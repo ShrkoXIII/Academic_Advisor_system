@@ -3,9 +3,17 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ACADEMIC_ADVISOR"
+name = "acad_recommend"
 version = "0.1.0"
 requires-python = ">=3.9"
+dependencies = [
+    "oracledb",
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "seaborn",
+    "pyarrow",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
