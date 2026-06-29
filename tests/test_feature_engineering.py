@@ -1,3 +1,10 @@
+"""Regression tests for feature-engineering contracts that protect model safety.
+
+The cases here focus on timeline grouping, previous-GPA fallback order,
+policy exclusions, and leakage prevention because those behaviours directly
+affect training reliability and inference correctness.
+"""
+
 import unittest
 
 import numpy as np
@@ -7,6 +14,8 @@ from src.feature_engineering import run_feature_engineering_job
 
 
 def _base_row(**overrides):
+    # Keep a complete minimal course-row fixture so each test can override only
+    # the field involved in the behaviour it protects.
     row = {
         "university_id": "111",
         "student_id": "student",
@@ -33,6 +42,9 @@ def _base_row(**overrides):
 
 
 class FeatureEngineeringJobTest(unittest.TestCase):
+    # These tests are intentionally behaviour-level: they treat the public
+    # feature-engineering job as the contract instead of testing private helpers.
+
     def test_over_policy_semester_remains_in_gpa_history_before_split(self):
         df = pd.DataFrame(
             [
