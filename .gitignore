@@ -54,5 +54,5 @@ temp/
 .idea/
 .DS_Store
 Thumbs.db
-## obsedian_vault/ - If you are using Obsidian for note-taking and it creates a vault in your project directory, you might want to ignore it to prevent sensitive notes from being uploaded. Adjust this based on your project's structure and needs.
-obsedian_vault/
+## obsidian_vault/ - If you are using Obsidian for note-taking and it creates a vault in your project directory, you might want to ignore it to prevent sensitive notes from being uploaded. Adjust this based on your project's structure and needs.
+obsidian_vault/
