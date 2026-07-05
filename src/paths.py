@@ -1,5 +1,6 @@
 """Central filesystem paths for data, model artifacts, and reports."""
 
+import os
 from pathlib import Path
 
 
@@ -9,12 +10,19 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 # Keep the project data layout in one place; downstream notebooks and jobs should
 # import these constants instead of duplicating folder names.
-DATA_DIR = PROJECT_ROOT / "data"
+# DATA_DIR can be overridden via ACADEMIC_ADVISOR_DATA_DIR environment variable.
+DATA_DIR = Path(os.environ.get("ACADEMIC_ADVISOR_DATA_DIR", PROJECT_ROOT / "data"))
 RAW_DIR = DATA_DIR / "raw"
 CLEAN_DIR = DATA_DIR / "preprocessed"
 PREPROCESSED_DIR = CLEAN_DIR
 FEATURES_DIR = DATA_DIR / "features"
 FINAL_DIR = DATA_DIR / "final"
+AUDIT_DIR = DATA_DIR / "audit"
+MODEL_DATA_DIR = DATA_DIR / "model_data"
+ARTIFACTS_DIR = DATA_DIR / "artifacts"
+MODELS_DIR = PROJECT_ROOT / "models"
+MERGE_DIR = PREPROCESSED_DIR / "merge"
+ARCHIVE_DIR = DATA_DIR / "archive"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 
 
@@ -38,6 +46,10 @@ for directory in (
     CLEAN_DIR,
     FEATURES_DIR,
     FINAL_DIR,
+    AUDIT_DIR,
+    MODEL_DATA_DIR,
+    ARTIFACTS_DIR,
+    MODELS_DIR,
     REPORTS_DIR,
 ):
     ensure_dir(directory)
