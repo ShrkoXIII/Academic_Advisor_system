@@ -11,22 +11,33 @@ Reorganize the project so it is clean and consistent. Three tasks, in order:
    No more `read.ipynb` / `Read.ipynb` / `all.ipynb`. Names must say what
    the file does.
 3. **Remove duplicate merge notebooks.** There must be exactly ONE merge
-   notebook per pipeline stage. Delete dead prototypes.
-
+   notebook per pipeline stage.Identify dead prototypes during the audit.
+Do not delete immediately.
+Move approved superseded files to archive/ first.
+Permanent deletion requires explicit approval.
 Do NOT change any data logic, ML logic, features, or model code during this
 job. Paths and names only. Logic fixes are a separate later job.
 
 ## How to do the paths task safely
 
-* First: `src/paths.py` is missing folders the project uses. Add
-  `AUDIT_DIR`, `MODEL_DATA_DIR`, `ARTIFACTS_DIR`, `MODELS_DIR` before
-  converting any notebook.
-* Convert one file at a time. Change only where it looks for files —
+During the read-only audit phase, do not modify src/paths.py.
+
+After explicit approval, update src/paths.py before converting notebooks.
+Compare it against the canonical directory layout first; do not assume the
+only missing constants are AUDIT_DIR, MODEL_DATA_DIR, ARTIFACTS_DIR, or
+MODELS_DIR.
+*Convert one file at a time. Change only where it looks for files —
   replace `D:\...` strings with imports from `paths.py`.
-* After converting a file, run it and confirm it reads/writes the SAME
-  files as before. If any output changed, stop and report — a path task
+After converting a file, first verify resolved input/output paths without
+changing data.
+
+Do not execute notebooks or scripts that write pipeline artifacts unless
+execution is explicitly approved.
+
+When execution is approved, confirm that the file reads/writes the intended
+canonical artifacts and that no data logic changed.. If any output changed, stop and report — a path task
   must never change data.
-* Do the merge and model notebooks first: that is where the wrong-folder
+*Do the merge and model notebooks first: that is where the wrong-folder
   bug lives.
 
 ## Canonical paths
