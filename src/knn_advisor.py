@@ -11,12 +11,13 @@ risk signal even if the ML model gave a 0.75 pass probability.
 Usage
 -----
 from src.knn_advisor import KNNAdvisor
+from src.paths import ARTIFACTS_DIR
 
 advisor = KNNAdvisor.build(df_train)
-advisor.save('D:/AI/data_clean_academic_advisor/data/artifacts/knn_index.pkl')
+advisor.save(str(ARTIFACTS_DIR / 'knn_index.pkl'))
 
 # At inference:
-advisor = KNNAdvisor.load('D:/AI/data_clean_academic_advisor/data/artifacts/knn_index.pkl')
+advisor = KNNAdvisor.load(str(ARTIFACTS_DIR / 'knn_index.pkl'))
 neighbours = advisor.find_similar(student_snapshot, k=20)
 evidence = advisor.summarize_evidence(neighbours)
 """

@@ -5,18 +5,18 @@ Model naming — LOCKED (do not reverse):
     M2 = final_mark REGRESSOR    target = final_mark   (raw 0-100, no transform)
 
 Artifact mapping:
-    M1 (classifier)  -> models/m1_pass_model.lgbm   + m1_feature_importance.csv
-    M2 (regressor)   -> models/m2_grade_model.lgbm  + m2_feature_importance.csv
+    M1 (classifier)  -> MODELS_DIR/m1_pass_model.lgbm   + m1_feature_importance.csv
+    M2 (regressor)   -> MODELS_DIR/m2_grade_model.lgbm  + m2_feature_importance.csv
 
 V1 scope: LightGBM only. No sample weights. No scale_pos_weight. No XGBoost.
 
 Usage
 -----
 python -m src.model_training \
-    --train D:/AI/data_clean_academic_advisor/data/model_data/df_train.parquet \
-    --valid D:/AI/data_clean_academic_advisor/data/model_data/df_valid.parquet \
-    --test  D:/AI/data_clean_academic_advisor/data/model_data/df_test.parquet \
-    --out   models/
+    --train $(python -c "from src.paths import MODEL_DATA_DIR; print(MODEL_DATA_DIR / 'df_train.parquet')") \
+    --valid $(python -c "from src.paths import MODEL_DATA_DIR; print(MODEL_DATA_DIR / 'df_valid.parquet')") \
+    --test  $(python -c "from src.paths import MODEL_DATA_DIR; print(MODEL_DATA_DIR / 'df_test.parquet')") \
+    --out   $(python -c "from src.paths import MODELS_DIR; print(MODELS_DIR)")
 """
 
 from __future__ import annotations
@@ -43,6 +43,7 @@ from sklearn.metrics import (
 )
 
 from src.feature_engineering import assert_no_leakage_columns
+from src.paths import MODELS_DIR
 
 # ---------------------------------------------------------------------------
 # Feature contract — V1 LOCKED ALLOWLIST (39 features)
@@ -626,7 +627,7 @@ def main() -> None:
     parser.add_argument("--train", required=True)
     parser.add_argument("--valid", required=True)
     parser.add_argument("--test", required=True)
-    parser.add_argument("--out", default="models")
+    parser.add_argument("--out", default=str(MODELS_DIR))
     args = parser.parse_args()
 
     out_dir = Path(args.out)

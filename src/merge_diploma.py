@@ -9,15 +9,16 @@
 import os
 import re
 from src.feature_engineering import _normalize_key_series
+from src.paths import PREPROCESSED_DIR, AUDIT_DIR
 import pandas as pd
 
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 # TODO: Fill in the path to your diploma source file (parquet, CSV, or Excel).
-DIPLOMA_SOURCE_PATH = r"D:\AI\Real projects\Academic_Advisor\data\preprocessed\V_add_academic_info\v_add_adcademic_info_cleaned.parquet"  # e.g. "D:/AI/data_clean_academic_advisor/diploma.parquet"
+DIPLOMA_SOURCE_PATH = PREPROCESSED_DIR / "V_add_academic_info" / "v_add_adcademic_info_cleaned.parquet"
 
 # Must match PARQUET_PATH in split_diagnostics.ipynb — this is the file we extend.
-AFTER_FET_ENG_PATH = "D:/AI/Real projects/Academic_Advisor/data/audit/after_fet_eng.parquet"
+AFTER_FET_ENG_PATH = AUDIT_DIR / "after_fet_eng.parquet"
 
 # Set to True ONLY when you intentionally want to overwrite existing diploma columns
 # (e.g. re-running after fixing the diploma source). Prevents silent double-merges.

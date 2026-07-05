@@ -9,11 +9,12 @@ semester, this module:
 Usage
 -----
 from src.inference import StudentScorer
+from src.paths import MODELS_DIR, ARTIFACTS_DIR
 
 scorer = StudentScorer.load(
-    grade_model_path='models/grade_model.lgbm',
-    pass_model_path='models/pass_model.lgbm',
-    difficulty_lookup_path='D:/AI/data_clean_academic_advisor/data/artifacts/course_difficulty_lookup.parquet',
+    grade_model_path=str(MODELS_DIR / 'grade_model.lgbm'),
+    pass_model_path=str(MODELS_DIR / 'pass_model.lgbm'),
+    difficulty_lookup_path=str(ARTIFACTS_DIR / 'course_difficulty_lookup.parquet'),
 )
 
 # df_history: all historical rows for one student (all semesters before target)

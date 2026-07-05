@@ -14,12 +14,13 @@ and KNN evidence to produce ranked course-plan recommendations.
 Usage
 -----
 from src.recommendation import Recommender
+from src.paths import MODELS_DIR, ARTIFACTS_DIR
 
 rec = Recommender.load(
-    grade_model_path='models/grade_model.lgbm',
-    pass_model_path='models/pass_model.lgbm',
-    difficulty_lookup_path='D:/AI/.../course_difficulty_lookup.parquet',
-    knn_index_path='D:/AI/.../knn_index.pkl',
+    grade_model_path=str(MODELS_DIR / 'grade_model.lgbm'),
+    pass_model_path=str(MODELS_DIR / 'pass_model.lgbm'),
+    difficulty_lookup_path=str(ARTIFACTS_DIR / 'course_difficulty_lookup.parquet'),
+    knn_index_path=str(ARTIFACTS_DIR / 'knn_index.pkl'),
 )
 
 plans = rec.recommend(

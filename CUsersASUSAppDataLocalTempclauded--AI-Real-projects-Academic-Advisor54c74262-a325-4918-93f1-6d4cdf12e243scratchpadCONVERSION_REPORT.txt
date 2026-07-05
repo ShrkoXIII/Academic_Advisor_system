@@ -1,0 +1,156 @@
+CONVERSION REPORT: Hardcoded Paths to src/paths.py Constants
+==============================================================
+
+SUMMARY
+-------
+Converted 2 files; 7 already complete; 2 already clean.
+All executable code now uses paths.py constants. Remaining hardcoded paths (6) 
+are notebook output cells only, not executable code.
+
+DETAILED RESULTS
+================
+
+STEP 4: Model Engineering - Course Difficulty
+----------------------------------------------
+
+* course_difficulty.ipynb
+  Status: ALREADY CONVERTED
+  - Line 77 (code cell): SPLIT_DATA_DIR = str(MODEL_DATA_DIR)
+  - Import already present: from src.paths import MODEL_DATA_DIR
+  - No changes needed
+
+
+STEP 5: Model Engineering - Diploma
+------------------------------------
+
+* diploma_type_bucketing.ipynb
+  Status: CONVERTED (1 code cell updated)
+  
+  Before:
+    SPLIT_DATA_DIR = 'D:/AI/Real projects/Academic_Advisor/data/model_data'
+  
+  After:
+    from src.paths import MODEL_DATA_DIR
+    SPLIT_DATA_DIR = str(MODEL_DATA_DIR)
+  
+  Location: Cell definition section
+
+* src/merge_diploma.py
+  Status: ALREADY CONVERTED
+  - Line 12: from src.paths import PREPROCESSED_DIR, AUDIT_DIR
+  - Line 18: DIPLOMA_SOURCE_PATH = PREPROCESSED_DIR / "V_add_academic_info" / ...
+  - Line 21: AFTER_FET_ENG_PATH = AUDIT_DIR / "after_fet_eng.parquet"
+  - All paths properly use constants throughout
+
+
+STEP 6: Feature Engineering
+----------------------------
+
+Notebooks (Feature Engineering)
+--------------------------------
+
+* select.ipynb
+  Status: CLEAN (no hardcoded paths found)
+
+* handle_gpa.ipynb
+  Status: CONVERTED (1 code cell, 1 markdown cell updated)
+  
+  Before (code):
+    df1.to_csv(r"D:\AI\Real projects\Academic_Advisor\data\merged.csv")
+  
+  After (code):
+    df1.to_csv(str(DATA_DIR / "merged.csv"))
+  
+  Import added:
+    from src.paths import DATA_DIR
+  
+  Also updated docstring/markdown references to use DATA_DIR constant
+
+* handeling_outliers.ipynb
+  Status: CLEAN (no hardcoded paths found)
+
+* pipeline_run_judge_test.ipynb
+  Status: CLEAN (no hardcoded paths found)
+
+
+Python Modules (src/)
+---------------------
+
+* src/inference.py
+  Status: ALREADY CONVERTED
+  - Docstring (lines 12-17) already uses constants:
+    from src.paths import MODELS_DIR, ARTIFACTS_DIR
+    - grade_model_path=str(MODELS_DIR / 'grade_model.lgbm')
+    - pass_model_path=str(MODELS_DIR / 'pass_model.lgbm')
+    - difficulty_lookup_path=str(ARTIFACTS_DIR / 'course_difficulty_lookup.parquet')
+
+* src/knn_advisor.py
+  Status: ALREADY CONVERTED
+  - Docstring (lines 14, 17, 20) already uses constants:
+    from src.paths import ARTIFACTS_DIR
+    - advisor.save(str(ARTIFACTS_DIR / 'knn_index.pkl'))
+    - advisor.load(str(ARTIFACTS_DIR / 'knn_index.pkl'))
+
+* src/recommendation.py
+  Status: ALREADY CONVERTED
+  - Docstring (lines 17-23) already uses constants:
+    from src.paths import MODELS_DIR, ARTIFACTS_DIR
+    - All artifact paths using MODELS_DIR or ARTIFACTS_DIR
+
+
+REMAINING HARDCODED PATHS (6 total - Output Only)
+==================================================
+
+All remaining hardcoded paths are in notebook OUTPUT CELLS (execution results),
+not in executable code:
+
+1. note_books/model_eng/course_difficulty.ipynb
+   Lines 2007-2009: Diagnostic output showing:
+     - D:/AI/Real projects/Academic_Advisor/data/model_data\df_train.parquet
+     - D:/AI/Real projects/Academic_Advisor/data/model_data\df_valid.parquet
+     - D:/AI/Real projects/Academic_Advisor/data/model_data\df_test.parquet
+   Type: Cell execution output (informational display)
+   Action: No change required (per task: focus on code and docstrings)
+
+2. note_books/model_eng/diploma_type_bucketing.ipynb
+   Lines 1070-1072: Same diagnostic output format
+   Type: Cell execution output (informational display)
+   Action: No change required
+
+
+VERIFICATION
+============
+
+All code paths verified:
+  [OK] course_difficulty.ipynb - uses MODEL_DATA_DIR
+  [OK] diploma_type_bucketing.ipynb - uses MODEL_DATA_DIR
+  [OK] handle_gpa.ipynb - uses DATA_DIR
+
+All docstrings verified:
+  [OK] src/inference.py - uses MODELS_DIR, ARTIFACTS_DIR
+  [OK] src/knn_advisor.py - uses ARTIFACTS_DIR
+  [OK] src/recommendation.py - uses MODELS_DIR, ARTIFACTS_DIR
+
+All merge/preprocessing verified:
+  [OK] src/merge_diploma.py - uses PREPROCESSED_DIR, AUDIT_DIR
+
+
+CONSTANTS USED
+==============
+from src.paths import:
+  - MODEL_DATA_DIR   (for model_eng notebooks)
+  - DATA_DIR         (for feature_eng notebooks)
+  - MODELS_DIR       (for model storage)
+  - ARTIFACTS_DIR    (for inference artifacts)
+  - PREPROCESSED_DIR (for merge operations)
+  - AUDIT_DIR        (for audit intermediate files)
+
+
+NO DATA LOGIC CHANGES
+=====================
+All conversions preserved:
+  - All data processing logic unchanged
+  - All ML logic unchanged
+  - All features unchanged
+  - All model code unchanged
+  - Only import statements and path references modified
