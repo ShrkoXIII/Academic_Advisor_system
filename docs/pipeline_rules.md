@@ -24,16 +24,27 @@ credit-hour university.
 
 ## Pipeline order
 
-clean → merge CRG+ADD+ACD → feature selection → feature engineering →
-`merge_diploma.py` → `split_diagnostics.ipynb` → `course_difficulty.ipynb` →
-`diploma_type_bucketing.ipynb` → training → KNN index → recommendation.
+> Updated 2026-07-07 (governance decision D1/D2 — see `docs/data_governance_plan.md`):
+> the diploma merge moved upstream, and the split enrichment stages write
+> distinct generations instead of rewriting the split files in place.
+
+clean → merge CRG+ADD+ACD (`01_merge_crg_add_acd`) → diploma merge
+(`02_merge_diploma`, distinct `merged_with_diploma.parquet`) → feature
+selection (`select`) → feature engineering (`handle_gpa`) →
+`split_diagnostics.ipynb` (base splits) → `course_difficulty.ipynb`
+(difficulty generation) → `diploma_type_bucketing.ipynb` (final generation) →
+training → KNN index → recommendation.
 
 ## src/ module ownership
 
 * `cleaning_utils.py` — single owner of ID normalization rules.
 * `feature_engineering.py` — builds features, owns `after_fet_eng.parquet`.
-* `merge_diploma.py` — extends `after_fet_eng.parquet` with
-  `diploma_gpa` / `diploma_type_id` (guarded, documented exception).
+* `merge_diploma.py` — **SUPERSEDED (D1, 2026-07-07; neutralized in Phase 7a).**
+  Historically extended `after_fet_eng.parquet` with `diploma_gpa` /
+  `diploma_type_id` as a documented exception. The diploma join now happens
+  upstream in the `02_merge_diploma` notebook; `after_fet_eng.parquet` has a
+  single writer — the feature-engineering stage. The script is kept for
+  history and raises on execution.
 * `model_training.py` — trains M1/M2.
 * `inference.py` — `StudentScorer` (course-level scoring at inference time).
 * `knn_advisor.py` — KNN index build/query over train-only snapshots.

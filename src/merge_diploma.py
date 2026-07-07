@@ -1,3 +1,22 @@
+"""SUPERSEDED - DO NOT RUN (governance decision D1, 2026-07-07).
+
+The diploma join moved upstream to note_books/merge/02_final_merged_with_dimploma.ipynb
+(logical stage 02_merge_diploma), which writes the distinct artifact
+MERGE_DIR/merged_with_diploma.parquet. This script's historical in-place
+extension of after_fet_eng.parquet must never run again: the feature-engineering
+stage (handle_gpa.ipynb) is the sole writer of that artifact (contract 2,
+docs/governance_contracts.md). Kept in place for history per plan Phase 4 -
+git preserves it; the guard below makes it inert.
+"""
+
+raise RuntimeError(
+    "merge_diploma.py is SUPERSEDED (D1): the diploma merge now happens upstream in "
+    "02_merge_diploma, and after_fet_eng.parquet has a single writer (feature engineering). "
+    "This script must not be executed. See docs/data_governance_plan.md and "
+    "docs/governance_contracts.md (contract 2)."
+)
+
+# Historical header (pre-D1), kept for context:
 # IMPORTANT: This is a STANDALONE merge script.
 # It does NOT modify feature_engineering.py or model_training.py.
 #

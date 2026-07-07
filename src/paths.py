@@ -12,6 +12,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 # import these constants instead of duplicating folder names.
 # DATA_DIR can be overridden via ACADEMIC_ADVISOR_DATA_DIR environment variable.
 DATA_DIR = Path(os.environ.get("ACADEMIC_ADVISOR_DATA_DIR", PROJECT_ROOT / "data"))
+
+# Captured before the ensure_dir loop below runs, so assert_data_root can tell a
+# pre-existing populated root from a tree this import itself just created.
+DATA_DIR_FROM_ENV = "ACADEMIC_ADVISOR_DATA_DIR" in os.environ
+_DATA_DIR_PREEXISTED = DATA_DIR.exists()
 RAW_DIR = DATA_DIR / "raw"
 CLEAN_DIR = DATA_DIR / "preprocessed"
 PREPROCESSED_DIR = CLEAN_DIR
@@ -36,6 +41,27 @@ def ensure_parent(path: Path) -> Path:
     # Create parent directories for file outputs without assuming the file exists.
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def assert_data_root(*required_paths) -> None:
+    """Refuse to run against a wrong or freshly created empty data root.
+
+    The import-time ensure_dir loop below materializes missing folders, which
+    would otherwise mask an unset or mistyped ACADEMIC_ADVISOR_DATA_DIR by
+    silently creating an empty tree. Pipeline entry points call this with their
+    required input artifacts before any read/write (governance contract 12).
+    """
+    if not _DATA_DIR_PREEXISTED:
+        raise RuntimeError(
+            f"Data root {DATA_DIR} did not exist before src.paths was imported "
+            f"(ACADEMIC_ADVISOR_DATA_DIR is {'set' if DATA_DIR_FROM_ENV else 'NOT set'}). "
+            "Refusing to run against a freshly created empty tree - point "
+            "ACADEMIC_ADVISOR_DATA_DIR at the populated data root and restart."
+        )
+    for required in required_paths:
+        required = Path(required)
+        if not required.exists() or required.stat().st_size == 0:
+            raise RuntimeError(f"Required data artifact missing or empty: {required}")
 
 
 # Materialize the expected project folders at import time because notebooks use

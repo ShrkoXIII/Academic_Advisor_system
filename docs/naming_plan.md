@@ -1,6 +1,6 @@
-# Naming & Numbering Plan — Phase 6 Deliverable (DRAFT — PENDING PHASE 6 APPROVAL)
+# Naming & Numbering Plan — Phase 6 Deliverable (APPROVED)
 
-Status: **DRAFT.** Produced 2026-07-07 under `docs/data_governance_plan.md` (Revision 4, corrected) and `docs/governance_contracts.md` (approved 2026-07-07; contracts 7–9 fix the principles this plan applies). Phase 6 is **planning only**: nothing here renames, moves, or edits any file. Every rename executes in its Phase 7b group — notebooks via `git mv` (+ in-file reference fixes in the same group), data artifacts via copy → repoint readers → validate (byte parity for pure rename/move, §4B logical parity where a rerun is involved) → retire preserved original, per contracts 10–11. Every proposal below was grounded by reading the actual code, not the filename.
+Status: **APPROVED by user 2026-07-07**, with the open decision rows resolved the same day: D5 → outlier branch exploratory/inactive (`handeling_outliers.ipynb` → `explore_outlier_removal.ipynb` in 7b; `without_outliers.parquet` frozen exploratory); `all.ipynb` → ARCHIVE as dead prototype (not renamed into the pipeline); root pre-drop ADD artifact → ARCHIVE after a no-live-consumer check; `course_difficulty_lookup.parquet` → producer ADOPTED (lands in 7c); `knn_index.pkl` → HOLD pending D7. Produced 2026-07-07 under `docs/data_governance_plan.md` (Revision 4, corrected) and `docs/governance_contracts.md` (approved 2026-07-07; contracts 7–9 fix the principles this plan applies). Phase 6 is **planning only**: nothing here renames, moves, or edits any file. Every rename executes in its Phase 7b group — notebooks via `git mv` (+ in-file reference fixes in the same group), data artifacts via copy → repoint readers → validate (byte parity for pure rename/move, §4B logical parity where a rerun is involved) → retire preserved original, per contracts 10–11. Every proposal below was grounded by reading the actual code, not the filename.
 
 Naming rules honored throughout (CLAUDE.md + contract 7–9): names say what the file does; one merge notebook per stage; the early merge (CRG+ADD+ACD) and the diploma merge stay separate stages; no two files whose names differ only by letter case; numbered = pipeline order, unnumbered = diagnostics/exploration.
 
@@ -132,6 +132,12 @@ After all 6A renames: zero `read.ipynb` files remain (five today), no `all.ipynb
 | `AUDIT_DIR/after_fet_eng.parquet` | `FEATURES_DIR/feature_engineered_primary.parquet` | P1 | writer: `handle_gpa` (single writer — C1 enforcement precondition applies before the move); readers: `split_diagnostics`; stale refs in retired `merge_diploma.py` + bucketing error text (7a text fixes). It saves `df_primary` — the name says so. |
 
 ### MODEL_DATA_DIR — D2 split generations (the deferred key deliverable)
+
+> **Status update (7a, 2026-07-07):** the generation filenames below are now implemented in
+> code — each of the three split-stage notebooks reads the previous generation and writes its
+> own. The files themselves do not exist on disk until the gated 7c rebuild; the bare-named
+> on-disk splits remain the live training inputs, and the training-side reader repointing
+> stays 7b/7c as planned.
 
 Generation-suffixed names; owner per generation (contracts 2–3):
 
