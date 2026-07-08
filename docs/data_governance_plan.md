@@ -137,7 +137,7 @@ Standing caveats: nonzero size proves availability only; mtimes are diagnostic m
 
 Phases 1–6 are non-destructive. **No further planned disk/code changes occur before Phase 7. Previously applied out-of-band changes are explicitly recorded (§1.3) and are not re-scheduled.**
 
-**Current position:** Phases 1–6 complete and approved. Phase 7a executed 2026-07-07. **Phases 7b (relocations & renames) and 7c (selective rebuild) authorized by user and executed 2026-07-08** — all Chain A stages validated (see `docs/manifests/validation_7c_2026-07-08.md`); one declared non-semantic delta (index provenance) recorded there. Superseded originals retired to `archive/pre_7c/` with isolated backups in `backup_7bc_2026-07-08/`. **STOPPED before Phase 8** — models NOT retrained; final cross-pipeline validation not run.
+**Current position:** Phases 1–7 complete. **Phase 8 (final cross-pipeline validation) executed 2026-07-08 — 51/51 checks PASS, zero unexplained drift** (see `docs/manifests/validation_phase8_2026-07-08.md`, tool `scripts/parity_check.py`). Superseded originals remain retired in `archive/pre_7c/` with isolated backups in `backup_7bc_2026-07-08/`. Models still NOT retrained (unchanged from 7c; confirmed value-identical to the rebuilt final splits by Phase 8). **STOPPED before Phase 9** — final freeze not started.
 
 ---
 
@@ -251,8 +251,8 @@ Ordering: 7a → 7b → 7c is default, not law; evidence-driven per dependency c
 
 Guardrails: never overwrite a current on-disk artifact without an isolated preserved copy + manifest. Do not modify split logic, saved splits, target definitions, or `feature_contract.json` without explicit approval. Superseded DATA → `archive/` first; permanent deletion needs separate approval. Minimal changes.
 
-### Phase 8 — Final cross-pipeline validation (read-only)
-Not the first validation (each 7-group self-validated). Final integration pass: end-to-end consistency; split boundaries; feature columns vs `feature_contract.json`; target distributions; join integrity; ID suffixes; drift screen vs baseline manifests. A parity-check script is to be **created** for this (no `scripts/parity_check.py` exists in the repository today — corrected from the pre-correction draft's "reuse" wording). Any unexplained drift → STOP.
+### Phase 8 — Final cross-pipeline validation (read-only) — EXECUTED 2026-07-08 (user-authorized)
+Not the first validation (each 7-group self-validated). Final integration pass: end-to-end consistency; split boundaries; feature columns vs `feature_contract.json`; target distributions; join integrity; ID suffixes; drift screen vs baseline manifests. `scripts/parity_check.py` **created** this phase (did not exist before) and run: **51/51 checks PASS**. Full record: `docs/manifests/validation_phase8_2026-07-08.md`. No unexplained drift — nothing stopped. Three informational findings carried forward (stale docstring in `src/model_training.py`, duplicate legacy `.lgbm` files in `models/`, guard-wiring gap into training/inference) — none block Phase 8, all are Phase 9/follow-up candidates.
 
 ### Phase 9 — Final freeze
 Checklist: one owner per artifact; one owner for base splits; no silent overwrites; clean tree; stable schema contract; meaningful notebook order/names; meaningful DataFrame names; documented lineage; reproducible rebuild sequence; fitted-state artifacts persisted per contract 14. Rollback: git tag for code; baseline manifest + isolated copies for data. Keep paused logic rules in `docs/pipeline_rules.md` and git.
