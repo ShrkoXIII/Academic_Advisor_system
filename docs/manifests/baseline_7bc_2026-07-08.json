@@ -1,0 +1,167 @@
+{
+  "created": "2026-07-08T11:08:34",
+  "data_root": "D:/AI/data_clean_academic_advisor/data",
+  "backup_dir": "D:/AI/data_clean_academic_advisor/backup_7bc_2026-07-08",
+  "phase": "7b/7c baseline (pre-change)",
+  "git_commit_at_capture": "25eb0c0f4429cc11d65b8750e622e79af98e7bb3",
+  "artifacts": [
+    {
+      "path": "raw/v_add_adcademic_info.parquet",
+      "size_bytes": 304641,
+      "mtime": "2026-07-01T09:15:55",
+      "sha256": "bbaca16bd24c01602e02d35ee8be1068a33d6fa4ad6f1bb194a5caf7ad7cd3a3",
+      "action": "copied to corrected name; original preserved",
+      "rows": 32548,
+      "n_cols": 6,
+      "backup": "D:/AI/data_clean_academic_advisor/backup_7bc_2026-07-08\\raw__v_add_adcademic_info.parquet"
+    },
+    {
+      "path": "preprocessed/V_add_academic_info/v_add_adcademic_info_cleaned.parquet",
+      "size_bytes": 256915,
+      "mtime": "2026-07-01T10:58:54",
+      "sha256": "b0aaf78103ec226938ed7014a3301c3e9f0f799295cc60902b77e8bf9a9d16ed",
+      "action": "superseded by rebuilt clean_v_add_academic_info.parquet; preserved",
+      "rows": 32524,
+      "n_cols": 3,
+      "backup": "D:/AI/data_clean_academic_advisor/backup_7bc_2026-07-08\\preprocessed__V_add_academic_info__v_add_adcademic_info_cleaned.parquet"
+    },
+    {
+      "path": "preprocessed/V_ACD_DEGREE_COURSE/v_acd_degree_course.parquet",
+      "size_bytes": 104222,
+      "mtime": "2026-06-17T12:10:08",
+      "sha256": "918bfe1a9f57a04618d5607153a2a9f684f464d51642e93219e947c0ae060bfd",
+      "action": "copied to clean_v_acd_degree_course.parquet; original preserved",
+      "rows": 4006,
+      "n_cols": 12,
+      "backup": "D:/AI/data_clean_academic_advisor/backup_7bc_2026-07-08\\preprocessed__V_ACD_DEGREE_COURSE__v_acd_degree_course.parquet"
+    },
+    {
+      "path": "features/merged_add_acd_crg.parquet",
+      "size_bytes": 24832101,
+      "mtime": "2026-06-23T11:49:08",
+      "sha256": "7e3ae26dfeb207893ad04f70ff84e974e5dcac3575039430e424183e5fa52cc1",
+      "action": "byte-parity copy to preprocessed/merge/; original preserved then retired",
+      "rows": 761347,
+      "n_cols": 62,
+      "backup": "D:/AI/data_clean_academic_advisor/backup_7bc_2026-07-08\\features__merged_add_acd_crg.parquet"
+    },
+    {
+      "path": "preprocessed/merge/merge_crg_add.parquet",
+      "size_bytes": 21974114,
+      "mtime": "2026-06-23T11:49:02",
+      "sha256": "fd178387cbd62fa85701a49f642dcc41e0a0e9b524c3abbc144cc8288dbaf0dc",
+      "action": "untouched chain input (manifest only)",
+      "rows": 761347,
+      "n_cols": 42
+    },
+    {
+      "path": "preprocessed/merge/merge_crg_add_unmatched_add_snapshot.csv",
+      "size_bytes": 177,
+      "mtime": "2026-06-23T11:49:02",
+      "sha256": "a6b086769ab11950f3ba91865b12f1003ba8136c1d7f2f74770f69679ccdbcfb",
+      "action": "relocated to audit/",
+      "backup": "D:/AI/data_clean_academic_advisor/backup_7bc_2026-07-08\\preprocessed__merge__merge_crg_add_unmatched_add_snapshot.csv"
+    },
+    {
+      "path": "audit/df_crg_add_acd.parquet",
+      "size_bytes": 17753637,
+      "mtime": "2026-06-23T11:51:26",
+      "sha256": "ddfb61be37c82100010923a1fdf922d1136115510f0d5f8b0cb9c9d91cc827a7",
+      "action": "superseded by features/selected_model_population.parquet",
+      "rows": 761346,
+      "n_cols": 26,
+      "backup": "D:/AI/data_clean_academic_advisor/backup_7bc_2026-07-08\\audit__df_crg_add_acd.parquet"
+    },
+    {
+      "path": "audit/after_fet_eng.parquet",
+      "size_bytes": 26801643,
+      "mtime": "2026-07-01T15:15:48",
+      "sha256": "b0fb7bf09dccd76a1d354d883eb1ae46aaa09f281fc426fd1b80e84ccd9b8707",
+      "action": "superseded by features/feature_engineered_primary.parquet",
+      "rows": 727852,
+      "n_cols": 64,
+      "backup": "D:/AI/data_clean_academic_advisor/backup_7bc_2026-07-08\\audit__after_fet_eng.parquet"
+    },
+    {
+      "path": "model_data/df_train.parquet",
+      "size_bytes": 19748821,
+      "mtime": "2026-07-02T16:51:13",
+      "sha256": "986bd22f20726003ab4552ce834f6688d44dbd6754c0dd14c7e238f95ea00c08",
+      "action": "superseded by base/difficulty/final generations",
+      "rows": 450465,
+      "n_cols": 72,
+      "backup": "D:/AI/data_clean_academic_advisor/backup_7bc_2026-07-08\\model_data__df_train.parquet"
+    },
+    {
+      "path": "model_data/df_valid.parquet",
+      "size_bytes": 6729784,
+      "mtime": "2026-07-02T16:51:14",
+      "sha256": "fd40bb2047a39072949a5768cc5eae811aacf42a1de5b3e8504b7e00e2c2d373",
+      "action": "superseded by base/difficulty/final generations",
+      "rows": 156097,
+      "n_cols": 72,
+      "backup": "D:/AI/data_clean_academic_advisor/backup_7bc_2026-07-08\\model_data__df_valid.parquet"
+    },
+    {
+      "path": "model_data/df_test.parquet",
+      "size_bytes": 4760639,
+      "mtime": "2026-07-02T16:51:14",
+      "sha256": "1b14461933a1713104654b33f689f87cb7c3da07db64335eef9a36a7a2b578fc",
+      "action": "superseded by base/difficulty/final generations",
+      "rows": 110008,
+      "n_cols": 72,
+      "backup": "D:/AI/data_clean_academic_advisor/backup_7bc_2026-07-08\\model_data__df_test.parquet"
+    },
+    {
+      "path": "merged.csv",
+      "size_bytes": 1188,
+      "mtime": "2026-06-23T12:00:10",
+      "sha256": "de2ce307f9b3bd723dc7be1d7d9c61ee4a961083b47d6c8c9ac7e471061af892",
+      "action": "debug residue -> archive",
+      "backup": "D:/AI/data_clean_academic_advisor/backup_7bc_2026-07-08\\merged.csv"
+    },
+    {
+      "path": "after_feature_eng_run.csv",
+      "size_bytes": 2681,
+      "mtime": "2026-06-23T08:47:02",
+      "sha256": "e4022926e3a636543f209a555b6633b6ed15bc001a879a7b8b2838589398adbc",
+      "action": "debug residue -> archive",
+      "backup": "D:/AI/data_clean_academic_advisor/backup_7bc_2026-07-08\\after_feature_eng_run.csv"
+    },
+    {
+      "path": "preprocessed/v_add_student_degree_status_clean.parquet",
+      "size_bytes": 6496281,
+      "mtime": "2026-06-20T11:48:00",
+      "sha256": "08213688e1f72fab3cb169626b2fb6a30d6b37f7bcc2118e49824a11d00bac4c",
+      "action": "pre-drop twin -> archive (producer write already removed)",
+      "rows": 181552,
+      "n_cols": 41,
+      "backup": "D:/AI/data_clean_academic_advisor/backup_7bc_2026-07-08\\preprocessed__v_add_student_degree_status_clean.parquet"
+    },
+    {
+      "path": "artifacts/course_difficulty_lookup.parquet",
+      "size_bytes": 64573,
+      "mtime": "2026-06-28T09:26:25",
+      "sha256": "ef29960675075c294da453e038943cbde730e21e94ac46a8e3a4032f4355d735",
+      "action": "untouched (D7-adjacent; drift sentinel)",
+      "rows": 1666,
+      "n_cols": 15
+    },
+    {
+      "path": "artifacts/knn_index.pkl",
+      "size_bytes": 81649350,
+      "mtime": "2026-06-28T09:33:38",
+      "sha256": "fde80326c0762f85893beafa4732dc4adf32a3e641ea90fdb8e7ee7cabf4ac68",
+      "action": "untouched (D7 HOLD; drift sentinel)"
+    },
+    {
+      "path": "final/without_outliers.parquet",
+      "size_bytes": 20335135,
+      "mtime": "2026-06-20T12:27:06",
+      "sha256": "d6bf1dbec44713020da3b43410690ad3678185b8fff708518523b21ff5b094b2",
+      "action": "untouched (D5 exploratory; drift sentinel)",
+      "rows": 727852,
+      "n_cols": 58
+    }
+  ]
+}

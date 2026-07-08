@@ -1,10 +1,10 @@
 """SUPERSEDED - DO NOT RUN (governance decision D1, 2026-07-07).
 
-The diploma join moved upstream to note_books/merge/02_final_merged_with_dimploma.ipynb
-(logical stage 02_merge_diploma), which writes the distinct artifact
-MERGE_DIR/merged_with_diploma.parquet. This script's historical in-place
-extension of after_fet_eng.parquet must never run again: the feature-engineering
-stage (handle_gpa.ipynb) is the sole writer of that artifact (contract 2,
+The diploma join moved upstream to note_books/merge/02_merge_diploma.ipynb,
+which writes the distinct artifact MERGE_DIR/merged_with_diploma.parquet.
+This script's historical in-place extension of the feature-engineered artifact
+(now features/feature_engineered_primary.parquet) must never run again: the
+feature-engineering stage (02_feature_engineering.ipynb) is its sole writer (contract 2,
 docs/governance_contracts.md). Kept in place for history per plan Phase 4 -
 git preserves it; the guard below makes it inert.
 """
