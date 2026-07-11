@@ -14,7 +14,7 @@ These contracts must not weaken locked decisions in `docs/pipeline_rules.md` (te
 |----------|--------------|----------------------|-------|
 | `student_id`, `degree_id`, `course_id`, `part_id`, `faculty_id`, `grade_id`, `student_course_id` (dotted join keys) | pandas `string` | `cleaning_utils.normalize_id_series` / `normalize_id_columns` (element rule: `normalize_id_to_string`) | Normalize at **source cleaning time**, never patched at merge time. |
 | `university_id` (derived) | `string` | suffix extraction `r"\.([^.]+)$"` (as in `feature_engineering.ensure_university_id`) | Derived for validation/keying only. |
-| `diploma_type_id` | raw: float64 with dotted suffix → merged: `Int64` (suffix-stripped) | suffix-consistency check + strip + `Int64` cast at the diploma-merge stage (as implemented in `02_merge_diploma`) | Multi-suffix source = STOP (multiple universities). |
+| `diploma_type_id` | raw: float64 with dotted suffix → cleaned: `Int64` (suffix-stripped) | suffix-consistency check + strip + `Int64` cast at **source cleaning time** via `id_casting.normalize_ids` (schema: `src/schemas.py`); the equivalent check in `02_merge_diploma` remains as a secondary no-op guard (amended by user decision 2026-07-09; previously done at the diploma-merge stage) | Multi-suffix source = STOP (multiple universities). |
 
 **Bans.** No join on float IDs. No `to_numeric`/`astype(float)` on a dotted ID class. No new normalizer implementations — consolidate on `cleaning_utils` (the Phase 2 finding of three parallel implementations is debt, not license). No float literals encoding dotted IDs (the dead `fillna(6.111)` in `Academic_info_clean.ipynb` is the canonical anti-example).
 

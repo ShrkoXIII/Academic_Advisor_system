@@ -153,7 +153,7 @@ if len(_unique_suffixes) == 1:
         _id_as_str
         .str.split('.')
         .str[0]
-        .astype(int)
+        .astype("Int64")
     )
     print(f"  Suffix stripped : .{_stripped_suffix}")
     print(f"  dtype after cast: {diploma_df['diploma_type_id'].dtype}")
