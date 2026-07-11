@@ -17,6 +17,11 @@ class IdColumnRule:
     dtype: CanonicalDtype
     semantic: IdSemantic
     nullable: bool = True
+    # Only consulted for Int64 rules. True: values may carry a dotted
+    # university suffix (e.g. 15.111) that is verified uniform and stripped
+    # before the cast. False: values must already be integer-like; any
+    # non-numeric or fractional value is a hard error, never stripped.
+    allow_suffix: bool = False
 
 
 # ============================================================
@@ -101,6 +106,7 @@ ID_COLUMN_RULES: dict[str, IdColumnRule] = {
     "diploma_type_id": IdColumnRule(
         dtype="Int64",
         semantic="categorical_code",
+        allow_suffix=True,
     ),
     "permanent_status_id": IdColumnRule(
         dtype="Int64",

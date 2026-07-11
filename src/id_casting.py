@@ -6,6 +6,7 @@ normalize_ids(df, table=TABLE_...) once, after their drop/null-handling steps,
 to cast every registered ID column in place — no duplicate `_key` columns.
 """
 
+import numpy as np
 import pandas as pd
 
 from src.cleaning_utils import normalize_id_series
@@ -49,32 +50,67 @@ def normalize_ids(df, table, skip=None):
         if rule.dtype == "string":
             df[column] = normalize_id_series(df[column])
         elif rule.dtype == "Int64":
-            # Categorical codes may arrive as dotted-suffix floats
-            # (e.g. 15.111 where .111 is university identity, not a decimal).
-            # A bare astype("Int64") raises on non-integer floats, so verify
-            # the suffix is uniform, strip it, then cast — same guard as the
-            # diploma-merge stage.
-            as_string = normalize_id_series(df[column])
-            suffixes = set(
-                as_string.str.extract(r"\.([^.]+)$", expand=False).dropna().unique()
-            )
-            if len(suffixes) > 1:
-                raise AssertionError(
-                    f"{table}.{column}: multiple university suffixes {suffixes} — "
-                    "STOP (rows span multiple universities)."
+            if rule.allow_suffix:
+                # Categorical codes may arrive as dotted-suffix floats
+                # (e.g. 15.111 where .111 is university identity, not a
+                # decimal). A bare astype("Int64") raises on non-integer
+                # floats, so verify the suffix is uniform, strip it, then
+                # cast — same guard as the diploma-merge stage.
+                as_string = normalize_id_series(df[column])
+                suffixes = set(
+                    as_string.str.extract(r"\.([^.]+)$", expand=False).dropna().unique()
                 )
-            if suffixes:
-                print(
-                    f"{table}.{column}: uniform suffix "
-                    f"'.{next(iter(suffixes))}' stripped before Int64 cast"
+                if len(suffixes) > 1:
+                    raise AssertionError(
+                        f"{table}.{column}: multiple university suffixes {suffixes} — "
+                        "STOP (rows span multiple universities)."
+                    )
+                if suffixes:
+                    print(
+                        f"{table}.{column}: uniform suffix "
+                        f"'.{next(iter(suffixes))}' stripped before Int64 cast"
+                    )
+                base = as_string.str.split(".").str[0]
+                casted = pd.to_numeric(base, errors="coerce").astype("Int64")
+                if int(casted.isna().sum()) != int(as_string.isna().sum()):
+                    raise AssertionError(
+                        f"{table}.{column}: Int64 cast introduced new nulls — investigate."
+                    )
+                df[column] = casted
+            else:
+                # Plain integer codes (semester/status codes): never strip
+                # anything. Validate integer-likeness, then cast — same
+                # triggers and example reporting as the historical
+                # convert_nullable_integer helper.
+                numeric = pd.to_numeric(df[column], errors="coerce")
+                source_has_value = (
+                    df[column].notna()
+                    & df[column].astype("string").str.strip().ne("")
                 )
-            base = as_string.str.split(".").str[0]
-            casted = pd.to_numeric(base, errors="coerce").astype("Int64")
-            if int(casted.isna().sum()) != int(as_string.isna().sum()):
-                raise AssertionError(
-                    f"{table}.{column}: Int64 cast introduced new nulls — investigate."
+                invalid_values = source_has_value & numeric.isna()
+                if invalid_values.any():
+                    examples = (
+                        df.loc[invalid_values, column].drop_duplicates().head(10).tolist()
+                    )
+                    raise AssertionError(
+                        f"{table}.{column}: contains non-numeric values that cannot "
+                        f"be converted to Int64. Examples: {examples}"
+                    )
+                non_integer_values = numeric.notna() & ~np.isclose(
+                    numeric % 1, 0, atol=1e-9
                 )
-            df[column] = casted
+                if non_integer_values.any():
+                    examples = (
+                        df.loc[non_integer_values, column]
+                        .drop_duplicates()
+                        .head(10)
+                        .tolist()
+                    )
+                    raise AssertionError(
+                        f"{table}.{column}: contains non-integer values that cannot "
+                        f"be converted to Int64. Examples: {examples}"
+                    )
+                df[column] = numeric.round().astype("Int64")
         else:
             raise AssertionError(
                 f"{table}.{column}: unhandled canonical dtype '{rule.dtype}'"
