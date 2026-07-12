@@ -5,18 +5,20 @@ Model naming — LOCKED (do not reverse):
     M2 = final_mark REGRESSOR    target = final_mark   (raw 0-100, no transform)
 
 Artifact mapping:
-    M1 (classifier)  -> MODELS_DIR/m1_pass_model.lgbm   + m1_feature_importance.csv
-    M2 (regressor)   -> MODELS_DIR/m2_grade_model.lgbm  + m2_feature_importance.csv
+    persistent --run-name runs -> MODELS_DIR/runs/<timestamp>__<case>/
+    no --run-name quick runs  -> MODELS_DIR/quick/latest/
 
 V1 scope: LightGBM only. No sample weights. No scale_pos_weight. No XGBoost.
 
 Usage
 -----
-python -m src.model_training \
-    --train $(python -c "from src.paths import MODEL_DATA_DIR; print(MODEL_DATA_DIR / 'df_train.parquet')") \
-    --valid $(python -c "from src.paths import MODEL_DATA_DIR; print(MODEL_DATA_DIR / 'df_valid.parquet')") \
-    --test  $(python -c "from src.paths import MODEL_DATA_DIR; print(MODEL_DATA_DIR / 'df_test.parquet')") \
-    --out   $(python -c "from src.paths import MODELS_DIR; print(MODELS_DIR)")
+python -m src.model_training
+
+All arguments default to the canonical final-generation splits
+(MODEL_DATA_DIR/df_{train,valid,test}_final.parquet, written by
+03_diploma_type_bucketing) and MODELS_DIR. Pass --train/--valid/--test/--out
+only to override. From a notebook, call main([]) so Jupyter's own argv is
+not parsed.
 """
 
 from __future__ import annotations
@@ -43,7 +45,8 @@ from sklearn.metrics import (
 )
 
 from src.feature_engineering import assert_no_leakage_columns
-from src.paths import MODELS_DIR
+from src import experiment_tracking
+from src.paths import MODEL_DATA_DIR, MODELS_DIR
 
 # ---------------------------------------------------------------------------
 # Feature contract — V1 LOCKED ALLOWLIST (39 features)
@@ -101,6 +104,9 @@ MODEL_FEATURES: List[str] = [
     "degree_requirement_credits_count_missing",
     "course_share_of_requirement",
     "requirement_size_bucket_ord",            # ordinal; raw string never enters X
+    # --- Pre-admission diploma signals ---
+    "diploma_gpa",
+    "diploma_type_bucket",                    # CATEGORICAL; raw diploma_type_id stays audit-only
 ]
 
 # Columns deliberately EXCLUDED (kept here as a guard list, asserted absent from X).
@@ -113,7 +119,7 @@ DROPPED_FEATURES: List[str] = [
     "difficulty_group_support_count",    # audit only
 ]
 
-CATEGORICAL_FEATURES: List[str] = ["requirement_type_id"]
+CATEGORICAL_FEATURES: List[str] = ["requirement_type_id", "diploma_type_bucket"]
 UNKNOWN_CATEGORY = -1   # NaN + categories unseen in train map here
 
 REQUIREMENT_BUCKET_ORD = {
@@ -128,7 +134,7 @@ REQUIREMENT_BUCKET_ORD = {
 _LEFTOVER_KEY_PATTERNS = ["l3_key", "l4_key", "_key", "tmp", "temp", "idx"]
 
 TARGET_GRADE = "final_mark"       # M2 regressor target
-EXPECTED_FEATURE_COUNT = 39
+EXPECTED_FEATURE_COUNT = 41
 
 
 # ---------------------------------------------------------------------------
@@ -457,8 +463,8 @@ def evaluate_grade(model, df, categorical_levels, label="") -> dict:  # M2
     return metrics
 
 
-def stratified_eval_pass(model, df, categorical_levels) -> None:
-    """M1 AUC broken down by key student segments (blind-spot check)."""
+def collect_segment_auc(model, df, categorical_levels) -> Dict[str, dict]:
+    """Collect the existing M1 segment AUCs without changing their calculation."""
     X_full, y_full = prepare_X_y(df, "pass", categorical_levels)
     y_prob_full = model.predict(X_full)
     segments = {
@@ -467,16 +473,31 @@ def stratified_eval_pass(model, df, categorical_levels) -> None:
         "low_difficulty_support": df["difficulty_fallback_level"] >= 3,
         "cold_start_gpa": df["no_previous_progress"] == 1,
     }
+    results = {}
     for seg_name, mask in segments.items():
         sub = mask.values
-        if sub.sum() < 100:
+        n = int(sub.sum())
+        if n < 100:
+            results[seg_name] = {"n": n, "auc": None, "status": "skipped_lt_100"}
             continue
         y_seg = y_full[sub]
         if y_seg.nunique() < 2:
-            print(f"  [{seg_name}]  n={sub.sum():,}  AUC=SKIPPED (one class only)")
+            results[seg_name] = {"n": n, "auc": None, "status": "skipped_one_class"}
             continue
         auc = roc_auc_score(y_seg, y_prob_full[sub])
-        print(f"  [{seg_name}]  n={sub.sum():,}  AUC={auc:.4f}")
+        results[seg_name] = {"n": n, "auc": round(float(auc), 4), "status": "ok"}
+    return results
+
+
+def stratified_eval_pass(model, df, categorical_levels) -> Dict[str, dict]:
+    """Print the existing M1 AUC segment breakdown and return it for persistence."""
+    results = collect_segment_auc(model, df, categorical_levels)
+    for seg_name, values in results.items():
+        if values["status"] == "skipped_one_class":
+            print(f"  [{seg_name}]  n={values['n']:,}  AUC=SKIPPED (one class only)")
+        elif values["status"] != "skipped_lt_100":
+            print(f"  [{seg_name}]  n={values['n']:,}  AUC={values['auc']:.4f}")
+    return results
 
 
 _THRESHOLDS = [0.3, 0.4, 0.5, 0.6, 0.7]
@@ -622,16 +643,27 @@ def _save_training_curves(
 # CLI entry point
 # ---------------------------------------------------------------------------
 
-def main() -> None:
+def main(argv: List[str] | None = None) -> None:
+    # Defaults point at the final-generation splits (bucketing output), so the
+    # common case needs no arguments. argv=None reads sys.argv (CLI); pass an
+    # explicit list (e.g. []) when calling from a notebook so Jupyter's own
+    # kernel arguments are not parsed.
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train", required=True)
-    parser.add_argument("--valid", required=True)
-    parser.add_argument("--test", required=True)
+    parser.add_argument("--train", default=str(MODEL_DATA_DIR / "df_train_final.parquet"))
+    parser.add_argument("--valid", default=str(MODEL_DATA_DIR / "df_valid_final.parquet"))
+    parser.add_argument("--test", default=str(MODEL_DATA_DIR / "df_test_final.parquet"))
     parser.add_argument("--out", default=str(MODELS_DIR))
-    args = parser.parse_args()
+    parser.add_argument("--run-name", help="Persistent readable experiment name (creates a timestamped run).")
+    parser.add_argument("--note", default="", help="One-line description used in the run report and leaderboard.")
+    parser.add_argument("--compare-to", help="Persistent baseline run ID used for validation-metric deltas.")
+    args = parser.parse_args(argv)
 
-    out_dir = Path(args.out)
-    out_dir.mkdir(parents=True, exist_ok=True)
+    run_context = experiment_tracking.resolve_output(
+        Path(args.out), args.run_name, args.note, args.compare_to
+    )
+    baseline_metrics = experiment_tracking.load_baseline_metrics(run_context)
+    out_dir = run_context.output_dir
+    print(f"Artifacts will be written to: {out_dir}")
 
     print("Loading data …")
     df_train = pd.read_parquet(args.train)
@@ -643,6 +675,15 @@ def main() -> None:
     print("\nLearning categorical levels (train only) …")
     categorical_levels = learn_categorical_levels(df_train)
     dtypes = run_pre_training_diagnostics(df_train, categorical_levels)
+    X_flags, _ = prepare_X_y(df_train, "pass", categorical_levels)
+    constant_features = list(X_flags.nunique(dropna=False)[lambda s: s <= 1].index)
+    important_flags = []
+    if constant_features:
+        important_flags.append("Train constant features: " + ", ".join(constant_features))
+    if "diploma_gpa" in MODEL_FEATURES:
+        important_flags.append(
+            "diploma_gpa has no dedicated missing-value indicator; source-level median fill remains unchanged and unmatched diploma records may be null."
+        )
 
     # Leakage gate on all three splits BEFORE training.
     for name, d in (("train", df_train), ("valid", df_valid), ("test", df_test)):
@@ -656,6 +697,7 @@ def main() -> None:
     m1_train = evaluate_pass(pass_model, df_train, categorical_levels, "train")
     m1_valid = evaluate_pass(pass_model, df_valid, categorical_levels, "valid")
     m1_test = evaluate_pass(pass_model, df_test, categorical_levels, "test")
+    m1_valid_segments = collect_segment_auc(pass_model, df_valid, categorical_levels)
     print("M1 stratified breakdown (test set):")
     stratified_eval_pass(pass_model, df_test, categorical_levels)
     print_threshold_table(pass_model, df_valid, df_test, categorical_levels)
@@ -680,9 +722,22 @@ def main() -> None:
         "m1_pass_classifier": {"train": m1_train, "valid": m1_valid, "test": m1_test},
         "m2_grade_regressor": {"train": m2_train, "valid": m2_valid, "test": m2_test},
     }
-    (out_dir / "metrics.json").write_text(json.dumps(results, indent=2))
+    segment_metrics = {"valid": m1_valid_segments}
+    if run_context.persistent:
+        experiment_tracking.finalize_persistent_run(
+            run_context,
+            results,
+            segment_metrics,
+            len(MODEL_FEATURES),
+            important_flags,
+            baseline_metrics,
+        )
+    else:
+        (out_dir / "metrics.json").write_text(
+            json.dumps({**results, "segments": segment_metrics}, indent=2), encoding="utf-8"
+        )
     print(f"\nMetrics saved to {out_dir / 'metrics.json'}")
-    print(json.dumps(results, indent=2))
+    print(json.dumps({**results, "segments": segment_metrics}, indent=2))
 
 
 if __name__ == "__main__":
