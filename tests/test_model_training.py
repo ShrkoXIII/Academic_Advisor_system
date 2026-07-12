@@ -27,9 +27,15 @@ class ModelTrainingContractTests(unittest.TestCase):
 
     def test_diploma_features_extend_the_contract_without_raw_type_id(self):
         self.assertEqual(len(MODEL_FEATURES), EXPECTED_FEATURE_COUNT)
-        self.assertEqual(EXPECTED_FEATURE_COUNT, 41)
+        self.assertEqual(EXPECTED_FEATURE_COUNT, 39)
         self.assertIn("diploma_gpa", MODEL_FEATURES)
-        self.assertIn("diploma_type_bucket", CATEGORICAL_FEATURES)
+        self.assertIn("diploma_type_bucket", MODEL_FEATURES)
+        self.assertEqual(
+            CATEGORICAL_FEATURES,
+            ["requirement_type_id", "diploma_type_bucket"],
+        )
+        self.assertNotIn("start_level_missing", MODEL_FEATURES)
+        self.assertNotIn("difficulty_fallback_level", MODEL_FEATURES)
         self.assertNotIn("diploma_type_id", MODEL_FEATURES)
 
     def test_diploma_type_bucket_is_train_fitted_categorical(self):

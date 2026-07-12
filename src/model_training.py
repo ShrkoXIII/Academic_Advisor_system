@@ -69,7 +69,6 @@ MODEL_FEATURES: List[str] = [
     "reg_total_semesters",
     # --- Academic standing ---
     "start_level_ord",
-    "start_level_missing",
     "start_semester",                         # 1/2/3 term started (NOT start_year)
     # --- Timeline / interruptions (PAST-ONLY; is_interruption_semester dropped) ---
     "prior_interruption_count",
@@ -95,7 +94,6 @@ MODEL_FEATURES: List[str] = [
     "course_avg_mark_historical",
     "course_retake_rate_historical",
     "course_history_count",                   # support count -> reliability of difficulty stats
-    "difficulty_fallback_level",
     "course_difficulty_missing",
     # --- Degree / requirement context ---
     "requirement_type_id",                    # CATEGORICAL (handled specially)
@@ -114,6 +112,8 @@ DROPPED_FEATURES: List[str] = [
     "is_interruption_semester",          # LEAKAGE: current-semester pass_credits/gpa_points
     "model_prev_gpa",                    # depends on structural_zero_as_nan; use clean + flags
     "prev_gpa_actual_zero_performance",  # dead stub, hardcoded 0
+    "start_level_missing",               # audit-only; constant in current train population
+    "difficulty_fallback_level",         # audit-only; train is intentionally all Level 1
     "part_year",                         # absolute calendar year -> drift
     "start_year",                        # absolute calendar year -> drift
     "difficulty_group_support_count",    # audit only
@@ -134,7 +134,7 @@ REQUIREMENT_BUCKET_ORD = {
 _LEFTOVER_KEY_PATTERNS = ["l3_key", "l4_key", "_key", "tmp", "temp", "idx"]
 
 TARGET_GRADE = "final_mark"       # M2 regressor target
-EXPECTED_FEATURE_COUNT = 41
+EXPECTED_FEATURE_COUNT = 39
 
 
 # ---------------------------------------------------------------------------
