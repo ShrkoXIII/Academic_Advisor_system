@@ -671,6 +671,23 @@ def main(argv: List[str] | None = None) -> None:
     df_test = pd.read_parquet(args.test)
     print(f"  train {df_train.shape}  valid {df_valid.shape}  test {df_test.shape}")
 
+    # TEMPORARY: remove after rebuilding final splits from 02_merge_diploma.
+    # Fit once on train only; valid/test must reuse the same frozen value.
+    diploma_gpa_median = df_train["diploma_gpa"].median()
+    for split_name, df_split in (
+        ("train", df_train),
+        ("valid", df_valid),
+        ("test", df_test),
+    ):
+        missing_before = int(df_split["diploma_gpa"].isna().sum())
+        df_split["diploma_gpa"] = df_split["diploma_gpa"].fillna(diploma_gpa_median)
+        missing_after = int(df_split["diploma_gpa"].isna().sum())
+        assert missing_after == 0, f"{split_name}: diploma_gpa still contains missing values"
+        print(
+            f"  [temporary diploma_gpa fill] {split_name}: "
+            f"{missing_before:,} -> {missing_after:,} nulls; train median={diploma_gpa_median}"
+        )
+
     # Learn categorical levels from TRAIN only, then run loud diagnostics.
     print("\nLearning categorical levels (train only) …")
     categorical_levels = learn_categorical_levels(df_train)

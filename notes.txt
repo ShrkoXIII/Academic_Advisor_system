@@ -1,0 +1,4 @@
+1_with course_pass_rate_historical dominating everything. 
+    But the earlier drift diagnostic showed those stats missing for ~23% of valid and ~55% of test (new courses unseen in train)
+2_ create cover flag to see the new courses ratio between train and test,valid
+     
