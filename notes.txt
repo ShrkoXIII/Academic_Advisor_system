@@ -1,4 +1,9 @@
 1_with course_pass_rate_historical dominating everything. 
     But the earlier drift diagnostic showed those stats missing for ~23% of valid and ~55% of test (new courses unseen in train)
 2_ create cover flag to see the new courses ratio between train and test,valid
-     
+3_ remove fill from model training after rebuilding the data 
+verify_versioned_outputs() — the independent post-write column comparison, genuinely the strongest safety check in the file — is defined but never called anywhere in build(). Right now nothing actually re-reads the written parquet files to confirm the write itself didn't corrupt anything; the in-memory checks are solid but they check pre-write data, not what landed on disk. Wire it in before staging_dir.rename(output_dir).
+_assemble_final() is also dead code — never called. Functionally harmless (the streaming approach achieves the same diploma-column preservation a different way), but worth deleting rather than leaving an unused function that looks load-bearing.
+02_course_difficulty.ipynb being unchanged isn't neutral — it's a live regression risk. It still writes to the same non-versioned df_*_difficulty.parquet paths using the old single-level-in-train logic. Anyone re-running it — you, or a future Claude Code session that doesn't know better — silently reverts all of this work with no version protection, since that overwrite path isn't gated the way the new script is. At minimum, add a markdown banner at the top: superseded by build_b2_temporal_course_stats.py, do not run. Better: strip the difficulty-writing cells entirely. delete every thing related to diploma gpa missing except the tow edit that we aggre on 
+1 fill in merge nothe book 
+2 fill before training 

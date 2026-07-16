@@ -326,7 +326,7 @@ _SHARED_PARAMS = {
 }
 
 
-def _make_datasets(X_tr, y_tr, X_va, y_va, X_te, y_te):
+def _make_datasets(X_tr, y_tr, X_va, y_va):
     dtrain = lgb.Dataset(
         X_tr, label=y_tr, free_raw_data=False, categorical_feature=CATEGORICAL_FEATURES
     )
@@ -334,21 +334,16 @@ def _make_datasets(X_tr, y_tr, X_va, y_va, X_te, y_te):
         X_va, label=y_va, reference=dtrain, free_raw_data=False,
         categorical_feature=CATEGORICAL_FEATURES,
     )
-    dtest = lgb.Dataset(
-        X_te, label=y_te, reference=dtrain, free_raw_data=False,
-        categorical_feature=CATEGORICAL_FEATURES,
-    )
-    return dtrain, dvalid, dtest
+    return dtrain, dvalid
 
 
 def train_pass_model(  # M1 classifier
-    df_train, df_valid, df_test, categorical_levels,
+    df_train, df_valid, categorical_levels,
     params=None, num_boost_round=2000, early_stopping_rounds=50,
 ) -> Tuple[lgb.Booster, dict]:
     """M1 — LightGBM binary classifier for pass/fail. NO scale_pos_weight in V1."""
     X_tr, y_tr = prepare_X_y(df_train, "pass", categorical_levels)
     X_va, y_va = prepare_X_y(df_valid, "pass", categorical_levels)
-    X_te, y_te = prepare_X_y(df_test, "pass", categorical_levels)
 
     # Class balance is printed for information only — NOT used to weight the model.
     pass_rate = float(y_tr.mean())
@@ -359,9 +354,10 @@ def train_pass_model(  # M1 classifier
     if params:
         default_params.update(params)
 
-    dtrain, dvalid, dtest = _make_datasets(X_tr, y_tr, X_va, y_va, X_te, y_te)
+    dtrain, dvalid = _make_datasets(X_tr, y_tr, X_va, y_va)
     evals_result: dict = {}
-    # early_stopping watches the first valid_set (dvalid) — train/test are logging only.
+    # Only validation may select the stopping iteration. Test is evaluated
+    # after fitting and is never passed to LightGBM during training.
     callbacks = [
         lgb.early_stopping(early_stopping_rounds, verbose=True),
         lgb.log_evaluation(100),
@@ -369,29 +365,29 @@ def train_pass_model(  # M1 classifier
     ]
     booster = lgb.train(
         default_params, dtrain, num_boost_round=num_boost_round,
-        valid_sets=[dvalid, dtrain, dtest],
-        valid_names=["valid", "train", "test"],
+        valid_sets=[dvalid, dtrain],
+        valid_names=["valid", "train"],
         callbacks=callbacks,
     )
     return booster, evals_result
 
 
 def train_grade_model(  # M2 regressor
-    df_train, df_valid, df_test, categorical_levels,
+    df_train, df_valid, categorical_levels,
     params=None, num_boost_round=2000, early_stopping_rounds=50,
 ) -> Tuple[lgb.Booster, dict]:
     """M2 — LightGBM regressor for final_mark (0-100), MAE loss."""
     X_tr, y_tr = prepare_X_y(df_train, "grade", categorical_levels)
     X_va, y_va = prepare_X_y(df_valid, "grade", categorical_levels)
-    X_te, y_te = prepare_X_y(df_test, "grade", categorical_levels)
 
     default_params = {"objective": "regression_l1", "metric": "mae", **_SHARED_PARAMS}
     if params:
         default_params.update(params)
 
-    dtrain, dvalid, dtest = _make_datasets(X_tr, y_tr, X_va, y_va, X_te, y_te)
+    dtrain, dvalid = _make_datasets(X_tr, y_tr, X_va, y_va)
     evals_result: dict = {}
-    # early_stopping watches the first valid_set (dvalid) — train/test are logging only.
+    # Only validation may select the stopping iteration. Test is evaluated
+    # after fitting and is never passed to LightGBM during training.
     callbacks = [
         lgb.early_stopping(early_stopping_rounds, verbose=True),
         lgb.log_evaluation(100),
@@ -399,8 +395,8 @@ def train_grade_model(  # M2 regressor
     ]
     booster = lgb.train(
         default_params, dtrain, num_boost_round=num_boost_round,
-        valid_sets=[dvalid, dtrain, dtest],
-        valid_names=["valid", "train", "test"],
+        valid_sets=[dvalid, dtrain],
+        valid_names=["valid", "train"],
         callbacks=callbacks,
     )
     return booster, evals_result
@@ -411,7 +407,7 @@ def train_grade_model(  # M2 regressor
 # ---------------------------------------------------------------------------
 
 def evaluate_pass(model, df, categorical_levels, label="") -> dict:  # M1
-    """M1 metrics: AUC, AvgPrecision, Accuracy, pass/fail P/R/F1, Brier, confusion matrix (thr=0.5)."""
+    """M1 metrics, including fail-class AP used for experiment selection."""
     X, y = prepare_X_y(df, "pass", categorical_levels)
     y_prob = model.predict(X)
     y_bin = (y_prob >= 0.5).astype(int)
@@ -421,8 +417,11 @@ def evaluate_pass(model, df, categorical_levels, label="") -> dict:  # M1
     tn, fp, fn, tp = int(cm[0, 0]), int(cm[0, 1]), int(cm[1, 0]), int(cm[1, 1])
 
     metrics = {
-        "auc": round(float(roc_auc_score(y, y_prob)), 4),
-        "avg_precision": round(float(average_precision_score(y, y_prob)), 4),
+        # Keep selection metrics unrounded in artifacts. Formatting is applied
+        # only when printing/reporting.
+        "auc": float(roc_auc_score(y, y_prob)),
+        "avg_precision": float(average_precision_score(y, y_prob)),
+        "fail_avg_precision": float(average_precision_score(1 - y, 1 - y_prob)),
         "accuracy": round(float(accuracy_score(y, y_bin)), 4),
         # Pass-class (pos_label=1, default)
         "precision": round(float(precision_score(y, y_bin, zero_division=0)), 4),
@@ -432,14 +431,15 @@ def evaluate_pass(model, df, categorical_levels, label="") -> dict:  # M1
         "fail_precision": round(float(precision_score(y, y_bin, pos_label=0, zero_division=0)), 4),
         "fail_recall": round(float(recall_score(y, y_bin, pos_label=0, zero_division=0)), 4),
         "fail_f1": round(float(f1_score(y, y_bin, pos_label=0, zero_division=0)), 4),
-        "brier": round(float(brier_score_loss(y, y_prob)), 4),
+        "brier": float(brier_score_loss(y, y_prob)),
         "confusion_matrix": {"tn": tn, "fp": fp, "fn": fn, "tp": tp},
     }
     if label:
         print(f"[{label}] M1 pass  AUC={metrics['auc']:.4f}  AP={metrics['avg_precision']:.4f}  "
               f"Acc={metrics['accuracy']:.4f}  P={metrics['precision']:.4f}  "
               f"R={metrics['recall']:.4f}  F1={metrics['f1']:.4f}  Brier={metrics['brier']:.4f}")
-        print(f"[{label}] M1 fail  P={metrics['fail_precision']:.4f}  "
+        print(f"[{label}] M1 fail  AP={metrics['fail_avg_precision']:.4f}  "
+              f"P={metrics['fail_precision']:.4f}  "
               f"R={metrics['fail_recall']:.4f}  F1={metrics['fail_f1']:.4f}")
         print(f"[{label}] M1 confusion matrix (rows=actual, cols=predicted):")
         print(f"              Pred-FAIL  Pred-PASS")
@@ -622,13 +622,11 @@ def _save_training_curves(
             "metric": m1_metric,
             "train": m1_evals_result["train"][m1_metric],
             "valid": m1_evals_result["valid"][m1_metric],
-            "test":  m1_evals_result["test"][m1_metric],
         },
         "m2_grade_regressor": {
             "metric": m2_metric,
             "train": m2_evals_result["train"][m2_metric],
             "valid": m2_evals_result["valid"][m2_metric],
-            "test":  m2_evals_result["test"][m2_metric],
         },
     }
     path.write_text(json.dumps(curves, indent=2))
@@ -710,25 +708,25 @@ def main(argv: List[str] | None = None) -> None:
 
     # --- M1: pass/fail classifier ---
     print("\n=== Training M1 (pass/fail classifier) ===")
-    pass_model, m1_evals = train_pass_model(df_train, df_valid, df_test, categorical_levels)
+    pass_model, m1_evals = train_pass_model(df_train, df_valid, categorical_levels)
     m1_train = evaluate_pass(pass_model, df_train, categorical_levels, "train")
     m1_valid = evaluate_pass(pass_model, df_valid, categorical_levels, "valid")
-    m1_test = evaluate_pass(pass_model, df_test, categorical_levels, "test")
+    m1_valid["train_valid_auc_gap"] = float(m1_train["auc"] - m1_valid["auc"])
+    m1_test = evaluate_pass(pass_model, df_test, categorical_levels, "test (descriptive)")
     m1_valid_segments = collect_segment_auc(pass_model, df_valid, categorical_levels)
-    print("M1 stratified breakdown (test set):")
+    print("M1 stratified breakdown (test set, descriptive only):")
     stratified_eval_pass(pass_model, df_test, categorical_levels)
     print_threshold_table(pass_model, df_valid, df_test, categorical_levels)
-    print("M1 segmented threshold table (test set, descriptive only):")
     stratified_threshold_table(pass_model, df_test, categorical_levels)
     pass_model.save_model(str(out_dir / "m1_pass_model.lgbm"))
     _save_feature_importance(pass_model, out_dir / "m1_feature_importance.csv")
 
     # --- M2: final_mark regressor ---
     print("\n=== Training M2 (final_mark regressor) ===")
-    grade_model, m2_evals = train_grade_model(df_train, df_valid, df_test, categorical_levels)
+    grade_model, m2_evals = train_grade_model(df_train, df_valid, categorical_levels)
     m2_train = evaluate_grade(grade_model, df_train, categorical_levels, "train")
     m2_valid = evaluate_grade(grade_model, df_valid, categorical_levels, "valid")
-    m2_test = evaluate_grade(grade_model, df_test, categorical_levels, "test")
+    m2_test = evaluate_grade(grade_model, df_test, categorical_levels, "test (descriptive)")
     grade_model.save_model(str(out_dir / "m2_grade_model.lgbm"))
     _save_feature_importance(grade_model, out_dir / "m2_feature_importance.csv")
 
@@ -739,6 +737,30 @@ def main(argv: List[str] | None = None) -> None:
         "m1_pass_classifier": {"train": m1_train, "valid": m1_valid, "test": m1_test},
         "m2_grade_regressor": {"train": m2_train, "valid": m2_valid, "test": m2_test},
     }
+    selection_summary = {
+        "selection_split": "valid",
+        "test_policy": "descriptive_only; never supplied to fitting or early stopping",
+        "directions": {
+            "fail_avg_precision": "higher_is_better",
+            "auc": "higher_is_better",
+            "brier": "lower_is_better",
+            "train_valid_auc_gap": "lower_is_better",
+        },
+        "valid": {
+            "fail_avg_precision": m1_valid["fail_avg_precision"],
+            "auc": m1_valid["auc"],
+            "brier": m1_valid["brier"],
+            "train_valid_auc_gap": m1_valid["train_valid_auc_gap"],
+        },
+        "test_descriptive": {
+            "fail_avg_precision": m1_test["fail_avg_precision"],
+            "auc": m1_test["auc"],
+            "brier": m1_test["brier"],
+        },
+    }
+    (out_dir / "selection_summary.json").write_text(
+        json.dumps(selection_summary, indent=2), encoding="utf-8"
+    )
     segment_metrics = {"valid": m1_valid_segments}
     if run_context.persistent:
         experiment_tracking.finalize_persistent_run(

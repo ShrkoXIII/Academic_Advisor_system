@@ -14,7 +14,7 @@ from src.paths import MODELS_DIR, ARTIFACTS_DIR
 scorer = StudentScorer.load(
     grade_model_path=str(MODELS_DIR / 'grade_model.lgbm'),
     pass_model_path=str(MODELS_DIR / 'pass_model.lgbm'),
-    difficulty_lookup_path=str(ARTIFACTS_DIR / 'course_difficulty_lookup.parquet'),
+    difficulty_lookup_path=str(ARTIFACTS_DIR / 'course_difficulty_state'),
 )
 
 # df_history: all historical rows for one student (all semesters before target)
@@ -30,6 +30,7 @@ scored = scorer.score(
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import List
 
 import lightgbm as lgb
@@ -44,6 +45,11 @@ from src.feature_engineering import (
     MAX_ALLOWED_SEMESTER_CREDITS,
     MAX_ALLOWED_SEMESTER_COURSES,
     run_feature_engineering_job,
+)
+from src.course_difficulty import (
+    DifficultyState,
+    apply_difficulty_state,
+    load_difficulty_state,
 )
 from src.model_training import MODEL_FEATURES, REQUIREMENT_BUCKET_ORD, prepare_X_y
 
@@ -114,14 +120,22 @@ class StudentScorer:
         self,
         grade_model: lgb.Booster,
         pass_model: lgb.Booster,
-        difficulty_lookup: pd.DataFrame,
+        difficulty_lookup: pd.DataFrame | DifficultyState,
     ) -> None:
         # Load expensive model and lookup artifacts once per scorer instance so
         # batch recommendation runs can score many students efficiently.
         self.grade_model = grade_model
         self.pass_model = pass_model
-        # Index by degree_course_key for O(1) lookups during candidate scoring.
-        self._diff = difficulty_lookup.set_index("degree_course_key")
+        # B2 persists all six lookup levels. Keep the old one-table artifact
+        # readable for backward compatibility with pre-B2 model bundles.
+        self._difficulty_state = (
+            difficulty_lookup if isinstance(difficulty_lookup, DifficultyState) else None
+        )
+        self._diff = (
+            difficulty_lookup.set_index("degree_course_key")
+            if isinstance(difficulty_lookup, pd.DataFrame)
+            else None
+        )
 
     @classmethod
     def load(
@@ -134,26 +148,52 @@ class StudentScorer:
         # LightGBM and parquet details.
         grade_model = lgb.Booster(model_file=grade_model_path)
         pass_model = lgb.Booster(model_file=pass_model_path)
-        diff = pd.read_parquet(difficulty_lookup_path)
+        lookup_path = Path(difficulty_lookup_path)
+        if lookup_path.is_dir() or lookup_path.name == "manifest.json":
+            state_dir = lookup_path.parent if lookup_path.name == "manifest.json" else lookup_path
+            diff = load_difficulty_state(state_dir)
+        else:
+            diff = pd.read_parquet(lookup_path)
         return cls(grade_model, pass_model, diff)
 
-    def _get_difficulty_row(self, degree_id: str, course_id: str) -> pd.Series:
-        """Look up pre-computed difficulty stats for a degree–course pair."""
-        # Prefer the degree-course statistic because difficulty is curriculum
-        # dependent, not only course-id dependent.
+    def _get_difficulty_row(
+        self,
+        degree_id: str,
+        course_id: str,
+        *,
+        faculty_id: str | None = None,
+        requirement_type_id: int | float | None = None,
+        course_credits: float | None = None,
+    ) -> pd.Series:
+        """Apply the same frozen six-level lookup used by the batch B2 build."""
+        if self._difficulty_state is not None:
+            if faculty_id is None:
+                faculty_id = self._difficulty_state.degree_to_faculty.get(str(degree_id))
+            candidate = pd.DataFrame(
+                {
+                    "degree_course_key": [f"{degree_id}__{course_id}"],
+                    "degree_id": [degree_id],
+                    "faculty_id": [faculty_id],
+                    "requirement_type_id": [requirement_type_id],
+                    "course_credits": [course_credits],
+                }
+            )
+            return apply_difficulty_state(candidate, self._difficulty_state).iloc[0]
+
+        if self._diff is None:
+            raise RuntimeError("No course-difficulty state or legacy lookup is loaded")
+
+        # Legacy pre-B2 lookup path.
         key = f"{degree_id}__{course_id}"
         if key in self._diff.index:
             return self._diff.loc[key]
 
-        # Fall back to the global prior so new or sparse courses can still be
-        # scored with an explicit missing-difficulty signal.
-        global_rows = self._diff[self._diff["difficulty_fallback_level"] >= 4]
+        global_rows = self._diff[self._diff["difficulty_fallback_level"] == 6]
         if not global_rows.empty:
             row = global_rows.iloc[0].copy()
             row["course_difficulty_missing"] = 1
-            row["difficulty_fallback_level"] = 5
+            row["difficulty_fallback_level"] = 6
             return row
-        # Use neutral final defaults only when the artifact lacks a global prior.
         return pd.Series(
             {
                 "course_credits": np.nan,
@@ -167,7 +207,11 @@ class StudentScorer:
                 "course_pass_rate_historical": np.nan,
                 "course_avg_mark_historical": np.nan,
                 "course_retake_rate_historical": np.nan,
-                "difficulty_fallback_level": 5,
+                "course_history_count": 0,
+                "difficulty_group_support_count": 0,
+                "difficulty_fallback_level": 6,
+                "course_is_new": 1,
+                "course_low_support": 0,
                 "course_difficulty_missing": 1,
             }
         )
@@ -189,6 +233,7 @@ class StudentScorer:
         expected_semester_credits: float | None = None,
         expected_semester_courses: int | None = None,
         snapshot: pd.Series | None = None,
+        candidate_metadata: pd.DataFrame | None = None,
     ) -> pd.DataFrame:
         """Score each candidate course for the upcoming target semester.
 
@@ -204,6 +249,9 @@ class StudentScorer:
         snapshot : pre-computed student snapshot from extract_snapshot(). If
             provided, skips re-running the feature engineering pipeline.
         expected_semester_courses : optional override for course count estimate.
+        candidate_metadata : optional course metadata indexed by ``course_id``
+            (or containing a ``course_id`` column). It supplies faculty,
+            requirement type, and credits needed by B2 Levels 3-5.
 
         Returns
         -------
@@ -245,13 +293,30 @@ class StudentScorer:
         # Build a model-compatible feature row per candidate by combining the
         # student snapshot, target semester context, and degree-course lookup.
         rows = []
+        metadata_by_course = None
+        if candidate_metadata is not None:
+            metadata_by_course = candidate_metadata.copy()
+            if "course_id" in metadata_by_course.columns:
+                metadata_by_course = metadata_by_course.set_index("course_id")
+            metadata_by_course.index = metadata_by_course.index.astype(str)
         for course_id in candidate_course_ids:
-            diff_row = self._get_difficulty_row(degree_id, course_id)
+            candidate_info = pd.Series(dtype=object)
+            if metadata_by_course is not None and str(course_id) in metadata_by_course.index:
+                candidate_info = metadata_by_course.loc[str(course_id)]
+                if isinstance(candidate_info, pd.DataFrame):
+                    candidate_info = candidate_info.iloc[0]
+            diff_row = self._get_difficulty_row(
+                degree_id,
+                course_id,
+                faculty_id=candidate_info.get("faculty_id"),
+                requirement_type_id=candidate_info.get("requirement_type_id"),
+                course_credits=candidate_info.get("course_credits"),
+            )
             attempt = _attempt_number(df_history, course_id)
 
             row = {
                 # Student history features (from snapshot)
-                "model_prev_gpa": snapshot.get("model_prev_gpa", np.nan),
+                "prev_gpa_points_clean": snapshot.get("prev_gpa_points_clean", np.nan),
                 "start_agpa_points": snapshot.get("start_agpa_points", np.nan),
                 "last_valid_gpa_before_current_semester": snapshot.get(
                     "last_valid_gpa_before_current_semester", np.nan
@@ -290,7 +355,8 @@ class StudentScorer:
                 "course_pass_rate_historical": diff_row.get("course_pass_rate_historical", np.nan),
                 "course_avg_mark_historical": diff_row.get("course_avg_mark_historical", np.nan),
                 "course_retake_rate_historical": diff_row.get("course_retake_rate_historical", np.nan),
-                "difficulty_fallback_level": diff_row.get("difficulty_fallback_level", 5),
+                "course_history_count": diff_row.get("course_history_count", 0),
+                "difficulty_fallback_level": diff_row.get("difficulty_fallback_level", 6),
                 "course_difficulty_missing": diff_row.get("course_difficulty_missing", 1),
                 # Requirement features
                 "requirement_type_id": diff_row.get("requirement_type_id", np.nan),
@@ -301,6 +367,9 @@ class StudentScorer:
                 ),
                 "course_share_of_requirement": diff_row.get("course_share_of_requirement", 0.0),
                 "requirement_size_bucket": diff_row.get("requirement_size_bucket", "none_or_unknown"),
+                # Pre-admission diploma features are student-level snapshot values.
+                "diploma_gpa": snapshot.get("diploma_gpa", np.nan),
+                "diploma_type_bucket": snapshot.get("diploma_type_bucket", -1),
                 # Metadata (not in MODEL_FEATURES, kept for output)
                 "_course_id": course_id,
             }

@@ -143,6 +143,19 @@ def _segment_auc(metrics: Optional[Dict[str, Any]], name: str) -> Optional[float
     return _value(metrics, "segments", "valid", name, "auc")
 
 
+def _auc_gap(metrics: Optional[Dict[str, Any]]) -> Optional[float]:
+    stored = _value(
+        metrics, "m1_pass_classifier", "valid", "train_valid_auc_gap"
+    )
+    if stored is not None:
+        return stored
+    train_auc = _value(metrics, "m1_pass_classifier", "train", "auc")
+    valid_auc = _value(metrics, "m1_pass_classifier", "valid", "auc")
+    if train_auc is None or valid_auc is None:
+        return None
+    return train_auc - valid_auc
+
+
 def _report_text(
     context: RunContext,
     results: Dict[str, Any],
@@ -159,18 +172,6 @@ def _report_text(
         if context.case_name == "add-diploma-signals"
         else "Record this isolated training experiment for reproducible comparison."
     )
-    old_recall = _value(baseline, "m1_pass_classifier", "valid", "fail_recall")
-    old_f1 = _value(baseline, "m1_pass_classifier", "valid", "fail_f1")
-    new_recall = _value(current, "m1_pass_classifier", "valid", "fail_recall")
-    new_f1 = _value(current, "m1_pass_classifier", "valid", "fail_f1")
-    if None in {old_recall, old_f1, new_recall, new_f1}:
-        recall_f1 = "- M1 valid fail recall/F1: not calculated"
-    else:
-        recall_f1 = (
-            f"- M1 valid fail recall/F1: {old_recall:.4f}/{old_f1:.4f} -> "
-            f"{new_recall:.4f}/{new_f1:.4f} "
-            f"({_delta(old_recall, new_recall)}/{_delta(old_f1, new_f1)})"
-        )
     flags = list(flags)
     flag_lines = "\n".join(f"- {flag}" for flag in flags) if flags else "- None"
 
@@ -191,9 +192,13 @@ def _report_text(
 
 ## Main result
 
+Selection is based on VALID only. Higher is better for fail-class AP/AUC;
+lower is better for Brier and the train-valid AUC gap. TEST is descriptive only.
+
+{_metric_line('M1 valid fail-class Average Precision', _value(baseline, 'm1_pass_classifier', 'valid', 'fail_avg_precision'), _value(current, 'm1_pass_classifier', 'valid', 'fail_avg_precision'))}
 {_metric_line('M1 valid AUC', _value(baseline, 'm1_pass_classifier', 'valid', 'auc'), _value(current, 'm1_pass_classifier', 'valid', 'auc'))}
-{recall_f1}
-{_metric_line('M2 valid MAE', _value(baseline, 'm2_grade_regressor', 'valid', 'mae'), _value(current, 'm2_grade_regressor', 'valid', 'mae'))}
+{_metric_line('M1 valid Brier', _value(baseline, 'm1_pass_classifier', 'valid', 'brier'), _value(current, 'm1_pass_classifier', 'valid', 'brier'))}
+{_metric_line('M1 train-valid AUC gap', _auc_gap(baseline), _auc_gap(current))}
 
 ## Segment result
 
