@@ -19,11 +19,16 @@ All arguments default to the canonical final-generation splits
 03_diploma_type_bucketing) and MODELS_DIR. Pass --train/--valid/--test/--out
 only to override. From a notebook, call main([]) so Jupyter's own argv is
 not parsed.
+
+This module never builds the parquet splits. Every invocation trains both
+models from scratch; loading saved weights for prediction is handled by the
+inference/analysis code instead.
 """
 
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -135,6 +140,20 @@ _LEFTOVER_KEY_PATTERNS = ["l3_key", "l4_key", "_key", "tmp", "temp", "idx"]
 
 TARGET_GRADE = "final_mark"       # M2 regressor target
 EXPECTED_FEATURE_COUNT = 39
+DERIVED_FEATURE_SOURCES = {
+    "requirement_size_bucket_ord": "requirement_size_bucket",
+}
+SEGMENT_ONLY_COLUMNS = ["difficulty_fallback_level"]
+
+# Read only columns used by fitting, targets, derivations, or reported segments.
+# The final parquet files contain many audit/string columns that model training
+# never consumes; loading them added hundreds of MiB to every training process.
+TRAINING_DATA_COLUMNS = list(dict.fromkeys(
+    [c for c in MODEL_FEATURES if c not in DERIVED_FEATURE_SOURCES]
+    + list(DERIVED_FEATURE_SOURCES.values())
+    + [TARGET_GRADE]
+    + SEGMENT_ONLY_COLUMNS
+))
 
 
 # ---------------------------------------------------------------------------
@@ -201,7 +220,6 @@ def prepare_X_y(
     if categorical_levels is None:
         raise ValueError("categorical_levels is required (learn from df_train first).")
 
-    df = df.copy()
     _check_target_column(df)
 
     # --- requirement_size_bucket -> ordinal, with a LOUD warning on unmapped values ---
@@ -214,23 +232,32 @@ def prepare_X_y(
             "WARNING: requirement_size_bucket has values NOT in REQUIREMENT_BUCKET_ORD; "
             f"they will map to 0. Unmapped values + counts: {counts}"
         )
-    df["requirement_size_bucket_ord"] = (
+    requirement_size_bucket_ord = (
         raw_bucket.map(REQUIREMENT_BUCKET_ORD).fillna(0).astype(int)
     )
 
-    # --- categorical handling (NaN + unseen -> -1, explicit category) ---
-    df = _apply_categorical_levels(df, categorical_levels)
-
     # --- presence check ---
-    missing_cols = [c for c in MODEL_FEATURES if c not in df.columns]
+    source_features = [c for c in MODEL_FEATURES if c not in DERIVED_FEATURE_SOURCES]
+    missing_cols = [c for c in source_features if c not in df.columns]
     if missing_cols:
         raise ValueError(f"Missing expected feature columns: {missing_cols}")
 
-    X = df[MODEL_FEATURES].copy()
+    # Copy only the model matrix, not the full 72-column source dataframe.
+    X = df[source_features].copy()
+    X.insert(
+        MODEL_FEATURES.index("requirement_size_bucket_ord"),
+        "requirement_size_bucket_ord",
+        requirement_size_bucket_ord,
+    )
+
+    # --- categorical handling (NaN + unseen -> -1, explicit category) ---
+    X = _apply_categorical_levels(X, categorical_levels)
 
     # --- dtype casting: numeric -> float64; categorical stays 'category' ---
+    # Cast one column at a time to avoid a second full numeric-frame temporary.
     numeric_feats = [c for c in MODEL_FEATURES if c not in CATEGORICAL_FEATURES]
-    X[numeric_feats] = X[numeric_feats].astype("float64")
+    for col in numeric_feats:
+        X[col] = X[col].astype("float64")
 
     # --- leakage gate + dropped-feature guard ---
     assert_no_leakage_columns(X)
@@ -277,10 +304,10 @@ def run_pre_training_diagnostics(
     print(f"\n[2] Dropped features present in X (must be empty): {still_present}")
     assert not still_present, f"Forbidden features in X: {still_present}"
 
-    # 4) unused parquet columns (informational)
+    # 4) loaded non-model columns (target/derivation/segment inputs; informational)
     used = set(MODEL_FEATURES) | {TARGET_GRADE}
     unused = sorted(c for c in df_train.columns if c not in used)
-    print(f"\n[3] Parquet columns NOT used by the model ({len(unused)}):")
+    print(f"\n[3] Loaded columns NOT used directly by the model ({len(unused)}):")
     print("    " + ", ".join(unused))
 
     # 5) leftover-key audit (flag only)
@@ -303,6 +330,8 @@ def run_pre_training_diagnostics(
     for c in MODEL_FEATURES:
         print(f"    {c}: {dtypes[c]}")
 
+    del X_train
+    gc.collect()
     print("\n=== END DIAGNOSTICS ===\n")
     return dtypes
 
@@ -320,7 +349,11 @@ _SHARED_PARAMS = {
     "bagging_freq": 5,
     "reg_alpha": 0.1,
     "reg_lambda": 1.0,
-    "n_jobs": -1,
+    # Bound the histogram cache and avoid LightGBM's extra row-wise Dataset
+    # allocation. This trades a little speed for a predictable RAM ceiling.
+    "histogram_pool_size": 256,
+    "force_col_wise": True,
+    "num_threads": 4,
     "verbose": -1,
     "seed": 42,
 }
@@ -328,12 +361,16 @@ _SHARED_PARAMS = {
 
 def _make_datasets(X_tr, y_tr, X_va, y_va):
     dtrain = lgb.Dataset(
-        X_tr, label=y_tr, free_raw_data=False, categorical_feature=CATEGORICAL_FEATURES
+        X_tr, label=y_tr, free_raw_data=True, categorical_feature=CATEGORICAL_FEATURES
     )
     dvalid = lgb.Dataset(
-        X_va, label=y_va, reference=dtrain, free_raw_data=False,
+        X_va, label=y_va, reference=dtrain, free_raw_data=True,
         categorical_feature=CATEGORICAL_FEATURES,
     )
+    # Construct now so LightGBM can release its references to the pandas frames
+    # before boosting begins. The native binned datasets retain everything needed.
+    dtrain.construct()
+    dvalid.construct()
     return dtrain, dvalid
 
 
@@ -355,6 +392,8 @@ def train_pass_model(  # M1 classifier
         default_params.update(params)
 
     dtrain, dvalid = _make_datasets(X_tr, y_tr, X_va, y_va)
+    del X_tr, y_tr, X_va, y_va
+    gc.collect()
     evals_result: dict = {}
     # Only validation may select the stopping iteration. Test is evaluated
     # after fitting and is never passed to LightGBM during training.
@@ -385,6 +424,8 @@ def train_grade_model(  # M2 regressor
         default_params.update(params)
 
     dtrain, dvalid = _make_datasets(X_tr, y_tr, X_va, y_va)
+    del X_tr, y_tr, X_va, y_va
+    gc.collect()
     evals_result: dict = {}
     # Only validation may select the stopping iteration. Test is evaluated
     # after fitting and is never passed to LightGBM during training.
@@ -410,7 +451,7 @@ def evaluate_pass(model, df, categorical_levels, label="") -> dict:  # M1
     """M1 metrics, including fail-class AP used for experiment selection."""
     X, y = prepare_X_y(df, "pass", categorical_levels)
     y_prob = model.predict(X)
-    y_bin = (y_prob >= 0.5).astype(int)
+    y_bin = (y_prob >= 0.85).astype(int)
 
     # labels=[0,1] -> row 0 = actual fail, row 1 = actual pass
     cm = confusion_matrix(y, y_bin, labels=[0, 1])
@@ -523,7 +564,7 @@ def print_threshold_table(model, df_valid, df_test, categorical_levels) -> None:
             fp_val = precision_score(y, y_bin, pos_label=0, zero_division=0)
             fr_val = recall_score(y, y_bin, pos_label=0, zero_division=0)
             ff_val = f1_score(y, y_bin, pos_label=0, zero_division=0)
-            print(f"  [{split_label}]  {thr:.1f}   {fp_val:.4f}    {fr_val:.4f}   {ff_val:.4f}")
+            print(f"  [{split_label}]  {thr:g}   {fp_val:.4f}    {fr_val:.4f}   {ff_val:.4f}")
 
     print("\n  (No threshold auto-selected — choose after reviewing the table above.)")
     print("=== END THRESHOLD TABLE ===\n")
@@ -568,7 +609,7 @@ def stratified_threshold_table(model, df_test, categorical_levels) -> None:
             fp_val = precision_score(y_seg, y_bin, pos_label=0, zero_division=0)
             fr_val = recall_score(y_seg, y_bin, pos_label=0, zero_division=0)
             ff_val = f1_score(y_seg, y_bin, pos_label=0, zero_division=0)
-            print(f"    {thr:.1f}   {fp_val:.4f}    {fr_val:.4f}   {ff_val:.4f}")
+            print(f"    {thr:g}   {fp_val:.4f}    {fr_val:.4f}   {ff_val:.4f}")
 
     print("\n=== END SEGMENTED THRESHOLD TABLE ===\n")
 
@@ -641,6 +682,17 @@ def _save_training_curves(
 # CLI entry point
 # ---------------------------------------------------------------------------
 
+def _read_existing_split(path: str | Path) -> pd.DataFrame:
+    """Read an existing model-ready split without invoking any data builder."""
+    path = Path(path)
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"Model-ready split not found: {path}. "
+            "Training never rebuilds data; run the data pipeline explicitly first."
+        )
+    return pd.read_parquet(path, columns=TRAINING_DATA_COLUMNS)
+
+
 def main(argv: List[str] | None = None) -> None:
     # Defaults point at the final-generation splits (bucketing output), so the
     # common case needs no arguments. argv=None reads sys.argv (CLI); pass an
@@ -654,7 +706,15 @@ def main(argv: List[str] | None = None) -> None:
     parser.add_argument("--run-name", help="Persistent readable experiment name (creates a timestamped run).")
     parser.add_argument("--note", default="", help="One-line description used in the run report and leaderboard.")
     parser.add_argument("--compare-to", help="Persistent baseline run ID used for validation-metric deltas.")
+    parser.add_argument(
+        "--num-threads",
+        type=int,
+        default=4,
+        help="LightGBM worker threads (default: 4; raise for speed if RAM/CPU allow).",
+    )
     args = parser.parse_args(argv)
+    if args.num_threads < 1:
+        parser.error("--num-threads must be at least 1")
 
     run_context = experiment_tracking.resolve_output(
         Path(args.out), args.run_name, args.note, args.compare_to
@@ -664,10 +724,12 @@ def main(argv: List[str] | None = None) -> None:
     print(f"Artifacts will be written to: {out_dir}")
 
     print("Loading data …")
-    df_train = pd.read_parquet(args.train)
-    df_valid = pd.read_parquet(args.valid)
-    df_test = pd.read_parquet(args.test)
+    print("  Existing splits only; this module never invokes a data builder.")
+    df_train = _read_existing_split(args.train)
+    df_valid = _read_existing_split(args.valid)
+    df_test = _read_existing_split(args.test)
     print(f"  train {df_train.shape}  valid {df_valid.shape}  test {df_test.shape}")
+    print(f"  loaded {len(TRAINING_DATA_COLUMNS)} required columns; audit-only columns stayed on disk")
 
     # TEMPORARY: remove after rebuilding final splits from 02_merge_diploma.
     # Fit once on train only; valid/test must reuse the same frozen value.
@@ -690,8 +752,10 @@ def main(argv: List[str] | None = None) -> None:
     print("\nLearning categorical levels (train only) …")
     categorical_levels = learn_categorical_levels(df_train)
     dtypes = run_pre_training_diagnostics(df_train, categorical_levels)
-    X_flags, _ = prepare_X_y(df_train, "pass", categorical_levels)
+    X_flags, y_flags = prepare_X_y(df_train, "pass", categorical_levels)
     constant_features = list(X_flags.nunique(dropna=False)[lambda s: s <= 1].index)
+    del X_flags, y_flags
+    gc.collect()
     important_flags = []
     if constant_features:
         important_flags.append("Train constant features: " + ", ".join(constant_features))
@@ -702,13 +766,18 @@ def main(argv: List[str] | None = None) -> None:
 
     # Leakage gate on all three splits BEFORE training.
     for name, d in (("train", df_train), ("valid", df_valid), ("test", df_test)):
-        X_chk, _ = prepare_X_y(d, "pass", categorical_levels)
+        X_chk, y_chk = prepare_X_y(d, "pass", categorical_levels)
         assert_no_leakage_columns(X_chk)
         print(f"Leakage gate passed on {name} ({X_chk.shape[1]} features).")
+        del X_chk, y_chk
+    gc.collect()
 
     # --- M1: pass/fail classifier ---
     print("\n=== Training M1 (pass/fail classifier) ===")
-    pass_model, m1_evals = train_pass_model(df_train, df_valid, categorical_levels)
+    training_params = {"num_threads": args.num_threads}
+    pass_model, m1_evals = train_pass_model(
+        df_train, df_valid, categorical_levels, params=training_params
+    )
     m1_train = evaluate_pass(pass_model, df_train, categorical_levels, "train")
     m1_valid = evaluate_pass(pass_model, df_valid, categorical_levels, "valid")
     m1_valid["train_valid_auc_gap"] = float(m1_train["auc"] - m1_valid["auc"])
@@ -723,7 +792,9 @@ def main(argv: List[str] | None = None) -> None:
 
     # --- M2: final_mark regressor ---
     print("\n=== Training M2 (final_mark regressor) ===")
-    grade_model, m2_evals = train_grade_model(df_train, df_valid, categorical_levels)
+    grade_model, m2_evals = train_grade_model(
+        df_train, df_valid, categorical_levels, params=training_params
+    )
     m2_train = evaluate_grade(grade_model, df_train, categorical_levels, "train")
     m2_valid = evaluate_grade(grade_model, df_valid, categorical_levels, "valid")
     m2_test = evaluate_grade(grade_model, df_test, categorical_levels, "test (descriptive)")

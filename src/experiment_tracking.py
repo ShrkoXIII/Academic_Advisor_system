@@ -134,8 +134,10 @@ def _delta(old: Optional[float], new: Optional[float]) -> str:
 
 
 def _metric_line(label: str, old: Optional[float], new: Optional[float]) -> str:
-    if old is None or new is None:
+    if new is None:
         return f"- {label}: not calculated"
+    if old is None:
+        return f"- {label}: {new:.4f} (no baseline)"
     return f"- {label}: {old:.4f} -> {new:.4f} ({_delta(old, new)})"
 
 
