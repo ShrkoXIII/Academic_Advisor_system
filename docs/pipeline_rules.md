@@ -91,6 +91,15 @@ training → KNN index → recommendation.
   a hard requirement.
 * One unified model unless evaluation evidence proves segmentation is needed.
 
+## Data lifecycle cross-reference
+
+* Dataset versioning and promotion rules (L1–L6) are locked in `CLAUDE.md`
+  § Data lifecycle — read them there; not duplicated here.
+* Per L5c, the parity reference (hashes + feature-count contract) is
+  re-based to the new generation only at promotion time. This means parity
+  (`scripts/parity_check.py`) always validates the current LIVE generation
+  — never a pending candidate version sitting in `versions/`.
+
 ## Merge Rules
 
 For every merge:

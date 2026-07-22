@@ -81,6 +81,39 @@ IDs carry a dotted university suffix (e.g. `15.111`). The suffix is
 meaningful identity, NOT a decimal. IDs are stored as pandas `string` via
 `cleaning_utils.normalize_id_series`. Never join on float IDs.
 
+## Data lifecycle (locked)
+
+These rules govern how a dataset rebuild moves from candidate to accepted
+"live" status. They apply always, independent of whichever job is
+currently active.
+
+* **L1. Live splits are the last accepted generation.** Live splits
+  (`data/model_data/df_{train,valid,test}_final.parquet`) always equal the
+  LAST ACCEPTED generation. Nothing writes to them except a promotion
+  commit (L5).
+* **L2. Every rebuild is a new immutable version.** Every dataset rebuild
+  (feature engineering → splits → train-only stats → bucketing) writes to
+  a new immutable folder `data/model_data/versions/<date>_<change-name>/`.
+  Never modify an existing version folder; any fix is a new version.
+* **L3. Experiments consume an explicit version.** Experiment training
+  runs consume a version via explicit `--train`/`--valid`/`--test` paths.
+  `model_split_path` defaults are reserved for the accepted live
+  generation only.
+* **L4. Every run records provenance.** Every run must record resolved
+  input paths + file hashes (or mtimes) in `run_inputs.json` inside the
+  run folder. Until tooling task T1 lands, the runner states the paths
+  manually in the run REPORT.
+* **L5. Promotion is one explicit commit, after acceptance is logged.**
+  (a) copy the accepted version's files over the live splits; (b) write
+  `data/model_data/CURRENT_VERSION.txt` with the source version; (c)
+  re-base the parity reference (hashes + feature-count contract) to the
+  new generation; (d) log the promotion in `Decisions_Log.md`. Rejected
+  versions stay in `versions/`, marked rejected; live stays unchanged.
+* **L6. Feature additions re-execute from stage 3.** Adding a feature
+  re-executes stage 3 (feature engineering) onward into a new version.
+  Stages 1–2 (raw, cleaning/merge) change only if the feature needs a new
+  source column — then the rebuild starts from that stage.
+
 ---
 
 *The full pipeline rules (targets, leakage control, merge validation, ML
