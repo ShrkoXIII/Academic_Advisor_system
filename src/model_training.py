@@ -53,7 +53,7 @@ from src import experiment_tracking
 from src.paths import MODELS_DIR, model_split_path
 
 # ---------------------------------------------------------------------------
-# Feature contract — V1 LOCKED ALLOWLIST (39 features)
+# Feature contract — V1 LOCKED ALLOWLIST (41 features)
 # ---------------------------------------------------------------------------
 # This is an explicit allowlist. It is NOT derived from fe.FEATURE_COLUMNS,
 # because that list contains diagnostic / string / leakage columns and is not a
@@ -64,6 +64,8 @@ MODEL_FEATURES: List[str] = [
     "prev_gpa_points_clean",                  # zero + flags design (NOT model_prev_gpa)
     "start_agpa_points",                      # cumulative AGPA at semester start
     "last_valid_gpa_before_current_semester", # last real GPA, skips interruptions
+    "gpa_trend_delta",                        # last valid GPA minus second-last valid GPA
+    "gpa_trend_missing",                      # trend undefined until two prior valid GPAs
     # --- Student workload / fail history ---
     "start_total_in_credits",
     "start_total_in_courses",
@@ -138,7 +140,7 @@ REQUIREMENT_BUCKET_ORD = {
 _LEFTOVER_KEY_PATTERNS = ["l3_key", "l4_key", "_key", "tmp", "temp", "idx"]
 
 TARGET_GRADE = "final_mark"       # M2 regressor target
-EXPECTED_FEATURE_COUNT = 39
+EXPECTED_FEATURE_COUNT = 41
 DERIVED_FEATURE_SOURCES = {
     "requirement_size_bucket_ord": "requirement_size_bucket",
 }

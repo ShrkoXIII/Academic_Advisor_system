@@ -13,6 +13,10 @@ import pandas as pd
 from src.feature_engineering import run_feature_engineering_job
 
 
+SEMESTER_KEY = ["university_id", "student_id", "degree_id", "part_id"]
+STUDENT_DEGREE_KEY = ["university_id", "student_id", "degree_id"]
+
+
 def _base_row(**overrides):
     # Keep a complete minimal course-row fixture so each test can override only
     # the field involved in the behaviour it protects.
@@ -119,6 +123,201 @@ class FeatureEngineeringJobTest(unittest.TestCase):
         self.assertEqual(int(current["consecutive_interruption_count"]), 1)
         self.assertAlmostEqual(current["last_valid_gpa_before_current_semester"], 2.0)
         self.assertAlmostEqual(current["prev_gpa_points_clean"], 2.0)
+
+    def test_gpa_trend_matches_brute_force_valid_history_oracle(self):
+        # The fixture deliberately covers interruption and invalid-zero gaps,
+        # cold starts, a true flat trend, duplicate course rows in one semester,
+        # and the same student/degree identity at two universities.
+        rows = [
+            _base_row(student_id="interrupted", part_id="20201", course_id="i1", gpa_points=2.0),
+            _base_row(
+                student_id="interrupted",
+                part_id="20202",
+                course_id="i2a",
+                semester_pass_credits=0,
+                gpa_points=0.0,
+                start_total_in_courses=4,
+                start_total_in_credits=12,
+            ),
+            _base_row(
+                student_id="interrupted",
+                part_id="20202",
+                course_id="i2b",
+                semester_pass_credits=0,
+                gpa_points=0.0,
+                start_total_in_courses=4,
+                start_total_in_credits=12,
+            ),
+            _base_row(
+                student_id="interrupted",
+                part_id="20203",
+                course_id="i3",
+                gpa_points=3.0,
+                start_total_in_courses=8,
+                start_total_in_credits=24,
+            ),
+            _base_row(
+                student_id="interrupted",
+                part_id="20204",
+                course_id="i4",
+                gpa_points=3.5,
+                start_total_in_courses=12,
+                start_total_in_credits=36,
+            ),
+            _base_row(student_id="invalid_zero", part_id="20201", course_id="z1", gpa_points=3.2),
+            _base_row(
+                student_id="invalid_zero",
+                part_id="20202",
+                course_id="z2",
+                semester_pass_credits=12,
+                gpa_points=0.0,
+                start_total_in_courses=4,
+                start_total_in_credits=12,
+            ),
+            _base_row(
+                student_id="invalid_zero",
+                part_id="20203",
+                course_id="z3",
+                gpa_points=2.9,
+                start_total_in_courses=8,
+                start_total_in_credits=24,
+            ),
+            _base_row(
+                student_id="invalid_zero",
+                part_id="20204",
+                course_id="z4",
+                gpa_points=3.1,
+                start_total_in_courses=12,
+                start_total_in_credits=36,
+            ),
+            _base_row(student_id="single", part_id="20201", course_id="s1", gpa_points=2.4),
+            _base_row(student_id="flat", part_id="20201", course_id="f1", gpa_points=2.5),
+            _base_row(
+                student_id="flat",
+                part_id="20202",
+                course_id="f2",
+                gpa_points=2.5,
+                start_total_in_courses=4,
+                start_total_in_credits=12,
+            ),
+            _base_row(
+                student_id="flat",
+                part_id="20203",
+                course_id="f3",
+                gpa_points=3.0,
+                start_total_in_courses=8,
+                start_total_in_credits=24,
+            ),
+            _base_row(
+                university_id="111",
+                student_id="same_student",
+                degree_id="same_degree",
+                part_id="20201",
+                course_id="u1",
+                gpa_points=3.7,
+            ),
+            _base_row(
+                university_id="111",
+                student_id="same_student",
+                degree_id="same_degree",
+                part_id="20202",
+                course_id="u2",
+                gpa_points=3.5,
+                start_total_in_courses=4,
+                start_total_in_credits=12,
+            ),
+            _base_row(
+                university_id="222",
+                student_id="same_student",
+                degree_id="same_degree",
+                part_id="20203",
+                course_id="u3",
+                gpa_points=2.0,
+            ),
+        ]
+        source = pd.DataFrame(rows)
+
+        # Naive reference: walk the unique semester timeline, inspect only valid
+        # strictly-earlier GPAs, and take the last two observations directly.
+        semester = source.groupby(SEMESTER_KEY, as_index=False, dropna=False, sort=False).agg(
+            {
+                "gpa_points": "max",
+                "semester_reg_credits": "max",
+                "semester_pass_credits": "max",
+            }
+        )
+        semester["__part_num"] = pd.to_numeric(semester["part_id"], errors="coerce")
+        semester["__part_text"] = semester["part_id"].astype("string")
+        semester = semester.sort_values(
+            STUDENT_DEGREE_KEY + ["__part_num", "__part_text"],
+            kind="mergesort",
+            na_position="last",
+        )
+
+        expected_last = {}
+        expected_delta = {}
+        for _, timeline in semester.groupby(STUDENT_DEGREE_KEY, sort=False, dropna=False):
+            valid_history = []
+            for row in timeline.itertuples(index=False):
+                key = tuple(str(getattr(row, column)) for column in SEMESTER_KEY)
+                expected_last[key] = valid_history[-1] if valid_history else np.nan
+                expected_delta[key] = (
+                    valid_history[-1] - valid_history[-2]
+                    if len(valid_history) >= 2
+                    else np.nan
+                )
+                is_interruption = (
+                    row.semester_reg_credits > 0
+                    and row.semester_pass_credits == 0
+                    and row.gpa_points == 0
+                )
+                if row.gpa_points > 0 and not is_interruption:
+                    valid_history.append(row.gpa_points)
+
+        result = run_feature_engineering_job(source)
+        audit = result["df_model_audit"]
+        actual_keys = [
+            tuple(str(value) for value in values)
+            for values in audit[SEMESTER_KEY].itertuples(index=False, name=None)
+        ]
+        oracle_last = pd.Series(
+            [expected_last[key] for key in actual_keys], index=audit.index, dtype="float64"
+        )
+        oracle_delta = pd.Series(
+            [expected_delta[key] for key in actual_keys], index=audit.index, dtype="float64"
+        )
+
+        np.testing.assert_allclose(
+            audit["last_valid_gpa_before_current_semester"].to_numpy(dtype=float),
+            oracle_last.to_numpy(dtype=float),
+            rtol=0,
+            atol=0,
+            equal_nan=True,
+        )
+        np.testing.assert_allclose(
+            audit["gpa_trend_delta"].to_numpy(dtype=float),
+            oracle_delta.to_numpy(dtype=float),
+            rtol=0,
+            atol=0,
+            equal_nan=True,
+        )
+        self.assertEqual(
+            audit["gpa_trend_missing"].tolist(),
+            audit["gpa_trend_delta"].isna().astype(int).tolist(),
+        )
+        self.assertEqual(len(audit), len(source))
+
+        interrupted_current = audit.loc[
+            audit["student_id"].eq("interrupted") & audit["part_id"].eq("20204")
+        ].iloc[0]
+        self.assertAlmostEqual(interrupted_current["gpa_trend_delta"], 1.0)
+        flat_current = audit.loc[
+            audit["student_id"].eq("flat") & audit["part_id"].eq("20203")
+        ].iloc[0]
+        self.assertEqual(float(flat_current["gpa_trend_delta"]), 0.0)
+        self.assertEqual(int(flat_current["gpa_trend_missing"]), 0)
+        university_222 = audit.loc[audit["university_id"].eq("222")].iloc[0]
+        self.assertTrue(pd.isna(university_222["gpa_trend_delta"]))
 
     def test_timeline_grouping_is_university_aware(self):
         df = pd.DataFrame(

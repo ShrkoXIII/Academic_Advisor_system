@@ -27,7 +27,9 @@ class ModelTrainingContractTests(unittest.TestCase):
 
     def test_diploma_features_extend_the_contract_without_raw_type_id(self):
         self.assertEqual(len(MODEL_FEATURES), EXPECTED_FEATURE_COUNT)
-        self.assertEqual(EXPECTED_FEATURE_COUNT, 39)
+        self.assertEqual(EXPECTED_FEATURE_COUNT, 41)
+        self.assertIn("gpa_trend_delta", MODEL_FEATURES)
+        self.assertIn("gpa_trend_missing", MODEL_FEATURES)
         self.assertIn("diploma_gpa", MODEL_FEATURES)
         self.assertIn("diploma_type_bucket", MODEL_FEATURES)
         self.assertEqual(

@@ -68,6 +68,7 @@ SEMESTER_FEATURE_COLUMNS = [
     "is_first_active_semester",
     "is_first_row_in_timeline",
     "last_valid_gpa_before_current_semester",
+    "gpa_trend_delta",
 ]
 
 # Public feature catalog used by diagnostics to report what this job added or
@@ -89,6 +90,8 @@ FEATURE_COLUMNS = [
     "is_first_active_semester",
     "is_first_row_in_timeline",
     "last_valid_gpa_before_current_semester",
+    "gpa_trend_delta",
+    "gpa_trend_missing",
     "prev_gpa_points_missing",
     "prev_gpa_points_zero",
     "prev_gpa_invalid_zero_case",
@@ -401,6 +404,36 @@ def _active_semester_flags(semester_df):
     return semester_df
 
 
+def add_valid_gpa_history_features(semester_df, gpa_points=None):
+    """Add strictly-prior last-valid GPA and two-valid-observation trend."""
+    if gpa_points is None:
+        gpa_points = _numeric_series(semester_df, "gpa_points", default=np.nan)
+    valid_gpa_for_history = gpa_points.where(
+        gpa_points.gt(0).fillna(False) & semester_df["is_interruption_semester"].eq(0)
+    )
+    valid_gpa_group = valid_gpa_for_history.groupby(
+        [semester_df[column] for column in STUDENT_DEGREE_KEY],
+        sort=False,
+        dropna=False,
+    )
+    last_valid_gpa = valid_gpa_group.transform(lambda values: values.ffill().shift(1))
+    semester_df["last_valid_gpa_before_current_semester"] = last_valid_gpa
+
+    # Build trend from the valid-observation subsequence, not from a twice-shifted
+    # forward-filled series. At each valid row, last_valid_gpa is the preceding
+    # valid observation. Keeping it only on valid rows, then forward-filling and
+    # shifting once more, propagates the second-to-last valid observation while
+    # remaining strictly before the current semester.
+    previous_valid_gpa_at_valid_row = last_valid_gpa.where(valid_gpa_for_history.notna())
+    second_last_valid_gpa = previous_valid_gpa_at_valid_row.groupby(
+        [semester_df[column] for column in STUDENT_DEGREE_KEY],
+        sort=False,
+        dropna=False,
+    ).transform(lambda values: values.ffill().shift(1))
+    semester_df["gpa_trend_delta"] = last_valid_gpa - second_last_valid_gpa
+    return semester_df
+
+
 def build_semester_history(df_model_audit, diagnostics):
     """Build full-audit semester history before policy exclusions."""
     # Build semester history from the full audit frame so over-policy semesters
@@ -494,17 +527,7 @@ def build_semester_history(df_model_audit, diagnostics):
 
     # Shift valid GPA history so the current semester's GPA never leaks into
     # features used to predict that same semester.
-    valid_gpa_for_history = gpa_points.where(
-        gpa_points.gt(0).fillna(False) & semester_df["is_interruption_semester"].eq(0)
-    )
-    semester_df["last_valid_gpa_before_current_semester"] = (
-        valid_gpa_for_history.groupby(
-            [semester_df[column] for column in STUDENT_DEGREE_KEY],
-            sort=False,
-            dropna=False,
-        )
-        .transform(lambda values: values.ffill().shift(1))
-    )
+    semester_df = add_valid_gpa_history_features(semester_df, gpa_points)
 
     # Store timeline diagnostics because most data quality bugs in this pipeline
     # show up as grouping, sorting, or first-semester concept issues.
@@ -547,6 +570,7 @@ def merge_semester_history(df_model_audit, semester_df, diagnostics):
 
     key_map = dict(zip(merge_labels, SEMESTER_KEY))
     left = df_model_audit.copy()
+    left_row_count = len(left)
     right = semester_df.copy()
     for label in merge_labels:
         key_column = key_map[label]
@@ -595,13 +619,27 @@ def merge_semester_history(df_model_audit, semester_df, diagnostics):
         validate="many_to_one",
         indicator="__fe_semester_feature_merge",
     )
+    assert len(merged) == left_row_count, (
+        "semester feature merge changed course-row count: "
+        f"before={left_row_count}, after={len(merged)}"
+    )
 
     # Move prefixed columns back to their canonical feature names.
     for column in SEMESTER_FEATURE_COLUMNS:
         merged[column] = merged[feature_rename[column]]
 
-    # Missing integer flags should be neutral zero; GPA history remains nullable.
-    integer_features = [column for column in SEMESTER_FEATURE_COLUMNS if column != "last_valid_gpa_before_current_semester"]
+    # Trend remains NaN until two valid prior semester GPAs exist. Preserve
+    # that distinction from a real flat trend (delta == 0.0) with a paired flag.
+    merged["gpa_trend_missing"] = merged["gpa_trend_delta"].isna().astype(int)
+
+    # Missing integer flags should be neutral zero; GPA history values remain nullable.
+    nullable_features = {
+        "last_valid_gpa_before_current_semester",
+        "gpa_trend_delta",
+    }
+    integer_features = [
+        column for column in SEMESTER_FEATURE_COLUMNS if column not in nullable_features
+    ]
     for column in integer_features:
         merged[column] = merged[column].fillna(0).astype(int)
 
@@ -1124,6 +1162,7 @@ __all__ = [
     "MAX_ALLOWED_SEMESTER_COURSES",
     "MAX_ALLOWED_SEMESTER_CREDITS",
     "STRUCTURAL_ZERO_AS_NAN",
+    "add_valid_gpa_history_features",
     "assert_no_leakage_columns",
     "run_feature_engineering_job",
 ]

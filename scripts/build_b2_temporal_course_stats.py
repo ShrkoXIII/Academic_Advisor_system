@@ -41,10 +41,11 @@ from src.paths import (  # noqa: E402
     MODEL_RUNS_DIR,
     model_split_path,
 )
+from src.model_training import EXPECTED_FEATURE_COUNT, MODEL_FEATURES  # noqa: E402
 
 
 SPLITS = ("train", "valid", "test")
-REFERENCE_RUN = "2026-07-12_1513__remove-dead-const"
+REFERENCE_RUN = "2026-07-16_1025__new-difficulty-logic"
 
 DIFFICULTY_INPUT_COLUMNS = [
     "part_id",
@@ -427,8 +428,12 @@ def build(args: argparse.Namespace) -> Path:
     reference_contract_path = MODEL_RUNS_DIR / args.reference_run / "feature_contract.json"
     reference_contract = json.loads(reference_contract_path.read_text(encoding="utf-8"))
     reference_features = reference_contract["features"]
-    expected_features_unchanged = (
+    expected_feature_change_is_gpa_trend_only = (
         reference_contract["n_features"] == len(reference_features) == 39
+        and EXPECTED_FEATURE_COUNT == len(MODEL_FEATURES) == 41
+        and set(MODEL_FEATURES).difference(reference_features)
+        == {"gpa_trend_delta", "gpa_trend_missing"}
+        and set(reference_features).difference(MODEL_FEATURES) == set()
         and "course_is_new" not in reference_features
         and "course_low_support" not in reference_features
         and "difficulty_fallback_level" not in reference_features
@@ -441,7 +446,7 @@ def build(args: argparse.Namespace) -> Path:
         "train exercises more than one fallback level": multi_level_gate,
         "valid/test statistics contain no nulls": valid_test_null_gate,
         "course_is_new definition equals no Level-1/2 history": new_definition_gate,
-        "MODEL_FEATURES remains the same 39-column contract": expected_features_unchanged,
+        "MODEL_FEATURES changes 39 -> 41 only for GPA trend": expected_feature_change_is_gpa_trend_only,
         "diploma_gpa values are byte-for-value unchanged": diploma_gate,
     }
     failed = [name for name, passed in data_gates.items() if not passed]
