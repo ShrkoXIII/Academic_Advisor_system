@@ -35,7 +35,12 @@ from src.course_difficulty import (  # noqa: E402
     fit_difficulty_state,
     save_difficulty_state,
 )
-from src.paths import MODEL_DATA_DIR  # noqa: E402
+from src.paths import (  # noqa: E402
+    MODEL_DATA_DIR,
+    MODEL_DATA_VERSIONS_DIR,
+    MODEL_RUNS_DIR,
+    model_split_path,
+)
 
 
 SPLITS = ("train", "valid", "test")
@@ -125,8 +130,8 @@ def verify_versioned_outputs(input_dir: Path, output_dir: Path) -> Dict[str, Any
     for split in SPLITS:
         for generation in ("difficulty", "final"):
             source_name = "base" if generation == "difficulty" else "final"
-            source_path = input_dir / f"df_{split}_{source_name}.parquet"
-            output_path = output_dir / f"df_{split}_{generation}.parquet"
+            source_path = model_split_path(split, source_name, input_dir)
+            output_path = model_split_path(split, generation, output_dir)
             source_file = pq.ParquetFile(source_path)
             output_file = pq.ParquetFile(output_path)
             if source_file.metadata.num_rows != output_file.metadata.num_rows:
@@ -308,9 +313,13 @@ def build(args: argparse.Namespace) -> Path:
 
     # Train is the largest split. Process and persist it before loading valid
     # or test so peak memory is bounded to one base/final pair.
-    train_base = pd.read_parquet(
-        input_dir / "df_train_base.parquet", columns=DIFFICULTY_INPUT_COLUMNS
+    train_base_path = model_split_path("train", "base", input_dir)
+    train_final_path = model_split_path("train", "final", input_dir)
+    staged_train_difficulty_path = model_split_path(
+        "train", "difficulty", staging_dir
     )
+    staged_train_final_path = model_split_path("train", "final", staging_dir)
+    train_base = pd.read_parquet(train_base_path, columns=DIFFICULTY_INPUT_COLUMNS)
     train_enriched = build_temporal_train(train_base, config, include_source=False)
     full_train_state = fit_difficulty_state(train_base, config)
     if not train_base.index.equals(train_enriched.index):
@@ -334,20 +343,20 @@ def build(args: argparse.Namespace) -> Path:
     )
 
     _stream_write_enriched(
-        input_dir / "df_train_base.parquet",
-        staging_dir / "df_train_difficulty.parquet",
+        train_base_path,
+        staged_train_difficulty_path,
         train_enriched,
     )
     _stream_write_enriched(
-        input_dir / "df_train_final.parquet",
-        staging_dir / "df_train_final.parquet",
+        train_final_path,
+        staged_train_final_path,
         train_enriched,
     )
     train_diploma_before = pd.read_parquet(
-        input_dir / "df_train_final.parquet", columns=["diploma_gpa"]
+        train_final_path, columns=["diploma_gpa"]
     )["diploma_gpa"]
     train_diploma_after = pd.read_parquet(
-        staging_dir / "df_train_final.parquet", columns=["diploma_gpa"]
+        staged_train_final_path, columns=["diploma_gpa"]
     )["diploma_gpa"]
     diploma_gate &= train_diploma_before.equals(train_diploma_after)
     diploma_null_counts["train"] = int(train_diploma_after.isna().sum())
@@ -360,7 +369,7 @@ def build(args: argparse.Namespace) -> Path:
         full_train_state,
         staging_dir / "difficulty_state",
         metadata={
-            "fit_source": str(input_dir / "df_train_base.parquet"),
+            "fit_source": str(train_base_path),
             "fit_rows": int(len(train_base)),
             "part_id_min": str(train_base.loc[part_numeric.idxmin(), "part_id"]),
             "part_id_max": str(train_base.loc[part_numeric.idxmax(), "part_id"]),
@@ -372,9 +381,11 @@ def build(args: argparse.Namespace) -> Path:
     gc.collect()
 
     for split in ("valid", "test"):
-        base = pd.read_parquet(
-            input_dir / f"df_{split}_base.parquet", columns=DIFFICULTY_INPUT_COLUMNS
-        )
+        base_path = model_split_path(split, "base", input_dir)
+        final_path = model_split_path(split, "final", input_dir)
+        staged_difficulty_path = model_split_path(split, "difficulty", staging_dir)
+        staged_final_path = model_split_path(split, "final", staging_dir)
+        base = pd.read_parquet(base_path, columns=DIFFICULTY_INPUT_COLUMNS)
         split_enriched = apply_difficulty_state(base, full_train_state, include_source=False)
         row_index_gate &= len(base) == len(split_enriched) and base.index.equals(split_enriched.index)
         new_definition_gate &= bool(
@@ -386,20 +397,20 @@ def build(args: argparse.Namespace) -> Path:
         valid_test_null_gate &= not split_enriched[STAT_OUTPUT_COLUMNS].isna().any().any()
 
         _stream_write_enriched(
-            input_dir / f"df_{split}_base.parquet",
-            staging_dir / f"df_{split}_difficulty.parquet",
+            base_path,
+            staged_difficulty_path,
             split_enriched,
         )
         _stream_write_enriched(
-            input_dir / f"df_{split}_final.parquet",
-            staging_dir / f"df_{split}_final.parquet",
+            final_path,
+            staged_final_path,
             split_enriched,
         )
         diploma_before = pd.read_parquet(
-            input_dir / f"df_{split}_final.parquet", columns=["diploma_gpa"]
+            final_path, columns=["diploma_gpa"]
         )["diploma_gpa"]
         diploma_after = pd.read_parquet(
-            staging_dir / f"df_{split}_final.parquet", columns=["diploma_gpa"]
+            staged_final_path, columns=["diploma_gpa"]
         )["diploma_gpa"]
         diploma_gate &= diploma_before.equals(diploma_after)
         diploma_null_counts[split] = int(diploma_after.isna().sum())
@@ -413,9 +424,7 @@ def build(args: argparse.Namespace) -> Path:
         values["status"] == "pass" for values in readback_checks.values()
     )
 
-    reference_contract_path = (
-        PROJECT_ROOT / "models" / "runs" / args.reference_run / "feature_contract.json"
-    )
+    reference_contract_path = MODEL_RUNS_DIR / args.reference_run / "feature_contract.json"
     reference_contract = json.loads(reference_contract_path.read_text(encoding="utf-8"))
     reference_features = reference_contract["features"]
     expected_features_unchanged = (
@@ -501,7 +510,7 @@ def build(args: argparse.Namespace) -> Path:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-dir", default=str(MODEL_DATA_DIR))
-    parser.add_argument("--output-root", default=str(MODEL_DATA_DIR / "versions"))
+    parser.add_argument("--output-root", default=str(MODEL_DATA_VERSIONS_DIR))
     parser.add_argument("--build-id")
     parser.add_argument("--min-support", type=int, default=20)
     parser.add_argument("--shrinkage-k", type=float, default=20.0)

@@ -14,11 +14,10 @@ Usage
 -----
 python -m src.model_training
 
-All arguments default to the canonical final-generation splits
-(MODEL_DATA_DIR/df_{train,valid,test}_final.parquet, written by
-03_diploma_type_bucketing) and MODELS_DIR. Pass --train/--valid/--test/--out
-only to override. From a notebook, call main([]) so Jupyter's own argv is
-not parsed.
+All arguments default to the canonical final-generation splits returned by
+``src.paths.model_split_path`` (written by 03_diploma_type_bucketing) and
+MODELS_DIR. Pass --train/--valid/--test/--out only to override. From a
+notebook, call main([]) so Jupyter's own argv is not parsed.
 
 This module never builds the parquet splits. Every invocation trains both
 models from scratch; loading saved weights for prediction is handled by the
@@ -51,7 +50,7 @@ from sklearn.metrics import (
 
 from src.feature_engineering import assert_no_leakage_columns
 from src import experiment_tracking
-from src.paths import MODEL_DATA_DIR, MODELS_DIR
+from src.paths import MODELS_DIR, model_split_path
 
 # ---------------------------------------------------------------------------
 # Feature contract — V1 LOCKED ALLOWLIST (39 features)
@@ -699,9 +698,9 @@ def main(argv: List[str] | None = None) -> None:
     # explicit list (e.g. []) when calling from a notebook so Jupyter's own
     # kernel arguments are not parsed.
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train", default=str(MODEL_DATA_DIR / "df_train_final.parquet"))
-    parser.add_argument("--valid", default=str(MODEL_DATA_DIR / "df_valid_final.parquet"))
-    parser.add_argument("--test", default=str(MODEL_DATA_DIR / "df_test_final.parquet"))
+    parser.add_argument("--train", default=str(model_split_path("train", "final")))
+    parser.add_argument("--valid", default=str(model_split_path("valid", "final")))
+    parser.add_argument("--test", default=str(model_split_path("test", "final")))
     parser.add_argument("--out", default=str(MODELS_DIR))
     parser.add_argument("--run-name", help="Persistent readable experiment name (creates a timestamped run).")
     parser.add_argument("--note", default="", help="One-line description used in the run report and leaderboard.")

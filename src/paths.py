@@ -30,6 +30,43 @@ MERGE_DIR = PREPROCESSED_DIR / "merge"
 ARCHIVE_DIR = DATA_DIR / "archive"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 
+# Canonical pipeline artifacts. Keep file names and reusable subdirectories here
+# so scripts and notebooks share one filesystem contract.
+SELECTED_MODEL_POPULATION_PATH = FEATURES_DIR / "selected_model_population.parquet"
+FEATURE_ENGINEERED_PRIMARY_PATH = FEATURES_DIR / "feature_engineered_primary.parquet"
+MODEL_DATA_VERSIONS_DIR = MODEL_DATA_DIR / "versions"
+DIPLOMA_TYPE_BUCKET_MAP_PATH = ARTIFACTS_DIR / "diploma_type_bucket_map.json"
+MODEL_RUNS_DIR = MODELS_DIR / "runs"
+GPA_TREND_REPORTS_DIR = REPORTS_DIR / "gpa_trend"
+
+MODEL_SPLITS = frozenset({"train", "valid", "test"})
+MODEL_DATA_GENERATIONS = frozenset({"base", "difficulty", "final"})
+
+
+def model_split_path(
+    split: str,
+    generation: str,
+    root: str | Path | None = None,
+) -> Path:
+    """Return a validated model-split artifact path under ``root``.
+
+    ``root`` defaults to the live model-data directory, while versioned builders
+    can pass their staging or published directory without duplicating filenames.
+    """
+    split = str(split).strip().lower()
+    generation = str(generation).strip().lower()
+    if split not in MODEL_SPLITS:
+        raise ValueError(
+            f"Unknown model split {split!r}; expected one of {sorted(MODEL_SPLITS)}"
+        )
+    if generation not in MODEL_DATA_GENERATIONS:
+        raise ValueError(
+            "Unknown model-data generation "
+            f"{generation!r}; expected one of {sorted(MODEL_DATA_GENERATIONS)}"
+        )
+    split_root = MODEL_DATA_DIR if root is None else Path(root)
+    return split_root / f"df_{split}_{generation}.parquet"
+
 
 def ensure_dir(path: Path) -> Path:
     # Return the path after creation so callers can compose this in expressions.
@@ -74,8 +111,11 @@ for directory in (
     FINAL_DIR,
     AUDIT_DIR,
     MODEL_DATA_DIR,
+    MODEL_DATA_VERSIONS_DIR,
     ARTIFACTS_DIR,
     MODELS_DIR,
+    MODEL_RUNS_DIR,
     REPORTS_DIR,
+    GPA_TREND_REPORTS_DIR,
 ):
     ensure_dir(directory)
