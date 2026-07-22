@@ -121,8 +121,8 @@ def check_join_integrity_and_lineage() -> None:
     base_cols = pd.read_parquet(MODEL_DATA_DIR / "df_train_base.parquet").shape[1]
     diff_cols = pd.read_parquet(MODEL_DATA_DIR / "df_train_difficulty.parquet").shape[1]
     final_cols = pd.read_parquet(MODEL_DATA_DIR / "df_train_final.parquet").shape[1]
-    check("column-count progression base -> difficulty (+7) -> final (+1)",
-          diff_cols == base_cols + 7 and final_cols == diff_cols + 1,
+    check("column-count progression base -> difficulty (+11) -> final (+1)",
+          diff_cols == base_cols + 11 and final_cols == diff_cols + 1,
           f"base={base_cols} difficulty={diff_cols} final={final_cols}")
 
     fit_state_path = ARTIFACTS_DIR / "diploma_type_bucket_map.json"
