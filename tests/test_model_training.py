@@ -27,11 +27,16 @@ class ModelTrainingContractTests(unittest.TestCase):
 
     def test_diploma_features_extend_the_contract_without_raw_type_id(self):
         self.assertEqual(len(MODEL_FEATURES), EXPECTED_FEATURE_COUNT)
-        self.assertEqual(EXPECTED_FEATURE_COUNT, 41)
+        self.assertEqual(EXPECTED_FEATURE_COUNT, 44)
         self.assertIn("gpa_trend_delta", MODEL_FEATURES)
         self.assertIn("gpa_trend_missing", MODEL_FEATURES)
         self.assertIn("diploma_gpa", MODEL_FEATURES)
         self.assertIn("diploma_type_bucket", MODEL_FEATURES)
+        # Concurrent course-group model features (audit columns stay out).
+        self.assertIn("concurrent_peer_difficulty_mean", MODEL_FEATURES)
+        self.assertIn("concurrent_peer_difficulty_max", MODEL_FEATURES)
+        self.assertIn("concurrent_peer_difficulty_missing", MODEL_FEATURES)
+        self.assertNotIn("concurrent_peer_observed_count", MODEL_FEATURES)
         self.assertEqual(
             CATEGORICAL_FEATURES,
             ["requirement_type_id", "diploma_type_bucket"],

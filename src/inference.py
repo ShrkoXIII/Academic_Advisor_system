@@ -44,12 +44,17 @@ import os
 from src.feature_engineering import (
     MAX_ALLOWED_SEMESTER_CREDITS,
     MAX_ALLOWED_SEMESTER_COURSES,
+    SEMESTER_KEY,
     run_feature_engineering_job,
 )
 from src.course_difficulty import (
     DifficultyState,
     apply_difficulty_state,
     load_difficulty_state,
+)
+from src.concurrent_group_features import (
+    MODEL_CONCURRENT_FEATURES,
+    compute_concurrent_group_features,
 )
 from src.model_training import MODEL_FEATURES, REQUIREMENT_BUCKET_ORD, prepare_X_y
 
@@ -290,8 +295,40 @@ class StudentScorer:
             else:
                 expected_semester_courses = 5
 
-        # Build a model-compatible feature row per candidate by combining the
-        # student snapshot, target semester context, and degree-course lookup.
+        # Single-course scoring has no plan context, so the concurrent peer
+        # features stay on their singleton placeholder inside the frame builder.
+        df_cand = self._build_candidate_frame(
+            snapshot=snapshot,
+            candidate_course_ids=candidate_course_ids,
+            degree_id=degree_id,
+            df_history=df_history,
+            target_year=target_year,
+            target_sem=target_sem,
+            expected_semester_credits=expected_semester_credits,
+            expected_semester_courses=expected_semester_courses,
+            candidate_metadata=candidate_metadata,
+        )
+        return self._predict_from_frame(df_cand)
+
+    def _build_candidate_frame(
+        self,
+        *,
+        snapshot: pd.Series,
+        candidate_course_ids: List[str],
+        degree_id: str,
+        df_history: pd.DataFrame,
+        target_year: int,
+        target_sem: int,
+        expected_semester_credits: float,
+        expected_semester_courses: int,
+        candidate_metadata: pd.DataFrame | None,
+    ) -> pd.DataFrame:
+        """Assemble one model-ready feature row per candidate course.
+
+        The concurrent peer features are seeded with the singleton placeholder
+        (mean/max NaN, missing=1); ``score_plan`` overwrites them once the full
+        plan context is known so train and serve compute them identically.
+        """
         rows = []
         metadata_by_course = None
         if candidate_metadata is not None:
@@ -372,11 +409,20 @@ class StudentScorer:
                 "diploma_type_bucket": snapshot.get("diploma_type_bucket", -1),
                 # Metadata (not in MODEL_FEATURES, kept for output)
                 "_course_id": course_id,
+                "gpa_trend_delta": snapshot.get("gpa_trend_delta", np.nan),
+                "gpa_trend_missing": snapshot.get("gpa_trend_missing", 1),
+                # Concurrent course group — singleton placeholder until a plan
+                # context is known (score_plan recomputes these across the plan).
+                "concurrent_peer_difficulty_mean": np.nan,
+                "concurrent_peer_difficulty_max": np.nan,
+                "concurrent_peer_difficulty_missing": 1,
             }
             rows.append(row)
 
-        df_cand = pd.DataFrame(rows)
+        return pd.DataFrame(rows)
 
+    def _predict_from_frame(self, df_cand: pd.DataFrame) -> pd.DataFrame:
+        """Encode categoricals, select MODEL_FEATURES, and score both models."""
         # Match the ordinal encoding used by training before selecting features.
         df_cand["requirement_size_bucket_ord"] = (
             df_cand["requirement_size_bucket"]
@@ -420,25 +466,54 @@ class StudentScorer:
         """Score a specific plan where the semester context is known exactly.
 
         Unlike `score()`, this sets semester_reg_credits / semester_reg_courses
-        to the actual totals for the given plan. Pass `snapshot` to avoid
-        re-running the feature engineering pipeline.
+        to the actual totals for the given plan, and recomputes the concurrent
+        peer features across the whole plan (train/serve parity). Pass `snapshot`
+        to avoid re-running the feature engineering pipeline.
         """
+        if df_history.empty or not plan_course_ids:
+            return pd.DataFrame(columns=["pred_mark", "pass_prob"])
+
+        if snapshot is None:
+            snapshot = _extract_student_snapshot(df_history)
+
         # Look up credits for plan courses so workload features reflect the
-        # concrete plan rather than a historical average.
+        # concrete plan rather than a historical average. Route through the
+        # shared difficulty lookup so this works under both the B2
+        # DifficultyState (self._diff is None) and the legacy lookup table, and
+        # stays consistent with the per-course credits score() itself uses. The
+        # B2 state carries no course_credits per course, so an unresolved course
+        # falls back to 3.0 credits — the same default recommendation.py uses
+        # (fillna(3.0) at recommendation.py:100,111,173) — rather than 0, which
+        # would be an out-of-distribution semester_reg_credits value never seen
+        # in training.
+        _FALLBACK_COURSE_CREDITS = 3.0
         total_credits = 0.0
         for cid in plan_course_ids:
-            key = f"{degree_id}__{cid}"
-            if key in self._diff.index:
-                cr = self._diff.loc[key, "course_credits"]
-                if pd.notna(cr):
-                    total_credits += float(cr)
+            cr = self._get_difficulty_row(degree_id, cid).get("course_credits")
+            total_credits += float(cr) if pd.notna(cr) else _FALLBACK_COURSE_CREDITS
 
-        return self.score(
-            df_history=df_history,
-            candidate_course_ids=plan_course_ids,
-            target_part_id=target_part_id,
-            degree_id=degree_id,
+        target_year, target_sem = _part_id_to_year_sem(target_part_id)
+        df_cand = self._build_candidate_frame(
             snapshot=snapshot,
+            candidate_course_ids=plan_course_ids,
+            degree_id=degree_id,
+            df_history=df_history,
+            target_year=target_year,
+            target_sem=target_sem,
             expected_semester_credits=total_credits,
             expected_semester_courses=len(plan_course_ids),
+            candidate_metadata=None,
         )
+
+        # Every plan course shares one semester group, so recompute the
+        # leave-one-out concurrent features across the plan with the SAME
+        # function training uses, replacing the singleton placeholder. Constant
+        # grouping keys collapse the plan into exactly one group.
+        df_group = df_cand.copy()
+        for key in SEMESTER_KEY:
+            df_group[key] = "__plan__"
+        computed = compute_concurrent_group_features(df_group)
+        for col in MODEL_CONCURRENT_FEATURES:
+            df_cand[col] = computed[col].to_numpy()
+
+        return self._predict_from_frame(df_cand)

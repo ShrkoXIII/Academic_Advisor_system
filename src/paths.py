@@ -40,7 +40,7 @@ MODEL_RUNS_DIR = MODELS_DIR / "runs"
 GPA_TREND_REPORTS_DIR = REPORTS_DIR / "gpa_trend"
 
 MODEL_SPLITS = frozenset({"train", "valid", "test"})
-MODEL_DATA_GENERATIONS = frozenset({"base", "difficulty", "final"})
+MODEL_DATA_GENERATIONS = frozenset({"base", "difficulty", "concurrent", "final"})
 
 
 def model_split_path(

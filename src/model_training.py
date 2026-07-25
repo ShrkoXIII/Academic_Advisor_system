@@ -101,6 +101,10 @@ MODEL_FEATURES: List[str] = [
     "course_retake_rate_historical",
     "course_history_count",                   # support count -> reliability of difficulty stats
     "course_difficulty_missing",
+    # --- Concurrent course group (same-semester peer difficulty, LOO) ---
+    "concurrent_peer_difficulty_mean",        # mean (1 - pass_rate) over valid peers
+    "concurrent_peer_difficulty_max",         # hardest valid peer
+    "concurrent_peer_difficulty_missing",     # 1 when the peer set is empty (singleton)
     # --- Degree / requirement context ---
     "requirement_type_id",                    # CATEGORICAL (handled specially)
     "requirement_type_missing",
@@ -140,7 +144,7 @@ REQUIREMENT_BUCKET_ORD = {
 _LEFTOVER_KEY_PATTERNS = ["l3_key", "l4_key", "_key", "tmp", "temp", "idx"]
 
 TARGET_GRADE = "final_mark"       # M2 regressor target
-EXPECTED_FEATURE_COUNT = 41
+EXPECTED_FEATURE_COUNT = 44
 DERIVED_FEATURE_SOURCES = {
     "requirement_size_bucket_ord": "requirement_size_bucket",
 }
