@@ -25,6 +25,7 @@ def _row(
     degree="d",
     part="20241",
     course="c",
+    occurrence=None,
     pass_rate=np.nan,
     diff_missing=0,
     req_type=1,
@@ -35,6 +36,11 @@ def _row(
         "degree_id": degree,
         "part_id": part,
         "course_id": course,
+        "student_course_id": (
+            occurrence
+            if occurrence is not None
+            else f"{uni}|{student}|{degree}|{part}|{course}"
+        ),
         "course_pass_rate_historical": pass_rate,
         "course_difficulty_missing": diff_missing,
         "requirement_type_id": req_type,
@@ -283,17 +289,45 @@ class ConcurrentGroupFeatureTest(unittest.TestCase):
         )
         self.assertAlmostEqual(f["concurrent_peer_weak_ratio"].iloc[0], 0.5)
 
-    # --- 17. duplicate course_id within a group is defined, not a crash ---
-    def test_17_duplicate_course_id(self):
+    # --- 17. one course contributes exactly ONE peer, not one per occurrence ---
+    def test_17_duplicate_course_collapses_to_a_single_peer(self):
+        # X registered twice with identical metadata + Y once. Peer membership
+        # is {X, Y}, so every row sees exactly one peer -- never a phantom
+        # second X. d(X)=0.1, d(Y)=0.5.
         f = _feat(
             [
-                _row(course="X", pass_rate=0.9),  # d=0.1
-                _row(course="X", pass_rate=0.5),  # d=0.5, same course id
+                _row(course="X", pass_rate=0.9),
+                _row(course="X", pass_rate=0.9),
+                _row(course="Y", pass_rate=0.5),
             ]
         )
-        # Treated as two peers; no crash.
+        self.assertTrue((f["concurrent_peer_observed_count"] == 1).all())
+        # Both X rows resolve to the same peer entry and see only Y.
         self.assertAlmostEqual(f["concurrent_peer_difficulty_mean"].iloc[0], 0.5)
-        self.assertAlmostEqual(f["concurrent_peer_difficulty_mean"].iloc[1], 0.1)
+        self.assertAlmostEqual(f["concurrent_peer_difficulty_mean"].iloc[1], 0.5)
+        self.assertAlmostEqual(f["concurrent_peer_difficulty_max"].iloc[0], 0.5)
+        # Y sees only X.
+        self.assertAlmostEqual(f["concurrent_peer_difficulty_mean"].iloc[2], 0.1)
+        self.assertAlmostEqual(f["concurrent_peer_difficulty_max"].iloc[2], 0.1)
+
+    # --- 17b. conflicting duplicate occurrences fail loudly, never a silent pick ---
+    def test_17b_conflicting_duplicate_occurrences_raise(self):
+        for column, rows in (
+            (
+                "course_pass_rate_historical",
+                [_row(course="X", pass_rate=0.9), _row(course="X", pass_rate=0.5)],
+            ),
+            (
+                "requirement_type_id",
+                [
+                    _row(course="X", pass_rate=0.9, req_type=1),
+                    _row(course="X", pass_rate=0.9, req_type=2),
+                ],
+            ),
+        ):
+            with self.subTest(column=column):
+                with self.assertRaisesRegex(ValueError, f"disagree on {column!r}"):
+                    _feat(rows)
 
     # --- 18. target's OWN pass_rate NaN but peers valid -> computed from peers ---
     def test_18_own_nan_peers_valid(self):
@@ -310,6 +344,178 @@ class ConcurrentGroupFeatureTest(unittest.TestCase):
         )
         self.assertAlmostEqual(f["concurrent_peer_difficulty_max"].iloc[0], 0.6)
         self.assertEqual(f["concurrent_peer_difficulty_missing"].iloc[0], 0)
+
+    # --- 19. two-input mode includes registered courses absent from targets ---
+    def test_19_roster_only_peer_is_included(self):
+        roster = _df(
+            [
+                _row(course="A", occurrence="occ-A", pass_rate=0.9),
+                _row(course="W", occurrence="occ-W", pass_rate=0.2),
+            ],
+            index=[101, 102],
+        )
+        target = roster.iloc[[0]].copy()
+        target.index = [77]
+
+        f = compute_concurrent_group_features(target, roster)
+
+        # W is roster-only, but is still A's registered peer: d(W) = 0.8.
+        self.assertEqual(list(f.index), [77])
+        self.assertAlmostEqual(f["concurrent_peer_difficulty_mean"].iloc[0], 0.8)
+        self.assertAlmostEqual(f["concurrent_peer_difficulty_max"].iloc[0], 0.8)
+        self.assertEqual(f["concurrent_peer_observed_count"].iloc[0], 1)
+        self.assertEqual(f["concurrent_peer_set_empty"].iloc[0], 0)
+
+    # --- 20. two-input occurrence identity must be exact and unambiguous ---
+    def test_20_two_input_rejects_duplicate_unmatched_and_semester_mismatch(self):
+        target = _df(
+            [_row(course="A", occurrence="occ-A", pass_rate=0.9)]
+        )
+        good_roster = _df(
+            [
+                _row(course="A", occurrence="occ-A", pass_rate=0.9),
+                _row(course="B", occurrence="occ-B", pass_rate=0.8),
+            ]
+        )
+
+        duplicate_roster = pd.concat(
+            [good_roster, good_roster.iloc[[0]]], ignore_index=True
+        )
+        with self.assertRaisesRegex(ValueError, "exactly one occurrence"):
+            compute_concurrent_group_features(target, duplicate_roster)
+
+        unmatched_target = target.copy()
+        unmatched_target["student_course_id"] = "not-in-roster"
+        with self.assertRaisesRegex(ValueError, "unmatched"):
+            compute_concurrent_group_features(unmatched_target, good_roster)
+
+        equivalent_semester_target = target.copy()
+        equivalent_semester_target["part_id"] = pd.to_numeric(
+            equivalent_semester_target["part_id"]
+        ).astype("int64")
+        equivalent = compute_concurrent_group_features(
+            equivalent_semester_target, good_roster
+        )
+        self.assertEqual(len(equivalent), 1)
+
+        wrong_semester_target = target.copy()
+        wrong_semester_target["part_id"] = "20242"
+        with self.assertRaisesRegex(ValueError, "SEMESTER_KEY mismatch"):
+            compute_concurrent_group_features(wrong_semester_target, good_roster)
+
+    # --- 21. explicit audit indicators separate empty set from missing values ---
+    def test_21_empty_set_and_missing_value_indicators(self):
+        singleton = _feat([_row(course="only", pass_rate=np.nan)])
+        self.assertEqual(singleton["concurrent_peer_set_empty"].iloc[0], 1)
+        self.assertEqual(
+            singleton["concurrent_peer_difficulty_values_missing"].iloc[0], 0
+        )
+        self.assertEqual(
+            singleton["concurrent_peer_difficulty_missing"].iloc[0],
+            singleton["concurrent_peer_set_empty"].iloc[0],
+        )
+
+        unusable_peers = _feat(
+            [
+                _row(course="A", pass_rate=np.nan),
+                _row(course="B", pass_rate=np.nan),
+            ]
+        )
+        self.assertTrue((unusable_peers["concurrent_peer_set_empty"] == 0).all())
+        self.assertTrue(
+            (
+                unusable_peers["concurrent_peer_difficulty_values_missing"] == 1
+            ).all()
+        )
+        self.assertTrue(
+            (
+                unusable_peers["concurrent_peer_difficulty_missing"]
+                == unusable_peers["concurrent_peer_set_empty"]
+            ).all()
+        )
+        for column in (
+            "concurrent_peer_difficulty_missing",
+            "concurrent_peer_set_empty",
+            "concurrent_peer_difficulty_values_missing",
+        ):
+            self.assertEqual(str(unusable_peers[column].dtype), "int64")
+
+    # --- 22. roster selection preserves arbitrary target order and index ---
+    def test_22_two_input_preserves_target_order_and_index(self):
+        roster = _df(
+            [
+                _row(course="A", occurrence="occ-A", pass_rate=0.9),
+                _row(course="B", occurrence="occ-B", pass_rate=0.5),
+                _row(course="C", occurrence="occ-C", pass_rate=0.7),
+            ],
+            index=[5, 6, 7],
+        )
+        target = roster.iloc[[2, 0]].copy()
+        target.index = [42, 11]
+
+        out = add_concurrent_group_features(target, roster)
+
+        self.assertEqual(list(out.index), [42, 11])
+        self.assertEqual(list(out["student_course_id"]), ["occ-C", "occ-A"])
+        self.assertAlmostEqual(out["concurrent_peer_difficulty_max"].iloc[0], 0.5)
+        self.assertAlmostEqual(out["concurrent_peer_difficulty_max"].iloc[1], 0.5)
+
+    # --- 24. REGRESSION ANCHOR: one-input == two-input when roster == targets ---
+    def test_24_one_input_equals_two_input_when_roster_equals_targets(self):
+        # The guard that keeps train/serve parity from silently breaking:
+        # score_plan uses the one-input path, the builder uses the two-input
+        # path, and they must agree exactly when the plan IS the roster.
+        # Frame carries NaNs, a tie for the max, a duplicate course, and a
+        # separate singleton group.
+        df = _df(
+            [
+                _row(course="A", occurrence="o1", pass_rate=0.1),  # d=0.9
+                _row(course="B", occurrence="o2", pass_rate=0.1),  # d=0.9 (tie)
+                _row(course="C", occurrence="o3", pass_rate=np.nan),  # invalid
+                _row(course="A", occurrence="o4", pass_rate=0.1),  # dup course
+                _row(student="s2", course="Z", occurrence="o5", pass_rate=0.4),
+            ],
+            index=[11, 4, 9, 2, 7],
+        )
+
+        one_input = compute_concurrent_group_features(df)
+        two_input = compute_concurrent_group_features(df, df)
+        pd.testing.assert_frame_equal(one_input, two_input)
+
+        # Hand-computed: membership is {A, B, C}; A collapses to one peer.
+        # valid d = {A:0.9, B:0.9}; every row has 2 observed peers.
+        # A: (1.8-0.9)/(2-1) = 0.9 ; tie for max keeps 0.9
+        # C: own invalid -> 1.8/2 = 0.9 ; max 0.9
+        mean = one_input["concurrent_peer_difficulty_mean"].to_numpy()
+        mx = one_input["concurrent_peer_difficulty_max"].to_numpy()
+        for position in range(4):
+            self.assertAlmostEqual(mean[position], 0.9)
+            self.assertAlmostEqual(mx[position], 0.9)
+        self.assertTrue(
+            (one_input["concurrent_peer_observed_count"].iloc[:4] == 2).all()
+        )
+        self.assertTrue(
+            (one_input["concurrent_peer_difficulty_missing"].iloc[:4] == 0).all()
+        )
+        # The singleton group is untouched by any of that.
+        self.assertEqual(one_input["concurrent_peer_observed_count"].iloc[4], 0)
+        self.assertEqual(one_input["concurrent_peer_difficulty_missing"].iloc[4], 1)
+        self.assertTrue(np.isnan(mean[4]))
+        self.assertTrue(np.isnan(mx[4]))
+        # Index and order survive both paths.
+        self.assertEqual(list(one_input.index), [11, 4, 9, 2, 7])
+
+    # --- 23. binding 44-feature contract remains unchanged ---
+    def test_23_model_contract_stays_at_44_with_audit_columns_excluded(self):
+        from src.model_training import EXPECTED_FEATURE_COUNT, MODEL_FEATURES
+
+        legacy = "concurrent_peer_difficulty_missing"
+        self.assertEqual(EXPECTED_FEATURE_COUNT, 44)
+        self.assertEqual(len(MODEL_FEATURES), 44)
+        self.assertIn(legacy, MODEL_FEATURES)
+        self.assertEqual(MODEL_FEATURES.index(legacy), 35)
+        self.assertNotIn("concurrent_peer_set_empty", MODEL_FEATURES)
+        self.assertNotIn("concurrent_peer_difficulty_values_missing", MODEL_FEATURES)
 
 
 if __name__ == "__main__":

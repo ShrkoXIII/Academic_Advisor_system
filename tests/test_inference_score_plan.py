@@ -141,6 +141,9 @@ class ScorePlanConcurrentParityTest(unittest.TestCase):
                 "student_id": ["s"] * n,
                 "degree_id": ["d"] * n,
                 "part_id": ["p"] * n,
+                # Peer membership is course-grained, so the hand frame carries
+                # the same course identities score_plan stamps onto its plan.
+                "course_id": list(self.PLAN),
                 "course_pass_rate_historical": self.PASS_RATE,
                 "course_difficulty_missing": self.DIFF_MISSING,
                 "requirement_type_id": self.REQ_TYPE,

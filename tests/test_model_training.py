@@ -36,7 +36,14 @@ class ModelTrainingContractTests(unittest.TestCase):
         self.assertIn("concurrent_peer_difficulty_mean", MODEL_FEATURES)
         self.assertIn("concurrent_peer_difficulty_max", MODEL_FEATURES)
         self.assertIn("concurrent_peer_difficulty_missing", MODEL_FEATURES)
+        self.assertEqual(
+            MODEL_FEATURES.index("concurrent_peer_difficulty_missing"), 35
+        )
         self.assertNotIn("concurrent_peer_observed_count", MODEL_FEATURES)
+        self.assertNotIn("concurrent_peer_set_empty", MODEL_FEATURES)
+        self.assertNotIn(
+            "concurrent_peer_difficulty_values_missing", MODEL_FEATURES
+        )
         self.assertEqual(
             CATEGORICAL_FEATURES,
             ["requirement_type_id", "diploma_type_bucket"],
@@ -55,3 +62,11 @@ class ModelTrainingContractTests(unittest.TestCase):
         self.assertEqual(str(X["diploma_type_bucket"].dtype), "category")
         self.assertEqual(X["diploma_type_bucket"].astype(int).tolist(), [-1, -1])
         self.assertEqual(str(X["diploma_gpa"].dtype), "float64")
+
+    def test_legacy_concurrent_missing_feature_keeps_model_dtype(self):
+        train = self._frame()
+        levels = learn_categorical_levels(train)
+        X, _ = prepare_X_y(train, "pass", levels)
+        self.assertEqual(
+            str(X["concurrent_peer_difficulty_missing"].dtype), "float64"
+        )

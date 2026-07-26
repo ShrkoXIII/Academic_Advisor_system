@@ -7,11 +7,13 @@ import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal, assert_series_equal
 
+from src.concurrent_group_features import compute_concurrent_group_features
 from src.course_difficulty import (
     DIFFICULTY_OUTPUT_COLUMNS,
     DifficultyConfig,
     _composite_key,
     apply_difficulty_state,
+    build_temporal_query_difficulty,
     build_temporal_train,
     fit_difficulty_state,
     load_difficulty_state,
@@ -135,6 +137,197 @@ class TemporalCourseDifficultyTests(unittest.TestCase):
         assert_frame_equal(
             original_result.loc[through_second, DIFFICULTY_OUTPUT_COLUMNS],
             changed_result.loc[through_second, DIFFICULTY_OUTPUT_COLUMNS],
+        )
+
+    def test_temporal_query_uses_only_strictly_prior_target_history(self):
+        target_history = pd.DataFrame(
+            [
+                _row("20201", "D1", "C1", "F1", 1, 3, 40),
+                _row("20202", "D1", "C1", "F1", 1, 3, 60),
+                _row("20203", "D1", "C1", "F1", 1, 3, 80),
+            ]
+        )
+        changed = target_history.copy()
+        changed.loc[
+            changed["part_id"].isin(["20202", "20203"]), "final_mark"
+        ] = [0.0, 100.0]
+        query = pd.DataFrame(
+            [
+                _row("20202", "D1", "C1", "F1", 1, 3, 99),
+                _row("20203", "D1", "C1", "F1", 1, 3, 99),
+            ],
+            index=[41, 17],
+        ).drop(columns=["final_mark", "attempt_number"])
+
+        original = build_temporal_query_difficulty(
+            target_history,
+            query,
+            self.config,
+            include_source=False,
+        )
+        mutated = build_temporal_query_difficulty(
+            changed,
+            query,
+            self.config,
+            include_source=False,
+        )
+
+        assert_frame_equal(
+            original.loc[[41], DIFFICULTY_OUTPUT_COLUMNS],
+            mutated.loc[[41], DIFFICULTY_OUTPUT_COLUMNS],
+        )
+        self.assertEqual(original.loc[41, "course_history_count"], 1)
+        self.assertEqual(original.loc[17, "course_history_count"], 2)
+        self.assertEqual(original.columns.tolist(), DIFFICULTY_OUTPUT_COLUMNS)
+        self.assertEqual(original.index.tolist(), [41, 17])
+
+    def test_query_rows_never_update_temporal_difficulty_state(self):
+        target_history = pd.DataFrame(
+            [_row("20201", "D1", "C1", "F1", 1, 3, 40)]
+        )
+        query = pd.DataFrame(
+            [
+                _row("20202", "D1", "C1", "F1", 1, 3, 100),
+                _row("20203", "D1", "C1", "F1", 1, 3, 0),
+            ]
+        )
+
+        result = build_temporal_query_difficulty(
+            target_history,
+            query,
+            self.config,
+            include_source=False,
+        )
+
+        assert_series_equal(
+            result.iloc[0],
+            result.iloc[1],
+            check_names=False,
+        )
+        self.assertEqual(result["course_history_count"].tolist(), [1, 1])
+
+    def test_equivalent_completed_and_roster_only_contexts_match(self):
+        prior = [
+            _row("20201", "D1", "C0", "F1", 1, 3, 80),
+            _row("20201", "D2", "C9", "F2", 2, 4, 20),
+        ]
+        completed = _row("20202", "D1", "NEW", "F1", 1, 3.1, 70)
+        full_target_history = pd.DataFrame([*prior, completed])
+        target_result = build_temporal_train(
+            full_target_history,
+            self.config,
+            include_source=False,
+        )
+        roster_only = pd.DataFrame(
+            [_row("20202", "D1", "NEW", "F1", 1, 3.4, 0)]
+        ).drop(columns=["final_mark", "attempt_number"])
+
+        query_result = build_temporal_query_difficulty(
+            full_target_history,
+            roster_only,
+            self.config,
+            include_source=False,
+        )
+
+        assert_series_equal(
+            target_result.iloc[-1][DIFFICULTY_OUTPUT_COLUMNS],
+            query_result.iloc[0][DIFFICULTY_OUTPUT_COLUMNS],
+            check_names=False,
+        )
+        self.assertEqual(query_result.loc[0, "difficulty_fallback_level"], 3)
+
+    def test_valid_and_test_queries_use_only_the_frozen_training_state(self):
+        train = pd.DataFrame(
+            [
+                _row("20201", "D1", "C1", "F1", 1, 3, 100),
+                _row("20202", "D1", "C1", "F1", 1, 3, 0),
+            ]
+        )
+        valid = pd.DataFrame(
+            [_row("20221", "D1", "C1", "F1", 1, 3, 0)]
+        )
+        test = pd.DataFrame(
+            [_row("20241", "D1", "C1", "F1", 1, 3, 100)]
+        )
+
+        permitted_state = fit_difficulty_state(train, self.config)
+        valid_from_train = apply_difficulty_state(
+            valid, permitted_state, include_source=False
+        )
+        test_from_train = apply_difficulty_state(
+            test, permitted_state, include_source=False
+        )
+
+        # This deliberately contaminated state demonstrates that admitting
+        # validation outcomes would alter the later lookup. The production
+        # contract must continue to use the train-only state for both splits.
+        contaminated_state = fit_difficulty_state(
+            pd.concat([train, valid], ignore_index=True), self.config
+        )
+        test_from_contaminated = apply_difficulty_state(
+            test, contaminated_state, include_source=False
+        )
+
+        self.assertEqual(
+            valid_from_train.loc[0, "course_history_count"], len(train)
+        )
+        self.assertEqual(
+            test_from_train.loc[0, "course_history_count"], len(train)
+        )
+        self.assertNotEqual(
+            test_from_train.loc[0, "course_history_count"],
+            test_from_contaminated.loc[0, "course_history_count"],
+        )
+        self.assertNotEqual(
+            test_from_train.loc[0, "course_pass_rate_historical"],
+            test_from_contaminated.loc[0, "course_pass_rate_historical"],
+        )
+
+    def test_future_outcomes_cannot_change_roster_only_peer_features(self):
+        history = pd.DataFrame(
+            [
+                _row("20201", "D1", "W", "F1", 1, 3, 20),
+                _row("20203", "D1", "W", "F1", 1, 3, 100),
+            ]
+        )
+        mutated = history.copy()
+        mutated.loc[mutated["part_id"] == "20203", "final_mark"] = 0.0
+        roster_query = pd.DataFrame(
+            [
+                _row("20202", "D1", "A", "F1", 1, 3, 0),
+                _row("20202", "D1", "W", "F1", 1, 3, 0),
+            ]
+        ).drop(columns=["final_mark", "attempt_number"])
+        roster_query["university_id"] = "111"
+        roster_query["student_id"] = "S1"
+        roster_query["student_course_id"] = ["target-A", "withdrawn-W"]
+
+        original_roster = build_temporal_query_difficulty(
+            history, roster_query, self.config
+        )
+        mutated_roster = build_temporal_query_difficulty(
+            mutated, roster_query, self.config
+        )
+        target = original_roster.iloc[[0]].copy()
+        mutated_target = mutated_roster.iloc[[0]].copy()
+
+        original_features = compute_concurrent_group_features(
+            target, original_roster
+        )
+        mutated_features = compute_concurrent_group_features(
+            mutated_target, mutated_roster
+        )
+
+        assert_frame_equal(original_features, mutated_features)
+        self.assertEqual(
+            original_features.loc[0, "concurrent_peer_observed_count"], 1
+        )
+        self.assertFalse(
+            np.isnan(
+                original_features.loc[
+                    0, "concurrent_peer_difficulty_mean"
+                ]
+            )
         )
 
     def test_all_six_fallback_levels_and_flag_definitions(self):

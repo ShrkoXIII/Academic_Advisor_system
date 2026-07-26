@@ -509,7 +509,12 @@ class StudentScorer:
         # leave-one-out concurrent features across the plan with the SAME
         # function training uses, replacing the singleton placeholder. Constant
         # grouping keys collapse the plan into exactly one group.
+        #
+        # course_id is required because peer membership is course-grained on
+        # both sides: a course listed twice in one plan contributes one peer,
+        # exactly as a course registered twice in one semester does in training.
         df_group = df_cand.copy()
+        df_group["course_id"] = df_cand["_course_id"].to_numpy()
         for key in SEMESTER_KEY:
             df_group[key] = "__plan__"
         computed = compute_concurrent_group_features(df_group)

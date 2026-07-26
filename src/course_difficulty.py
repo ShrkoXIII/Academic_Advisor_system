@@ -221,6 +221,28 @@ def _validate_training_frame(df: pd.DataFrame) -> None:
         raise ValueError("part_id must be non-null and numerically sortable")
 
 
+def _validate_query_frame(df: pd.DataFrame) -> None:
+    """Validate rows that receive difficulty without contributing outcomes."""
+
+    required = {
+        "part_id",
+        "degree_course_key",
+        "degree_id",
+        "faculty_id",
+        "requirement_type_id",
+        "course_credits",
+    }
+    missing = sorted(required - set(df.columns))
+    if missing:
+        raise ValueError(
+            f"Missing columns required for course-difficulty queries: {missing}"
+        )
+
+    part_numeric = pd.to_numeric(df["part_id"], errors="coerce")
+    if part_numeric.isna().any():
+        raise ValueError("query part_id must be non-null and numerically sortable")
+
+
 def _sufficient_stats(frame: pd.DataFrame, key: pd.Series) -> pd.DataFrame:
     work = pd.DataFrame(index=frame.index)
     work["key"] = key
@@ -621,6 +643,96 @@ def build_temporal_train(
 
     if len(out) != len(df_train) or not out.index.equals(df_train.index):
         raise AssertionError("Temporal train enrichment changed row count, order, or index")
+    return out
+
+
+def build_temporal_query_difficulty(
+    df_target_history: pd.DataFrame,
+    df_query: pd.DataFrame,
+    config: DifficultyConfig | None = None,
+    *,
+    include_source: bool = True,
+) -> pd.DataFrame:
+    """Enrich query rows from target history strictly before each semester.
+
+    ``df_target_history`` is the sole source of sufficient-statistic updates.
+    Query rows are read-only lookups, so an outcome present on a query row can
+    never affect it or a later query.  For a query in semester ``t``, the
+    accumulator contains exactly target-history rows whose ``part_id < t``.
+
+    Equivalent completed and roster-only occurrences therefore receive the
+    same historical context when their registration-time difficulty keys
+    (including faculty, requirement type, and rounded credits) are equivalent.
+    No same-semester shortcut keyed only by degree and course is used, because
+    that would be ambiguous when those registration contexts differ.
+
+    ``include_source=False`` returns exactly ``DIFFICULTY_OUTPUT_COLUMNS`` and
+    is intended for memory-bounded roster enrichment.
+    """
+
+    config = config or DifficultyConfig()
+    _validate_training_frame(df_target_history)
+    _validate_query_frame(df_query)
+    history = _drop_stale_columns(df_target_history)
+    query = _drop_stale_columns(df_query)
+
+    history_part = pd.to_numeric(history["part_id"], errors="raise")
+    query_part = pd.to_numeric(query["part_id"], errors="raise")
+    history_semesters = sorted(history_part.unique().tolist())
+    query_semesters = sorted(query_part.unique().tolist())
+
+    result_columns: Dict[str, np.ndarray] = {
+        column: np.full(len(query), np.nan, dtype="float64")
+        for column in STAT_OUTPUT_COLUMNS
+    }
+    result_columns.update(
+        {
+            column: np.zeros(len(query), dtype="int64")
+            for column in AUDIT_OUTPUT_COLUMNS
+        }
+    )
+
+    accumulator = _DifficultyAccumulator(config)
+    next_history_semester = 0
+    history_values = history_part.to_numpy()
+    query_values = query_part.to_numpy()
+
+    for query_semester in query_semesters:
+        while (
+            next_history_semester < len(history_semesters)
+            and history_semesters[next_history_semester] < query_semester
+        ):
+            history_semester = history_semesters[next_history_semester]
+            history_positions = np.flatnonzero(
+                history_values == history_semester
+            )
+            accumulator.update(history.iloc[history_positions])
+            next_history_semester += 1
+
+        query_positions = np.flatnonzero(query_values == query_semester)
+        enriched = apply_difficulty_state(
+            query.iloc[query_positions],
+            accumulator.state(),
+            include_source=False,
+        )
+        for column in DIFFICULTY_OUTPUT_COLUMNS:
+            result_columns[column][query_positions] = enriched[column].to_numpy()
+
+    features = pd.DataFrame(
+        result_columns,
+        index=query.index,
+        copy=False,
+    ).loc[:, DIFFICULTY_OUTPUT_COLUMNS]
+    out = (
+        pd.concat([query, features], axis=1)
+        if include_source
+        else features
+    )
+
+    if len(out) != len(df_query) or not out.index.equals(df_query.index):
+        raise AssertionError(
+            "Temporal query enrichment changed row count, order, or index"
+        )
     return out
 
 
