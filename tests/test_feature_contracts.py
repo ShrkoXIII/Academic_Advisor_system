@@ -563,5 +563,251 @@ class Concurrent43CliTest(unittest.TestCase):
         self.assertEqual(b["effective_seed_settings"], c["effective_seed_settings"])
 
 
+SEED42_CONTROL_RUN_DIRS = {
+    # The two seed-42 default-parameter controls the regularization screening
+    # compares against. Both were trained BEFORE the --num-leaves /
+    # --min-child-samples / --reg-lambda flags existed, so their serialized
+    # models are an independent record of what "no flags" used to mean.
+    "baseline_41": PROJECT_ROOT / "models/runs/2026-07-26_1551__baseline-41-gpa-trend-control",
+    "concurrent_43": (
+        PROJECT_ROOT
+        / "models/runs/2026-07-27_1327__seed42-concurrent-43-drop-dead-missing-flag"
+    ),
+}
+
+# LightGBM canonicalises alias names when serializing a model.
+_MODEL_FILE_PARAM_ALIASES = {
+    "num_leaves": "num_leaves",
+    "min_child_samples": "min_data_in_leaf",
+    "reg_lambda": "lambda_l2",
+}
+
+
+def _model_file_params(model_path: Path) -> dict:
+    """Every parameter LightGBM itself recorded inside a serialized model."""
+    values = {}
+    in_block = False
+    for line in model_path.read_text(encoding="utf-8").splitlines():
+        if line.strip() == "parameters:":
+            in_block = True
+            continue
+        if in_block:
+            if not line.strip():
+                break
+            if line.startswith("[") and ": " in line:
+                name, raw = line[1:-1].split(": ", 1)
+                values[name] = raw
+    return values
+
+
+class RegularizationLeverCliTest(unittest.TestCase):
+    """The --num-leaves / --min-child-samples / --reg-lambda screening flags.
+
+    Proves each flag reaches the parameters LightGBM actually trained with,
+    that omitting them reproduces today's defaults, that seed derivation is
+    untouched by them, and that TEST stays closed throughout.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.TemporaryDirectory()
+        root = Path(cls._tmp.name)
+        cls.train_path = root / "train.parquet"
+        cls.valid_path = root / "valid.parquet"
+        _synthetic_split(400, seed=1).to_parquet(cls.train_path)
+        _synthetic_split(200, seed=2).to_parquet(cls.valid_path)
+        # Deliberately nonexistent: reading TEST would raise FileNotFoundError.
+        cls.absent_test_path = root / "test_MUST_NOT_BE_READ.parquet"
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._tmp.cleanup()
+
+    def _run(self, out_dir: Path, extra=(), contract="baseline_41", seed=42):
+        mt.main([
+            "--train", str(self.train_path),
+            "--valid", str(self.valid_path),
+            "--test", str(self.absent_test_path),
+            "--out", str(out_dir),
+            "--run-name", f"unit-lever-{contract}-seed{seed}",
+            "--feature-contract", contract,
+            "--num-threads", "1",
+            "--seed", str(seed),
+            *extra,
+        ])
+        runs = sorted((out_dir / "runs").glob("*__unit-lever-*"))
+        self.assertEqual(len(runs), 1, runs)
+        # TEST is never read: the run completing at all proves it.
+        self.assertFalse(self.absent_test_path.exists())
+        return runs[0]
+
+    def test_21_each_lever_flag_reaches_the_effective_lightgbm_parameters(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._run(
+                Path(tmp),
+                extra=(
+                    "--num-leaves", "31",
+                    "--min-child-samples", "200",
+                    "--reg-lambda", "10.0",
+                ),
+            )
+            metrics = json.loads((run_dir / "metrics.json").read_text(encoding="utf-8"))
+            recorded = metrics["run_settings"]["lightgbm_params"]
+
+            expected = {"num_leaves": 31, "min_child_samples": 200, "reg_lambda": 10.0}
+            for model_key in ("m1_pass_classifier", "m2_grade_regressor"):
+                for name, value in expected.items():
+                    with self.subTest(model=model_key, param=name):
+                        self.assertEqual(recorded[model_key][name], value)
+
+            # Independent of metrics.json: what LightGBM itself serialized.
+            for model_file in ("m1_pass_model.lgbm", "m2_grade_model.lgbm"):
+                on_disk = _model_file_params(run_dir / model_file)
+                for name, value in expected.items():
+                    with self.subTest(model_file=model_file, param=name):
+                        self.assertEqual(
+                            float(on_disk[_MODEL_FILE_PARAM_ALIASES[name]]),
+                            float(value),
+                        )
+
+            # The levers are shared, so both models moved together, and the
+            # run records exactly which levers left their default.
+            self.assertEqual(recorded["differing_keys"], ["metric", "objective"])
+            self.assertEqual(
+                sorted(recorded["tuned_off_default"]),
+                ["min_child_samples", "num_leaves", "reg_lambda"],
+            )
+
+            # TEST stayed closed.
+            self.assertEqual(metrics["run_settings"]["test_policy"], "closed_not_read")
+            self.assertIsNone(metrics["m1_pass_classifier"]["test"])
+            self.assertIsNone(metrics["m2_grade_regressor"]["test"])
+
+    def test_22_flag_defaults_are_exactly_the_shared_param_values(self):
+        for name in mt.TUNABLE_PARAM_NAMES:
+            with self.subTest(param=name):
+                self.assertIn(name, mt._SHARED_PARAMS)
+        self.assertEqual(mt._SHARED_PARAMS["num_leaves"], 127)
+        self.assertEqual(mt._SHARED_PARAMS["min_child_samples"], 50)
+        self.assertEqual(mt._SHARED_PARAMS["reg_lambda"], 1.0)
+
+    def test_23_omitting_the_flags_reproduces_the_current_defaults(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._run(Path(tmp))
+            metrics = json.loads((run_dir / "metrics.json").read_text(encoding="utf-8"))
+            recorded = metrics["run_settings"]["lightgbm_params"]
+
+        overrides = {"num_threads": 1, "seed": 42, **{
+            name: mt._SHARED_PARAMS[name] for name in mt.TUNABLE_PARAM_NAMES
+        }}
+        expected_m1 = mt.effective_lgbm_params(mt.M1_OBJECTIVE, mt.M1_METRIC, overrides)
+        expected_m2 = mt.effective_lgbm_params(mt.M2_OBJECTIVE, mt.M2_METRIC, overrides)
+        # Byte-for-byte on the serialized form, not just dict equality.
+        self.assertEqual(
+            json.dumps(recorded["m1_pass_classifier"], sort_keys=True),
+            json.dumps(expected_m1, sort_keys=True),
+        )
+        self.assertEqual(
+            json.dumps(recorded["m2_grade_regressor"], sort_keys=True),
+            json.dumps(expected_m2, sort_keys=True),
+        )
+        # No flag passed => nothing recorded as tuned off default.
+        self.assertEqual(recorded["tuned_off_default"], {})
+        # Every lever still sits at its documented default value.
+        self.assertEqual(recorded["m1_pass_classifier"]["num_leaves"], 127)
+        self.assertEqual(recorded["m1_pass_classifier"]["min_child_samples"], 50)
+        self.assertEqual(recorded["m1_pass_classifier"]["reg_lambda"], 1.0)
+
+    def test_24_lever_flags_do_not_change_seed_derivation(self):
+        with tempfile.TemporaryDirectory() as tmp_a, tempfile.TemporaryDirectory() as tmp_b:
+            plain = json.loads(
+                (self._run(Path(tmp_a)) / "feature_contract.json").read_text(encoding="utf-8")
+            )
+            tuned = json.loads(
+                (
+                    self._run(
+                        Path(tmp_b),
+                        extra=(
+                            "--num-leaves", "31",
+                            "--min-child-samples", "200",
+                            "--reg-lambda", "10.0",
+                        ),
+                    )
+                    / "feature_contract.json"
+                ).read_text(encoding="utf-8")
+            )
+        self.assertEqual(plain["random_seed"], tuned["random_seed"])
+        self.assertEqual(
+            plain["effective_seed_settings"], tuned["effective_seed_settings"]
+        )
+        # The contract itself is untouched by a hyperparameter change.
+        self.assertEqual(plain["contract_name"], tuned["contract_name"])
+        self.assertEqual(plain["ordered_features"], tuned["ordered_features"])
+        self.assertEqual(plain["reporting_threshold"], tuned["reporting_threshold"])
+        self.assertEqual(plain["test_policy"], "closed_not_read")
+        self.assertEqual(tuned["test_policy"], "closed_not_read")
+
+    def test_25_invalid_lever_values_are_rejected(self):
+        for flag, value in (
+            ("--num-leaves", "1"),
+            ("--min-child-samples", "0"),
+            ("--reg-lambda", "-1"),
+        ):
+            with self.subTest(flag=flag):
+                with tempfile.TemporaryDirectory() as tmp:
+                    with self.assertRaises(SystemExit) as caught:
+                        self._run(Path(tmp), extra=(flag, value))
+                    self.assertNotEqual(caught.exception.code, 0)
+
+
+@unittest.skipUnless(
+    all(
+        (d / "m1_pass_model.lgbm").is_file()
+        for d in SEED42_CONTROL_RUN_DIRS.values()
+    ),
+    "seed-42 control run artifacts not present",
+)
+class ScreeningControlParityTest(unittest.TestCase):
+    """The new flag defaults match the controls the screening compares against.
+
+    The two seed-42 controls were trained before these flags existed. If
+    today's defaults did not reproduce their parameters exactly, every
+    screening delta would confound the lever with an unnoticed default change.
+    """
+
+    def test_26_controls_were_trained_at_todays_default_lever_values(self):
+        for contract, run_dir in SEED42_CONTROL_RUN_DIRS.items():
+            for model_file in ("m1_pass_model.lgbm", "m2_grade_model.lgbm"):
+                on_disk = _model_file_params(run_dir / model_file)
+                for name, alias in _MODEL_FILE_PARAM_ALIASES.items():
+                    with self.subTest(contract=contract, model=model_file, param=name):
+                        self.assertEqual(
+                            float(on_disk[alias]), float(mt._SHARED_PARAMS[name])
+                        )
+
+    def test_27_controls_share_the_screening_mechanics(self):
+        for contract, run_dir in SEED42_CONTROL_RUN_DIRS.items():
+            contract_json = json.loads(
+                (run_dir / "feature_contract.json").read_text(encoding="utf-8")
+            )
+            with self.subTest(contract=contract):
+                self.assertEqual(contract_json["contract_name"], contract)
+                self.assertEqual(contract_json["reporting_threshold"], 0.80)
+                self.assertEqual(contract_json["test_policy"], "closed_not_read")
+                self.assertEqual(contract_json["random_seed"], 42)
+            for model_file in ("m1_pass_model.lgbm", "m2_grade_model.lgbm"):
+                on_disk = _model_file_params(run_dir / model_file)
+                with self.subTest(contract=contract, model=model_file):
+                    self.assertEqual(int(on_disk["num_iterations"]), mt.NUM_BOOST_ROUND)
+                    self.assertEqual(int(on_disk["num_threads"]), 4)
+                    self.assertEqual(int(on_disk["seed"]), 42)
+                    self.assertEqual(float(on_disk["learning_rate"]), 0.05)
+                    self.assertEqual(float(on_disk["feature_fraction"]), 0.8)
+                    self.assertEqual(float(on_disk["bagging_fraction"]), 0.8)
+                    self.assertEqual(int(on_disk["bagging_freq"]), 5)
+                    self.assertEqual(float(on_disk["lambda_l1"]), 0.1)
+                    self.assertEqual(int(on_disk["histogram_pool_size"]), 256)
+
+
 if __name__ == "__main__":
     unittest.main()

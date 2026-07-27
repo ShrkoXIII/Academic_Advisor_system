@@ -597,6 +597,56 @@ _SHARED_PARAMS = {
     "seed": 42,
 }
 
+# Objective/metric are the only LightGBM settings that legitimately differ
+# between M1 and M2. Everything else comes from _SHARED_PARAMS, so a run's two
+# models are identical apart from these two keys plus per-run overrides.
+M1_OBJECTIVE, M1_METRIC = "binary", "auc"
+M2_OBJECTIVE, M2_METRIC = "regression_l1", "mae"
+
+# Regularization levers exposed as explicit CLI flags. Kept as a named tuple of
+# keys (not a free-form params string) so every run's deviation from
+# _SHARED_PARAMS is enumerable and auditable from the artifacts alone.
+TUNABLE_PARAM_NAMES = ("num_leaves", "min_child_samples", "reg_lambda")
+
+
+def effective_lgbm_params(
+    objective: str,
+    metric: str,
+    overrides: "Dict[str, Any] | None" = None,
+) -> Dict[str, Any]:
+    """The COMPLETE LightGBM parameter dict one model is trained with.
+
+    Single source of truth: the training functions build their parameters with
+    this, and the CLI records its output in metrics.json. A recorded dict and
+    the dict handed to ``lgb.train`` therefore cannot drift apart.
+    """
+    params = {"objective": objective, "metric": metric, **_SHARED_PARAMS}
+    if overrides:
+        params.update(overrides)
+    return params
+
+
+def _assert_booster_matches_params(
+    booster: lgb.Booster, expected: Dict[str, Any], label: str
+) -> None:
+    """Verify the trained model actually received the parameters we recorded.
+
+    LightGBM keeps extra keys of its own (``num_iterations``,
+    ``early_stopping_round``); only the ones we set are checked.
+    """
+    actual = booster.params or {}
+    mismatched = {
+        key: (value, actual.get(key))
+        for key, value in expected.items()
+        if key in actual and actual[key] != value
+    }
+    if mismatched:
+        raise AssertionError(
+            f"{label}: recorded LightGBM parameters differ from the trained "
+            f"booster's own (expected, actual): {mismatched}"
+        )
+
+
 NUM_BOOST_ROUND = 2000
 EARLY_STOPPING_ROUNDS = 50
 EFFECTIVE_SEED_PARAM_NAMES = (
@@ -658,9 +708,7 @@ def train_pass_model(  # M1 classifier
     print(f"M1 class balance — train pass rate: {pass_rate:.4f} "
           f"(pass={int(y_tr.sum()):,}  fail={int(len(y_tr) - y_tr.sum()):,})")
 
-    default_params = {"objective": "binary", "metric": "auc", **_SHARED_PARAMS}
-    if params:
-        default_params.update(params)
+    default_params = effective_lgbm_params(M1_OBJECTIVE, M1_METRIC, params)
 
     dtrain, dvalid = _make_datasets(
         X_tr, y_tr, X_va, y_va, resolved.categorical_features
@@ -695,9 +743,7 @@ def train_grade_model(  # M2 regressor
     X_tr, y_tr = prepare_X_y(df_train, "grade", categorical_levels, resolved)
     X_va, y_va = prepare_X_y(df_valid, "grade", categorical_levels, resolved)
 
-    default_params = {"objective": "regression_l1", "metric": "mae", **_SHARED_PARAMS}
-    if params:
-        default_params.update(params)
+    default_params = effective_lgbm_params(M2_OBJECTIVE, M2_METRIC, params)
 
     dtrain, dvalid = _make_datasets(
         X_tr, y_tr, X_va, y_va, resolved.categorical_features
@@ -1182,9 +1228,50 @@ def main(argv: List[str] | None = None) -> None:
             "data, feature-fraction, bagging, and drop seeds from this value."
         ),
     )
+    # Regularization levers. Explicit typed flags, never a free-form params
+    # string, so every deviation from _SHARED_PARAMS stays auditable. Defaults
+    # are read from _SHARED_PARAMS, so omitting them reproduces current
+    # behaviour exactly. _SHARED_PARAMS is shared by M1 and M2: each flag
+    # changes BOTH models.
+    parser.add_argument(
+        "--num-leaves",
+        type=int,
+        default=_SHARED_PARAMS["num_leaves"],
+        help=(
+            "LightGBM num_leaves for M1 and M2 "
+            f"(default: {_SHARED_PARAMS['num_leaves']}). Lower = stronger "
+            "regularization."
+        ),
+    )
+    parser.add_argument(
+        "--min-child-samples",
+        type=int,
+        default=_SHARED_PARAMS["min_child_samples"],
+        help=(
+            "LightGBM min_child_samples for M1 and M2 "
+            f"(default: {_SHARED_PARAMS['min_child_samples']}). Higher = "
+            "stronger regularization."
+        ),
+    )
+    parser.add_argument(
+        "--reg-lambda",
+        type=float,
+        default=_SHARED_PARAMS["reg_lambda"],
+        help=(
+            "LightGBM reg_lambda (L2) for M1 and M2 "
+            f"(default: {_SHARED_PARAMS['reg_lambda']}). Higher = stronger "
+            "regularization."
+        ),
+    )
     args = parser.parse_args(argv)
     if args.num_threads < 1:
         parser.error("--num-threads must be at least 1")
+    if args.num_leaves < 2:
+        parser.error("--num-leaves must be at least 2")
+    if args.min_child_samples < 1:
+        parser.error("--min-child-samples must be at least 1")
+    if args.reg_lambda < 0:
+        parser.error("--reg-lambda must not be negative")
     if args.run_name and not args.feature_contract:
         parser.error(
             "--feature-contract is required for persistent runs (--run-name). "
@@ -1278,7 +1365,22 @@ def main(argv: List[str] | None = None) -> None:
 
     # --- M1: pass/fail classifier ---
     print("\n=== Training M1 (pass/fail classifier) ===")
-    training_params = {"num_threads": args.num_threads, "seed": args.seed}
+    training_params = {
+        "num_threads": args.num_threads,
+        "seed": args.seed,
+        "num_leaves": args.num_leaves,
+        "min_child_samples": args.min_child_samples,
+        "reg_lambda": args.reg_lambda,
+    }
+    tuned_off_default = {
+        name: {"default": _SHARED_PARAMS[name], "this_run": training_params[name]}
+        for name in TUNABLE_PARAM_NAMES
+        if training_params[name] != _SHARED_PARAMS[name]
+    }
+    print(
+        "LightGBM levers off default: "
+        + (json.dumps(tuned_off_default) if tuned_off_default else "none (defaults)")
+    )
     pass_model, m1_evals = train_pass_model(
         df_train, df_valid, categorical_levels, params=training_params,
         num_boost_round=NUM_BOOST_ROUND,
@@ -1334,6 +1436,29 @@ def main(argv: List[str] | None = None) -> None:
     m2_effective_seeds = _effective_seed_settings(out_dir / "m2_grade_model.lgbm")
     assert m1_effective_seeds == m2_effective_seeds, (
         "M1 and M2 received different effective LightGBM seed settings"
+    )
+    # The COMPLETE effective parameter dict per model, verified against each
+    # trained booster's own record so a future comparison can check equality
+    # programmatically instead of trusting a report's prose.
+    m1_effective_params = effective_lgbm_params(M1_OBJECTIVE, M1_METRIC, training_params)
+    m2_effective_params = effective_lgbm_params(M2_OBJECTIVE, M2_METRIC, training_params)
+    _assert_booster_matches_params(pass_model, m1_effective_params, "M1")
+    _assert_booster_matches_params(grade_model, m2_effective_params, "M2")
+    lightgbm_params_by_model = {
+        "m1_pass_classifier": m1_effective_params,
+        "m2_grade_regressor": m2_effective_params,
+        # Objective/metric are the only intended M1/M2 difference; anything
+        # else differing between the two dicts is a defect.
+        "differing_keys": sorted(
+            key
+            for key in set(m1_effective_params) | set(m2_effective_params)
+            if m1_effective_params.get(key) != m2_effective_params.get(key)
+        ),
+        "tuned_off_default": tuned_off_default,
+    }
+    assert lightgbm_params_by_model["differing_keys"] == ["metric", "objective"], (
+        "M1 and M2 differ on more than objective/metric: "
+        f"{lightgbm_params_by_model['differing_keys']}"
     )
     training_control = {
         "num_boost_round": NUM_BOOST_ROUND,
@@ -1412,6 +1537,7 @@ def main(argv: List[str] | None = None) -> None:
         "random_seed": args.seed,
         "effective_seed_settings": m1_effective_seeds,
         "num_threads": args.num_threads,
+        "lightgbm_params": lightgbm_params_by_model,
         "training_control": training_control,
         "diploma_gpa_handling": diploma_gpa_handling,
         "data_rows": data_rows,
