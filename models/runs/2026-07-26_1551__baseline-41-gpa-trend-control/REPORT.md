@@ -1,0 +1,60 @@
+# baseline-41-gpa-trend-control
+
+**Run ID:** 2026-07-26_1551__baseline-41-gpa-trend-control
+**Date:** 2026-07-26T15:51:22+03:00
+**Features:** 41
+**Compared with:** none
+
+## What changed
+
+- Controlled baseline: 41 features (GPA trend, no concurrent) on 2026-07-26 registration-roster version; TEST closed; reporting threshold 0.80.
+
+## Why
+
+Record this isolated training experiment for reproducible comparison.
+
+## Main result
+
+Selection is based on VALID only. Higher is better for fail-class AP/AUC;
+lower is better for Brier and the train-valid AUC gap. TEST is descriptive only.
+
+- M1 valid fail-class Average Precision: 0.3220 (no baseline)
+- M1 valid AUC: 0.8092 (no baseline)
+- M1 valid Brier: 0.0808 (no baseline)
+- M1 train-valid AUC gap: 0.0554 (no baseline)
+
+## M2 regressor
+
+- M2 valid MAE: 9.5667 (no baseline)
+- M2 valid RMSE: 12.8549 (no baseline)
+- M2 valid R2: 0.3519 (no baseline)
+
+## Fail-class at the locked reporting threshold (VALID)
+
+- M1 valid fail precision: 0.3307 (no baseline)
+- M1 valid fail recall: 0.4195 (no baseline)
+- M1 valid fail F1: 0.3698 (no baseline)
+
+## Segment result (VALID; existing segment definitions only)
+
+- cold_start_gpa valid AUC (n=14732): 0.7329 (no baseline)
+- first_semester valid AUC (n=14732): 0.7329 (no baseline)
+- low_difficulty_support valid AUC (n=25627): 0.7644 (no baseline)
+- retake_attempt valid AUC (n=17958): 0.6768 (no baseline)
+- **NOTE:** `first_semester` and `cold_start_gpa` have identical population size (n=14732) and identical AUC — treat them as one segment until the definitions are separated.
+
+## Run settings
+
+- dataset_version: `2026-07-26_batched_fixes__registration_roster_concurrent`
+- feature_contract: `baseline_41`
+- feature_count: `41`
+- num_threads: `4`
+- random_seed: `42`
+- reporting_threshold: `0.8`
+- test_policy: `closed_not_read`
+- train_path: `data/model_data/versions/2026-07-26_batched_fixes__registration_roster_concurrent/df_train_final.parquet`
+- valid_path: `data/model_data/versions/2026-07-26_batched_fixes__registration_roster_concurrent/df_valid_final.parquet`
+
+## Important flags
+
+- diploma_gpa has no dedicated missing-value indicator; source-level median fill remains unchanged and unmatched diploma records may be null.

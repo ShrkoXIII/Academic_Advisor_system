@@ -1,0 +1,1943 @@
+{
+  "experiment": "baseline_41_vs_concurrent_44_five_seed_stability",
+  "seeds": [
+    42,
+    52,
+    62,
+    72,
+    82
+  ],
+  "delta_definition": "candidate_minus_baseline",
+  "repository": {
+    "initial": {
+      "status_short": "",
+      "diff_stat": "",
+      "log_3_oneline": [
+        "5928aaa Add feature contract tests for baseline_41 and concurrent_44",
+        "0291dd2 Enhance concurrent group features and registration roster tests",
+        "e6e2686 Implement concurrent group features for course difficulty analysis"
+      ]
+    },
+    "final_status_short": " M src/model_training.py\n M tests/test_feature_contracts.py\n?? scripts/generate_multiseed_baseline41_vs_concurrent44_report.py",
+    "final_diff_stat": " src/model_training.py           | 94 ++++++++++++++++++++++++++++++++++++++---\n tests/test_feature_contracts.py | 68 ++++++++++++++++++++++++++---\n 2 files changed, 150 insertions(+), 12 deletions(-)",
+    "final_log_3_oneline": [
+      "5928aaa Add feature contract tests for baseline_41 and concurrent_44",
+      "0291dd2 Enhance concurrent group features and registration roster tests",
+      "e6e2686 Implement concurrent group features for course difficulty analysis"
+    ]
+  },
+  "tests": {
+    "command": "python -m unittest discover -s tests -t .",
+    "final_status": "passed",
+    "tests_run": 104,
+    "failures": 0,
+    "elapsed_seconds": 12.891,
+    "pre_gate_development_note": "The first development attempt exposed three failures in the new effective-seed metadata extractor. No experiment run had started. The extractor was corrected to read serialized LightGBM parameters, and the complete mandatory pre-training suite then passed."
+  },
+  "memory": {
+    "physical_memory_bytes": 16855928832,
+    "commit_limit_bytes": 16855928832,
+    "pagefile_configured": true,
+    "pagefile_configuration": "?:\\pagefile.sys",
+    "pagefile_active": false,
+    "active_pagefile_bytes": 0,
+    "available_memory_initial_audit_bytes": 3995344896,
+    "available_memory_immediately_before_training_bytes": 6416273408,
+    "conclusion": "The pagefile was configured but inactive. Commit limit equaled physical memory; training proceeded unchanged because sufficient memory was available immediately before the first run."
+  },
+  "dataset": {
+    "version": "2026-07-26_batched_fixes__registration_roster_concurrent",
+    "train_path": "data/model_data/versions/2026-07-26_batched_fixes__registration_roster_concurrent/df_train_final.parquet",
+    "valid_path": "data/model_data/versions/2026-07-26_batched_fixes__registration_roster_concurrent/df_valid_final.parquet",
+    "train_sha256": "8aaff32aeac5b37506b24584d56913b52ab284f1b551f107a2e3c55969d5641f",
+    "valid_sha256": "228719fa492da84bd4696e24c88c574d2ce68a3143dac8bb6bc925fc1e432b75",
+    "train_rows": 450465,
+    "valid_rows": 156097,
+    "test_policy": "closed_not_read"
+  },
+  "run_paths": {
+    "42": {
+      "baseline": "2026-07-26_1551__baseline-41-gpa-trend-control",
+      "candidate": "2026-07-26_1554__concurrent-44-registration-roster-candidate"
+    },
+    "52": {
+      "baseline": "2026-07-27_1027__seed52-baseline-41-gpa-trend-control",
+      "candidate": "2026-07-27_1028__seed52-concurrent-44-registration-roster-candidate"
+    },
+    "62": {
+      "baseline": "2026-07-27_1031__seed62-baseline-41-gpa-trend-control",
+      "candidate": "2026-07-27_1033__seed62-concurrent-44-registration-roster-candidate"
+    },
+    "72": {
+      "baseline": "2026-07-27_1035__seed72-baseline-41-gpa-trend-control",
+      "candidate": "2026-07-27_1036__seed72-concurrent-44-registration-roster-candidate"
+    },
+    "82": {
+      "baseline": "2026-07-27_1038__seed82-baseline-41-gpa-trend-control",
+      "candidate": "2026-07-27_1039__seed82-concurrent-44-registration-roster-candidate"
+    }
+  },
+  "contract_verification": {
+    "42": {
+      "valid": true,
+      "checks": {
+        "categorical_features": true,
+        "categorical_levels": true,
+        "unknown_category_code": true,
+        "derived_feature_sources": true,
+        "dropped_feature_guard": true,
+        "target_m1_classifier": true,
+        "target_m2_regressor": true,
+        "reporting_threshold": true,
+        "random_seed": true,
+        "lightgbm_params": true,
+        "test_policy": true,
+        "train_path": true,
+        "valid_path": true,
+        "dataset_version": true,
+        "dataset_inputs": true,
+        "git": true,
+        "shared_feature_dtypes": true,
+        "only_three_feature_difference": true,
+        "metrics_nonfeature_settings": true,
+        "test_closed_and_null": true,
+        "identical_effective_seeds": true,
+        "same_nonseed_params_as_final_protocol": true,
+        "same_contract_definition_as_final_protocol": true,
+        "same_data_as_final_protocol": true
+      },
+      "effective_seed_settings": {
+        "seed": 42,
+        "data_random_seed": 175,
+        "feature_fraction_seed": 30056,
+        "bagging_seed": 400,
+        "drop_seed": 17869
+      },
+      "note": "Directly comparable historical pair; historical code confirms 2000 rounds, 50-round VALID-only early stopping, train-only diploma median fill, and the same seed-only LightGBM derivation."
+    },
+    "52": {
+      "valid": true,
+      "checks": {
+        "categorical_features": true,
+        "categorical_levels": true,
+        "unknown_category_code": true,
+        "derived_feature_sources": true,
+        "dropped_feature_guard": true,
+        "target_m1_classifier": true,
+        "target_m2_regressor": true,
+        "reporting_threshold": true,
+        "random_seed": true,
+        "lightgbm_params": true,
+        "test_policy": true,
+        "train_path": true,
+        "valid_path": true,
+        "dataset_version": true,
+        "dataset_inputs": true,
+        "git": true,
+        "effective_seed_settings": true,
+        "training_control": true,
+        "diploma_gpa_handling": true,
+        "data_rows": true,
+        "shared_feature_dtypes": true,
+        "only_three_feature_difference": true,
+        "metrics_nonfeature_settings": true,
+        "test_closed_and_null": true,
+        "identical_effective_seeds": true
+      },
+      "effective_seed_settings": {
+        "seed": 52,
+        "data_random_seed": 208,
+        "feature_fraction_seed": 8545,
+        "bagging_seed": 9580,
+        "drop_seed": 32671
+      },
+      "note": "Baseline Git metadata was repaired from the immediately adjacent candidate after a launcher environment-injection failure; model, metric, and data artifacts were unchanged."
+    },
+    "62": {
+      "valid": true,
+      "checks": {
+        "categorical_features": true,
+        "categorical_levels": true,
+        "unknown_category_code": true,
+        "derived_feature_sources": true,
+        "dropped_feature_guard": true,
+        "target_m1_classifier": true,
+        "target_m2_regressor": true,
+        "reporting_threshold": true,
+        "random_seed": true,
+        "lightgbm_params": true,
+        "test_policy": true,
+        "train_path": true,
+        "valid_path": true,
+        "dataset_version": true,
+        "dataset_inputs": true,
+        "git": true,
+        "effective_seed_settings": true,
+        "training_control": true,
+        "diploma_gpa_handling": true,
+        "data_rows": true,
+        "shared_feature_dtypes": true,
+        "only_three_feature_difference": true,
+        "metrics_nonfeature_settings": true,
+        "test_closed_and_null": true,
+        "identical_effective_seeds": true
+      },
+      "effective_seed_settings": {
+        "seed": 62,
+        "data_random_seed": 241,
+        "feature_fraction_seed": 19802,
+        "bagging_seed": 18760,
+        "drop_seed": 14704
+      },
+      "note": "All recorded non-feature settings match."
+    },
+    "72": {
+      "valid": true,
+      "checks": {
+        "categorical_features": true,
+        "categorical_levels": true,
+        "unknown_category_code": true,
+        "derived_feature_sources": true,
+        "dropped_feature_guard": true,
+        "target_m1_classifier": true,
+        "target_m2_regressor": true,
+        "reporting_threshold": true,
+        "random_seed": true,
+        "lightgbm_params": true,
+        "test_policy": true,
+        "train_path": true,
+        "valid_path": true,
+        "dataset_version": true,
+        "dataset_inputs": true,
+        "git": true,
+        "effective_seed_settings": true,
+        "training_control": true,
+        "diploma_gpa_handling": true,
+        "data_rows": true,
+        "shared_feature_dtypes": true,
+        "only_three_feature_difference": true,
+        "metrics_nonfeature_settings": true,
+        "test_closed_and_null": true,
+        "identical_effective_seeds": true
+      },
+      "effective_seed_settings": {
+        "seed": 72,
+        "data_random_seed": 273,
+        "feature_fraction_seed": 31059,
+        "bagging_seed": 27940,
+        "drop_seed": 29506
+      },
+      "note": "All recorded non-feature settings match."
+    },
+    "82": {
+      "valid": true,
+      "checks": {
+        "categorical_features": true,
+        "categorical_levels": true,
+        "unknown_category_code": true,
+        "derived_feature_sources": true,
+        "dropped_feature_guard": true,
+        "target_m1_classifier": true,
+        "target_m2_regressor": true,
+        "reporting_threshold": true,
+        "random_seed": true,
+        "lightgbm_params": true,
+        "test_policy": true,
+        "train_path": true,
+        "valid_path": true,
+        "dataset_version": true,
+        "dataset_inputs": true,
+        "git": true,
+        "effective_seed_settings": true,
+        "training_control": true,
+        "diploma_gpa_handling": true,
+        "data_rows": true,
+        "shared_feature_dtypes": true,
+        "only_three_feature_difference": true,
+        "metrics_nonfeature_settings": true,
+        "test_closed_and_null": true,
+        "identical_effective_seeds": true
+      },
+      "effective_seed_settings": {
+        "seed": 82,
+        "data_random_seed": 306,
+        "feature_fraction_seed": 9548,
+        "bagging_seed": 4352,
+        "drop_seed": 11540
+      },
+      "note": "All recorded non-feature settings match."
+    }
+  },
+  "runs": {
+    "42_baseline": {
+      "seed": 42,
+      "arm": "baseline",
+      "contract": "baseline_41",
+      "run_path": "models/runs/2026-07-26_1551__baseline-41-gpa-trend-control",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8645724829519178,
+          "pass_average_precision": 0.9700907630083122,
+          "fail_average_precision": 0.5679958456883846,
+          "brier_score": 0.09613034467119051,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.40897648203292664,
+          "fail_recall": 0.7704596961472818,
+          "fail_f1": 0.534322928036091,
+          "pass_precision": 0.9480433942786937,
+          "pass_recall": 0.7899932186931867,
+          "pass_f1": 0.8618320775491699,
+          "confusion_matrix": {
+            "tn": 55074,
+            "fp": 16408,
+            "fn": 79589,
+            "tp": 299394
+          }
+        },
+        "valid": {
+          "roc_auc": 0.80918853274908,
+          "pass_average_precision": 0.9726121527045282,
+          "fail_average_precision": 0.3219831593412697,
+          "brier_score": 0.08077845438389275,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.33072903950388205,
+          "fail_recall": 0.4194587229825974,
+          "fail_f1": 0.3698465570905914,
+          "pass_precision": 0.9308793817929774,
+          "pass_recall": 0.9020650232225795,
+          "pass_f1": 0.9162457179353191,
+          "confusion_matrix": {
+            "tn": 6773,
+            "fp": 9374,
+            "fn": 13706,
+            "tp": 126244
+          },
+          "train_valid_auc_gap": 0.05538395020283782,
+          "best_iteration": 137
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.756642818020739,
+          "rmse": 12.46608465526612,
+          "r2": 0.4911358977441326
+        },
+        "valid": {
+          "mae": 9.56670973063096,
+          "rmse": 12.854908853104188,
+          "r2": 0.35190917004813094,
+          "best_iteration": 438
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7329310827134857
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7329310827134857
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6768272871085127
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7644051315707036
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8209615204193982
+        }
+      }
+    },
+    "52_baseline": {
+      "seed": 52,
+      "arm": "baseline",
+      "contract": "baseline_41",
+      "run_path": "models/runs/2026-07-27_1027__seed52-baseline-41-gpa-trend-control",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8787079850192796,
+          "pass_average_precision": 0.9736843119236648,
+          "fail_average_precision": 0.6043611421942608,
+          "brier_score": 0.0922290155471752,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.4248721444334812,
+          "fail_recall": 0.7891357264765955,
+          "fail_f1": 0.5523552134894173,
+          "pass_precision": 0.9525555716435105,
+          "pass_recall": 0.7985186670642219,
+          "pass_f1": 0.86876203025488,
+          "confusion_matrix": {
+            "tn": 56409,
+            "fp": 15073,
+            "fn": 76358,
+            "tp": 302625
+          }
+        },
+        "valid": {
+          "roc_auc": 0.8099725366177877,
+          "pass_average_precision": 0.9727950760097909,
+          "fail_average_precision": 0.3223876966589215,
+          "brier_score": 0.08068400479483179,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.32101036385661086,
+          "fail_recall": 0.44311636836564067,
+          "fail_f1": 0.37230721198876054,
+          "pass_precision": 0.9327992347243812,
+          "pass_recall": 0.8918613790639515,
+          "pass_f1": 0.9118710686080407,
+          "confusion_matrix": {
+            "tn": 7155,
+            "fp": 8992,
+            "fn": 15134,
+            "tp": 124816
+          },
+          "train_valid_auc_gap": 0.06873544840149193,
+          "best_iteration": 227
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.943266018027714,
+          "rmse": 12.64486936450576,
+          "r2": 0.4764352911169405
+        },
+        "valid": {
+          "mae": 9.571450517082688,
+          "rmse": 12.855157806946629,
+          "r2": 0.35188406737855193,
+          "best_iteration": 308
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7357368285169952
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7357368285169952
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6733750777569675
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7652953687931744
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8217310474344764
+        }
+      }
+    },
+    "62_baseline": {
+      "seed": 62,
+      "arm": "baseline",
+      "contract": "baseline_41",
+      "run_path": "models/runs/2026-07-27_1031__seed62-baseline-41-gpa-trend-control",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8707581963042526,
+          "pass_average_precision": 0.9717034770129644,
+          "fail_average_precision": 0.5820933136631433,
+          "brier_score": 0.09459696650417329,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.41435967525087836,
+          "fail_recall": 0.7803922665845947,
+          "fail_f1": 0.541305813913997,
+          "pass_precision": 0.9502973043142371,
+          "pass_recall": 0.7919616447175731,
+          "pass_f1": 0.863934740026568,
+          "confusion_matrix": {
+            "tn": 55784,
+            "fp": 15698,
+            "fn": 78843,
+            "tp": 300140
+          }
+        },
+        "valid": {
+          "roc_auc": 0.8091809346395975,
+          "pass_average_precision": 0.9726000333324218,
+          "fail_average_precision": 0.32327512466144837,
+          "brier_score": 0.08073913911857501,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.32829896408171166,
+          "fail_recall": 0.4200161020623026,
+          "fail_f1": 0.36853688357560116,
+          "pass_precision": 0.9308544806148894,
+          "pass_recall": 0.9008503036798857,
+          "pass_f1": 0.9156066509555574,
+          "confusion_matrix": {
+            "tn": 6782,
+            "fp": 9365,
+            "fn": 13876,
+            "tp": 126074
+          },
+          "train_valid_auc_gap": 0.06157726166465505,
+          "best_iteration": 172
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.844281445153166,
+          "rmse": 12.563946260886995,
+          "r2": 0.48311514009492296
+        },
+        "valid": {
+          "mae": 9.538716288429402,
+          "rmse": 12.808063845401405,
+          "r2": 0.3566240229723635,
+          "best_iteration": 379
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7283975778370546
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7283975778370546
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6760072941954213
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7624302913992174
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8211002964021674
+        }
+      }
+    },
+    "72_baseline": {
+      "seed": 72,
+      "arm": "baseline",
+      "contract": "baseline_41",
+      "run_path": "models/runs/2026-07-27_1035__seed72-baseline-41-gpa-trend-control",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8677461191173715,
+          "pass_average_precision": 0.9709023374159509,
+          "fail_average_precision": 0.5759430051781707,
+          "brier_score": 0.09529545945877692,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.41221385407674216,
+          "fail_recall": 0.7748803894686774,
+          "fail_f1": 0.5381483964363092,
+          "pass_precision": 0.9490909320990975,
+          "pass_recall": 0.7915948736486861,
+          "pass_f1": 0.8632178351719811,
+          "confusion_matrix": {
+            "tn": 55390,
+            "fp": 16092,
+            "fn": 78982,
+            "tp": 300001
+          }
+        },
+        "valid": {
+          "roc_auc": 0.8095465260631418,
+          "pass_average_precision": 0.9726883029815366,
+          "fail_average_precision": 0.32210829879484304,
+          "brier_score": 0.08074219073529276,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.33407940833008953,
+          "fail_recall": 0.42521830680621786,
+          "fail_f1": 0.3741791329464018,
+          "pass_precision": 0.9315282747427054,
+          "pass_recall": 0.9022079314040728,
+          "pass_f1": 0.9166336957113559,
+          "confusion_matrix": {
+            "tn": 6866,
+            "fp": 9281,
+            "fn": 13686,
+            "tp": 126264
+          },
+          "train_valid_auc_gap": 0.058199593054229726,
+          "best_iteration": 151
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.576222726117305,
+          "rmse": 12.290547020958662,
+          "r2": 0.5053658508091865
+        },
+        "valid": {
+          "mae": 9.549175952897139,
+          "rmse": 12.835566407271592,
+          "r2": 0.35385803345502753,
+          "best_iteration": 576
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7353883033536314
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7353883033536314
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6753342460156302
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7688693329935705
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8208656178725807
+        }
+      }
+    },
+    "82_baseline": {
+      "seed": 82,
+      "arm": "baseline",
+      "contract": "baseline_41",
+      "run_path": "models/runs/2026-07-27_1038__seed82-baseline-41-gpa-trend-control",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8561269694278992,
+          "pass_average_precision": 0.9678395091649228,
+          "fail_average_precision": 0.5475104082913635,
+          "brier_score": 0.09840206540966809,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.3996076348939434,
+          "fail_recall": 0.7579810301894183,
+          "fail_f1": 0.5233206162167383,
+          "pass_precision": 0.9450579115019515,
+          "pass_recall": 0.7851988083898223,
+          "pass_f1": 0.8577436370449371,
+          "confusion_matrix": {
+            "tn": 54182,
+            "fp": 17300,
+            "fn": 81406,
+            "tp": 297577
+          }
+        },
+        "valid": {
+          "roc_auc": 0.8097270946703423,
+          "pass_average_precision": 0.9725963040903627,
+          "fail_average_precision": 0.32383240525549156,
+          "brier_score": 0.08079991844856552,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.3368295959491578,
+          "fail_recall": 0.4037282467331393,
+          "fail_f1": 0.36725726035886314,
+          "pass_precision": 0.9295905457683391,
+          "pass_recall": 0.9082886745266167,
+          "pass_f1": 0.9188161608714351,
+          "confusion_matrix": {
+            "tn": 6519,
+            "fp": 9628,
+            "fn": 12835,
+            "tp": 127115
+          },
+          "train_valid_auc_gap": 0.046399874757556914,
+          "best_iteration": 100
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.138857468552336,
+          "rmse": 12.843883212953127,
+          "r2": 0.45982514125971585
+        },
+        "valid": {
+          "mae": 9.600819131634662,
+          "rmse": 12.894956155591352,
+          "r2": 0.3478648445828748,
+          "best_iteration": 223
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7356859512156579
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7356859512156579
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6805783778524221
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.770927173158696
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.82043709374451
+        }
+      }
+    },
+    "42_candidate": {
+      "seed": 42,
+      "arm": "candidate",
+      "contract": "concurrent_44",
+      "run_path": "models/runs/2026-07-26_1554__concurrent-44-registration-roster-candidate",
+      "m1": {
+        "train": {
+          "roc_auc": 0.86662517566146,
+          "pass_average_precision": 0.9706655165850778,
+          "fail_average_precision": 0.5706963342459741,
+          "brier_score": 0.09573487331805712,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.411386791679399,
+          "fail_recall": 0.7721804090540276,
+          "fail_f1": 0.5367922005300139,
+          "pass_precision": 0.9485127666839502,
+          "pass_recall": 0.7916107054933863,
+          "pass_f1": 0.8629880263205206,
+          "confusion_matrix": {
+            "tn": 55197,
+            "fp": 16285,
+            "fn": 78976,
+            "tp": 300007
+          }
+        },
+        "valid": {
+          "roc_auc": 0.809775483166415,
+          "pass_average_precision": 0.9727342568523207,
+          "fail_average_precision": 0.32284489485725293,
+          "brier_score": 0.08069752575417358,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.32980369403345905,
+          "fail_recall": 0.4224314114076918,
+          "fail_f1": 0.37041461891444244,
+          "pass_precision": 0.9311302292951298,
+          "pass_recall": 0.9009574848160057,
+          "pass_f1": 0.9157953988342745,
+          "confusion_matrix": {
+            "tn": 6821,
+            "fp": 9326,
+            "fn": 13861,
+            "tp": 126089
+          },
+          "train_valid_auc_gap": 0.05684969249504501,
+          "best_iteration": 143
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.584824875172888,
+          "rmse": 12.295495635860027,
+          "r2": 0.5049674557346662
+        },
+        "valid": {
+          "mae": 9.529311955375983,
+          "rmse": 12.81396481224236,
+          "r2": 0.3560310504624111,
+          "best_iteration": 559
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7411209545764115
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7411209545764115
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6764628765277894
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7711102514370181
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8204233605917721
+        }
+      },
+      "concurrent_feature_importance": {
+        "m1": {
+          "concurrent_peer_difficulty_mean": {
+            "gain_importance": 12808.223442554474,
+            "split_importance": 692,
+            "rank_by_gain": 16,
+            "percentage_of_total_gain": 1.2986886991021207,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_max": {
+            "gain_importance": 15370.886476516724,
+            "split_importance": 778,
+            "rank_by_gain": 14,
+            "percentage_of_total_gain": 1.558529693970787,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_missing": {
+            "gain_importance": 0.0,
+            "split_importance": 0,
+            "rank_by_gain": 40,
+            "percentage_of_total_gain": 0.0,
+            "split_count_is_zero": true
+          }
+        },
+        "m2": {
+          "concurrent_peer_difficulty_mean": {
+            "gain_importance": 42490.15148234368,
+            "split_importance": 3094,
+            "rank_by_gain": 15,
+            "percentage_of_total_gain": 1.6123898122188,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_max": {
+            "gain_importance": 50869.73672127724,
+            "split_importance": 3488,
+            "rank_by_gain": 12,
+            "percentage_of_total_gain": 1.9303730953683065,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_missing": {
+            "gain_importance": 0.0,
+            "split_importance": 0,
+            "rank_by_gain": 40,
+            "percentage_of_total_gain": 0.0,
+            "split_count_is_zero": true
+          }
+        }
+      }
+    },
+    "52_candidate": {
+      "seed": 52,
+      "arm": "candidate",
+      "contract": "concurrent_44",
+      "run_path": "models/runs/2026-07-27_1028__seed52-concurrent-44-registration-roster-candidate",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8826545396523854,
+          "pass_average_precision": 0.9746434505871326,
+          "fail_average_precision": 0.6130954545711964,
+          "brier_score": 0.09116387950361014,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.42827936871963546,
+          "fail_recall": 0.7941999384460423,
+          "fail_f1": 0.5564747743067467,
+          "pass_precision": 0.9537257517088223,
+          "pass_recall": 0.800030608233087,
+          "pass_f1": 0.8701434368596569,
+          "confusion_matrix": {
+            "tn": 56771,
+            "fp": 14711,
+            "fn": 75785,
+            "tp": 303198
+          }
+        },
+        "valid": {
+          "roc_auc": 0.80959020678474,
+          "pass_average_precision": 0.9727501636826866,
+          "fail_average_precision": 0.3203424057106794,
+          "brier_score": 0.0808032401083775,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.31918861145222177,
+          "fail_recall": 0.4346318201523503,
+          "fail_f1": 0.36807048827817695,
+          "pass_precision": 0.9319290134963836,
+          "pass_recall": 0.8930403715612719,
+          "pass_f1": 0.9120703495584909,
+          "confusion_matrix": {
+            "tn": 7018,
+            "fp": 9129,
+            "fn": 14969,
+            "tp": 124981
+          },
+          "train_valid_auc_gap": 0.07306433286764535,
+          "best_iteration": 244
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.977615932767584,
+          "rmse": 12.673301386952536,
+          "r2": 0.4740781708122489
+        },
+        "valid": {
+          "mae": 9.554901009778437,
+          "rmse": 12.847472085211535,
+          "r2": 0.35265881471604,
+          "best_iteration": 295
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7241183725272866
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7241183725272866
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.675374636711383
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7611497075480387
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8216408801905024
+        }
+      },
+      "concurrent_feature_importance": {
+        "m1": {
+          "concurrent_peer_difficulty_mean": {
+            "gain_importance": 19297.80896449089,
+            "split_importance": 1474,
+            "rank_by_gain": 13,
+            "percentage_of_total_gain": 1.7432280186096407,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_max": {
+            "gain_importance": 22391.854878664017,
+            "split_importance": 1598,
+            "rank_by_gain": 11,
+            "percentage_of_total_gain": 2.0227223144841546,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_missing": {
+            "gain_importance": 8.836259841918945,
+            "split_importance": 1,
+            "rank_by_gain": 40,
+            "percentage_of_total_gain": 0.0007982054213766891,
+            "split_count_is_zero": false
+          }
+        },
+        "m2": {
+          "concurrent_peer_difficulty_mean": {
+            "gain_importance": 25114.16613388061,
+            "split_importance": 1311,
+            "rank_by_gain": 17,
+            "percentage_of_total_gain": 1.1001011596190204,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_max": {
+            "gain_importance": 30490.645674705505,
+            "split_importance": 1506,
+            "rank_by_gain": 14,
+            "percentage_of_total_gain": 1.3356125178699374,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_missing": {
+            "gain_importance": 0.0,
+            "split_importance": 0,
+            "rank_by_gain": 41,
+            "percentage_of_total_gain": 0.0,
+            "split_count_is_zero": true
+          }
+        }
+      }
+    },
+    "62_candidate": {
+      "seed": 62,
+      "arm": "candidate",
+      "contract": "concurrent_44",
+      "run_path": "models/runs/2026-07-27_1033__seed62-concurrent-44-registration-roster-candidate",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8847698805902784,
+          "pass_average_precision": 0.9752528343829555,
+          "fail_average_precision": 0.6180496429020901,
+          "brier_score": 0.09065808265065427,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.4302730576119898,
+          "fail_recall": 0.7984387678016843,
+          "fail_f1": 0.5591981501802791,
+          "pass_precision": 0.9546660205966289,
+          "pass_recall": 0.8005926387199426,
+          "pass_f1": 0.8708671903926797,
+          "confusion_matrix": {
+            "tn": 57074,
+            "fp": 14408,
+            "fn": 75572,
+            "tp": 303411
+          }
+        },
+        "valid": {
+          "roc_auc": 0.8102227571432905,
+          "pass_average_precision": 0.9727883906879671,
+          "fail_average_precision": 0.3222891152785812,
+          "brier_score": 0.08063159535728039,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.32301310043668124,
+          "fail_recall": 0.45810367250882517,
+          "fail_f1": 0.3788767382897534,
+          "pass_precision": 0.9343078297559254,
+          "pass_recall": 0.8892247231153984,
+          "pass_f1": 0.9112089827089442,
+          "confusion_matrix": {
+            "tn": 7397,
+            "fp": 8750,
+            "fn": 15503,
+            "tp": 124447
+          },
+          "train_valid_auc_gap": 0.07454712344698788,
+          "best_iteration": 264
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.018408377361375,
+          "rmse": 12.718857453367994,
+          "r2": 0.4702903666695214
+        },
+        "valid": {
+          "mae": 9.585235924615487,
+          "rmse": 12.886114296657684,
+          "r2": 0.3487588546322151,
+          "best_iteration": 273
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7347939813578335
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7347939813578335
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6757411448765475
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7709524337541354
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.821434632905111
+        }
+      },
+      "concurrent_feature_importance": {
+        "m1": {
+          "concurrent_peer_difficulty_mean": {
+            "gain_importance": 20675.72047591209,
+            "split_importance": 1604,
+            "rank_by_gain": 13,
+            "percentage_of_total_gain": 1.8419792930316838,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_max": {
+            "gain_importance": 23129.269669771194,
+            "split_importance": 1791,
+            "rank_by_gain": 11,
+            "percentage_of_total_gain": 2.060563540907751,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_missing": {
+            "gain_importance": 0.0,
+            "split_importance": 0,
+            "rank_by_gain": 41,
+            "percentage_of_total_gain": 0.0,
+            "split_count_is_zero": true
+          }
+        },
+        "m2": {
+          "concurrent_peer_difficulty_mean": {
+            "gain_importance": 23621.624220848083,
+            "split_importance": 1156,
+            "rank_by_gain": 19,
+            "percentage_of_total_gain": 1.047219909666303,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_max": {
+            "gain_importance": 28815.80420446396,
+            "split_importance": 1387,
+            "rank_by_gain": 13,
+            "percentage_of_total_gain": 1.27749402809174,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_missing": {
+            "gain_importance": 0.0,
+            "split_importance": 0,
+            "rank_by_gain": 40,
+            "percentage_of_total_gain": 0.0,
+            "split_count_is_zero": true
+          }
+        }
+      }
+    },
+    "72_candidate": {
+      "seed": 72,
+      "arm": "candidate",
+      "contract": "concurrent_44",
+      "run_path": "models/runs/2026-07-27_1036__seed72-concurrent-44-registration-roster-candidate",
+      "m1": {
+        "train": {
+          "roc_auc": 0.862890906715062,
+          "pass_average_precision": 0.9696902428415095,
+          "fail_average_precision": 0.5617421044573592,
+          "brier_score": 0.09674567389829586,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.40584934711159804,
+          "fail_recall": 0.7670042807979631,
+          "fail_f1": 0.530821884651505,
+          "pass_precision": 0.9471895184432402,
+          "pass_recall": 0.7882094975236357,
+          "pass_f1": 0.8604174227629631,
+          "confusion_matrix": {
+            "tn": 54827,
+            "fp": 16655,
+            "fn": 80265,
+            "tp": 298718
+          }
+        },
+        "valid": {
+          "roc_auc": 0.810563852961049,
+          "pass_average_precision": 0.9727494430201664,
+          "fail_average_precision": 0.32365227877016317,
+          "brier_score": 0.08069128307179078,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.3368189323059989,
+          "fail_recall": 0.4169195516194959,
+          "fail_f1": 0.3726130514197155,
+          "pass_precision": 0.9308280067592388,
+          "pass_recall": 0.9052876027152554,
+          "pass_f1": 0.9178801709773238,
+          "confusion_matrix": {
+            "tn": 6732,
+            "fp": 9415,
+            "fn": 13255,
+            "tp": 126695
+          },
+          "train_valid_auc_gap": 0.05232705375401292,
+          "best_iteration": 127
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.618725049129052,
+          "rmse": 12.324539749154683,
+          "r2": 0.5026259864446452
+        },
+        "valid": {
+          "mae": 9.536566915187707,
+          "rmse": 12.813732832730954,
+          "r2": 0.35605436662602363,
+          "best_iteration": 527
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7388869959147927
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7388869959147927
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.678569900099045
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7709297336502784
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.821260425443395
+        }
+      },
+      "concurrent_feature_importance": {
+        "m1": {
+          "concurrent_peer_difficulty_mean": {
+            "gain_importance": 14236.858572006226,
+            "split_importance": 651,
+            "rank_by_gain": 14,
+            "percentage_of_total_gain": 1.4809198047609247,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_max": {
+            "gain_importance": 14107.491127490995,
+            "split_importance": 695,
+            "rank_by_gain": 15,
+            "percentage_of_total_gain": 1.4674629870433824,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_missing": {
+            "gain_importance": 0.0,
+            "split_importance": 0,
+            "rank_by_gain": 40,
+            "percentage_of_total_gain": 0.0,
+            "split_count_is_zero": true
+          }
+        },
+        "m2": {
+          "concurrent_peer_difficulty_mean": {
+            "gain_importance": 41885.58813095093,
+            "split_importance": 2976,
+            "rank_by_gain": 15,
+            "percentage_of_total_gain": 1.6141077391183398,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_max": {
+            "gain_importance": 47860.97213983536,
+            "split_importance": 3230,
+            "rank_by_gain": 12,
+            "percentage_of_total_gain": 1.8443758099113416,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_missing": {
+            "gain_importance": 0.0,
+            "split_importance": 0,
+            "rank_by_gain": 41,
+            "percentage_of_total_gain": 0.0,
+            "split_count_is_zero": true
+          }
+        }
+      }
+    },
+    "82_candidate": {
+      "seed": 82,
+      "arm": "candidate",
+      "contract": "concurrent_44",
+      "run_path": "models/runs/2026-07-27_1039__seed82-concurrent-44-registration-roster-candidate",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8829784422399063,
+          "pass_average_precision": 0.9747551981764503,
+          "fail_average_precision": 0.6135533384934482,
+          "brier_score": 0.09114536593315746,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.42834265608083727,
+          "fail_recall": 0.797025824683137,
+          "fail_f1": 0.5572204019756467,
+          "pass_precision": 0.9542961723950015,
+          "pass_recall": 0.7993709480372471,
+          "pass_f1": 0.8699902360576647,
+          "confusion_matrix": {
+            "tn": 56973,
+            "fp": 14509,
+            "fn": 76035,
+            "tp": 302948
+          }
+        },
+        "valid": {
+          "roc_auc": 0.8098587295938819,
+          "pass_average_precision": 0.9727186638005907,
+          "fail_average_precision": 0.32193427587076756,
+          "brier_score": 0.0807077587897443,
+          "reporting_threshold": 0.8,
+          "fail_precision": 0.3227078693392725,
+          "fail_recall": 0.4307301665944138,
+          "fail_f1": 0.3689753043847317,
+          "pass_precision": 0.9316808502731428,
+          "pass_recall": 0.895698463737049,
+          "pass_f1": 0.9133353977303776,
+          "confusion_matrix": {
+            "tn": 6955,
+            "fp": 9192,
+            "fn": 14597,
+            "tp": 125353
+          },
+          "train_valid_auc_gap": 0.07311971264602435,
+          "best_iteration": 247
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.869048856858587,
+          "rmse": 12.572192843683279,
+          "r2": 0.4824363831817705
+        },
+        "valid": {
+          "mae": 9.550396457241758,
+          "rmse": 12.827479438350265,
+          "r2": 0.3546719724341276,
+          "best_iteration": 351
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7312937760402756
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7312937760402756
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6739589460773155
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7642698574824124
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8215768592032371
+        }
+      },
+      "concurrent_feature_importance": {
+        "m1": {
+          "concurrent_peer_difficulty_mean": {
+            "gain_importance": 20700.374820947647,
+            "split_importance": 1529,
+            "rank_by_gain": 14,
+            "percentage_of_total_gain": 1.8672129964970599,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_max": {
+            "gain_importance": 24590.587048769,
+            "split_importance": 1765,
+            "rank_by_gain": 11,
+            "percentage_of_total_gain": 2.2181175039637164,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_missing": {
+            "gain_importance": 0.0,
+            "split_importance": 0,
+            "rank_by_gain": 41,
+            "percentage_of_total_gain": 0.0,
+            "split_count_is_zero": true
+          }
+        },
+        "m2": {
+          "concurrent_peer_difficulty_mean": {
+            "gain_importance": 28130.40174388885,
+            "split_importance": 1551,
+            "rank_by_gain": 17,
+            "percentage_of_total_gain": 1.1827653153646056,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_max": {
+            "gain_importance": 35559.84498167038,
+            "split_importance": 1965,
+            "rank_by_gain": 14,
+            "percentage_of_total_gain": 1.4951422182656489,
+            "split_count_is_zero": false
+          },
+          "concurrent_peer_difficulty_missing": {
+            "gain_importance": 13.954299926757812,
+            "split_importance": 1,
+            "rank_by_gain": 40,
+            "percentage_of_total_gain": 0.0005867197384463067,
+            "split_count_is_zero": false
+          }
+        }
+      }
+    }
+  },
+  "paired_deltas": [
+    {
+      "seed": 42,
+      "m1_valid_auc": {
+        "baseline": 0.80918853274908,
+        "candidate": 0.809775483166415,
+        "delta_candidate_minus_baseline": 0.0005869504173350304,
+        "direction": "higher_is_better"
+      },
+      "m1_valid_fail_ap": {
+        "baseline": 0.3219831593412697,
+        "candidate": 0.32284489485725293,
+        "delta_candidate_minus_baseline": 0.0008617355159832307,
+        "direction": "higher_is_better"
+      },
+      "m1_valid_brier": {
+        "baseline": 0.08077845438389275,
+        "candidate": 0.08069752575417358,
+        "delta_candidate_minus_baseline": -8.092862971917358e-05,
+        "direction": "lower_is_better"
+      },
+      "m1_train_valid_auc_gap": {
+        "baseline": 0.05538395020283782,
+        "candidate": 0.05684969249504501,
+        "delta_candidate_minus_baseline": 0.001465742292207195,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_mae": {
+        "baseline": 9.56670973063096,
+        "candidate": 9.529311955375983,
+        "delta_candidate_minus_baseline": -0.037397775254977006,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_rmse": {
+        "baseline": 12.854908853104188,
+        "candidate": 12.81396481224236,
+        "delta_candidate_minus_baseline": -0.04094404086182735,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_r2": {
+        "baseline": 0.35190917004813094,
+        "candidate": 0.3560310504624111,
+        "delta_candidate_minus_baseline": 0.004121880414280188,
+        "direction": "higher_is_better"
+      },
+      "cold_start_auc": {
+        "baseline": 0.7329310827134857,
+        "candidate": 0.7411209545764115,
+        "delta_candidate_minus_baseline": 0.008189871862925746,
+        "direction": "higher_is_better"
+      },
+      "low_difficulty_support_auc": {
+        "baseline": 0.7644051315707036,
+        "candidate": 0.7711102514370181,
+        "delta_candidate_minus_baseline": 0.006705119866314502,
+        "direction": "higher_is_better"
+      },
+      "level_1_auc": {
+        "baseline": 0.8209615204193982,
+        "candidate": 0.8204233605917721,
+        "delta_candidate_minus_baseline": -0.0005381598276260613,
+        "direction": "higher_is_better"
+      }
+    },
+    {
+      "seed": 52,
+      "m1_valid_auc": {
+        "baseline": 0.8099725366177877,
+        "candidate": 0.80959020678474,
+        "delta_candidate_minus_baseline": -0.00038232983304764545,
+        "direction": "higher_is_better"
+      },
+      "m1_valid_fail_ap": {
+        "baseline": 0.3223876966589215,
+        "candidate": 0.3203424057106794,
+        "delta_candidate_minus_baseline": -0.0020452909482420734,
+        "direction": "higher_is_better"
+      },
+      "m1_valid_brier": {
+        "baseline": 0.08068400479483179,
+        "candidate": 0.0808032401083775,
+        "delta_candidate_minus_baseline": 0.00011923531354571248,
+        "direction": "lower_is_better"
+      },
+      "m1_train_valid_auc_gap": {
+        "baseline": 0.06873544840149193,
+        "candidate": 0.07306433286764535,
+        "delta_candidate_minus_baseline": 0.0043288844661534265,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_mae": {
+        "baseline": 9.571450517082688,
+        "candidate": 9.554901009778437,
+        "delta_candidate_minus_baseline": -0.01654950730425142,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_rmse": {
+        "baseline": 12.855157806946629,
+        "candidate": 12.847472085211535,
+        "delta_candidate_minus_baseline": -0.007685721735093409,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_r2": {
+        "baseline": 0.35188406737855193,
+        "candidate": 0.35265881471604,
+        "delta_candidate_minus_baseline": 0.0007747473374880576,
+        "direction": "higher_is_better"
+      },
+      "cold_start_auc": {
+        "baseline": 0.7357368285169952,
+        "candidate": 0.7241183725272866,
+        "delta_candidate_minus_baseline": -0.011618455989708565,
+        "direction": "higher_is_better"
+      },
+      "low_difficulty_support_auc": {
+        "baseline": 0.7652953687931744,
+        "candidate": 0.7611497075480387,
+        "delta_candidate_minus_baseline": -0.004145661245135712,
+        "direction": "higher_is_better"
+      },
+      "level_1_auc": {
+        "baseline": 0.8217310474344764,
+        "candidate": 0.8216408801905024,
+        "delta_candidate_minus_baseline": -9.016724397403753e-05,
+        "direction": "higher_is_better"
+      }
+    },
+    {
+      "seed": 62,
+      "m1_valid_auc": {
+        "baseline": 0.8091809346395975,
+        "candidate": 0.8102227571432905,
+        "delta_candidate_minus_baseline": 0.0010418225036930018,
+        "direction": "higher_is_better"
+      },
+      "m1_valid_fail_ap": {
+        "baseline": 0.32327512466144837,
+        "candidate": 0.3222891152785812,
+        "delta_candidate_minus_baseline": -0.0009860093828671923,
+        "direction": "higher_is_better"
+      },
+      "m1_valid_brier": {
+        "baseline": 0.08073913911857501,
+        "candidate": 0.08063159535728039,
+        "delta_candidate_minus_baseline": -0.00010754376129462617,
+        "direction": "lower_is_better"
+      },
+      "m1_train_valid_auc_gap": {
+        "baseline": 0.06157726166465505,
+        "candidate": 0.07454712344698788,
+        "delta_candidate_minus_baseline": 0.012969861782332837,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_mae": {
+        "baseline": 9.538716288429402,
+        "candidate": 9.585235924615487,
+        "delta_candidate_minus_baseline": 0.04651963618608512,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_rmse": {
+        "baseline": 12.808063845401405,
+        "candidate": 12.886114296657684,
+        "delta_candidate_minus_baseline": 0.07805045125627963,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_r2": {
+        "baseline": 0.3566240229723635,
+        "candidate": 0.3487588546322151,
+        "delta_candidate_minus_baseline": -0.007865168340148387,
+        "direction": "higher_is_better"
+      },
+      "cold_start_auc": {
+        "baseline": 0.7283975778370546,
+        "candidate": 0.7347939813578335,
+        "delta_candidate_minus_baseline": 0.006396403520778859,
+        "direction": "higher_is_better"
+      },
+      "low_difficulty_support_auc": {
+        "baseline": 0.7624302913992174,
+        "candidate": 0.7709524337541354,
+        "delta_candidate_minus_baseline": 0.008522142354917994,
+        "direction": "higher_is_better"
+      },
+      "level_1_auc": {
+        "baseline": 0.8211002964021674,
+        "candidate": 0.821434632905111,
+        "delta_candidate_minus_baseline": 0.0003343365029435663,
+        "direction": "higher_is_better"
+      }
+    },
+    {
+      "seed": 72,
+      "m1_valid_auc": {
+        "baseline": 0.8095465260631418,
+        "candidate": 0.810563852961049,
+        "delta_candidate_minus_baseline": 0.0010173268979072336,
+        "direction": "higher_is_better"
+      },
+      "m1_valid_fail_ap": {
+        "baseline": 0.32210829879484304,
+        "candidate": 0.32365227877016317,
+        "delta_candidate_minus_baseline": 0.001543979975320131,
+        "direction": "higher_is_better"
+      },
+      "m1_valid_brier": {
+        "baseline": 0.08074219073529276,
+        "candidate": 0.08069128307179078,
+        "delta_candidate_minus_baseline": -5.0907663501978395e-05,
+        "direction": "lower_is_better"
+      },
+      "m1_train_valid_auc_gap": {
+        "baseline": 0.058199593054229726,
+        "candidate": 0.05232705375401292,
+        "delta_candidate_minus_baseline": -0.005872539300216806,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_mae": {
+        "baseline": 9.549175952897139,
+        "candidate": 9.536566915187707,
+        "delta_candidate_minus_baseline": -0.012609037709431448,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_rmse": {
+        "baseline": 12.835566407271592,
+        "candidate": 12.813732832730954,
+        "delta_candidate_minus_baseline": -0.021833574540638168,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_r2": {
+        "baseline": 0.35385803345502753,
+        "candidate": 0.35605436662602363,
+        "delta_candidate_minus_baseline": 0.002196333170996101,
+        "direction": "higher_is_better"
+      },
+      "cold_start_auc": {
+        "baseline": 0.7353883033536314,
+        "candidate": 0.7388869959147927,
+        "delta_candidate_minus_baseline": 0.0034986925611613096,
+        "direction": "higher_is_better"
+      },
+      "low_difficulty_support_auc": {
+        "baseline": 0.7688693329935705,
+        "candidate": 0.7709297336502784,
+        "delta_candidate_minus_baseline": 0.0020604006567078725,
+        "direction": "higher_is_better"
+      },
+      "level_1_auc": {
+        "baseline": 0.8208656178725807,
+        "candidate": 0.821260425443395,
+        "delta_candidate_minus_baseline": 0.00039480757081422624,
+        "direction": "higher_is_better"
+      }
+    },
+    {
+      "seed": 82,
+      "m1_valid_auc": {
+        "baseline": 0.8097270946703423,
+        "candidate": 0.8098587295938819,
+        "delta_candidate_minus_baseline": 0.00013163492353962525,
+        "direction": "higher_is_better"
+      },
+      "m1_valid_fail_ap": {
+        "baseline": 0.32383240525549156,
+        "candidate": 0.32193427587076756,
+        "delta_candidate_minus_baseline": -0.001898129384724001,
+        "direction": "higher_is_better"
+      },
+      "m1_valid_brier": {
+        "baseline": 0.08079991844856552,
+        "candidate": 0.0807077587897443,
+        "delta_candidate_minus_baseline": -9.215965882121424e-05,
+        "direction": "lower_is_better"
+      },
+      "m1_train_valid_auc_gap": {
+        "baseline": 0.046399874757556914,
+        "candidate": 0.07311971264602435,
+        "delta_candidate_minus_baseline": 0.026719837888467435,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_mae": {
+        "baseline": 9.600819131634662,
+        "candidate": 9.550396457241758,
+        "delta_candidate_minus_baseline": -0.05042267439290349,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_rmse": {
+        "baseline": 12.894956155591352,
+        "candidate": 12.827479438350265,
+        "delta_candidate_minus_baseline": -0.06747671724108706,
+        "direction": "lower_is_better"
+      },
+      "m2_valid_r2": {
+        "baseline": 0.3478648445828748,
+        "candidate": 0.3546719724341276,
+        "delta_candidate_minus_baseline": 0.006807127851252814,
+        "direction": "higher_is_better"
+      },
+      "cold_start_auc": {
+        "baseline": 0.7356859512156579,
+        "candidate": 0.7312937760402756,
+        "delta_candidate_minus_baseline": -0.0043921751753823735,
+        "direction": "higher_is_better"
+      },
+      "low_difficulty_support_auc": {
+        "baseline": 0.770927173158696,
+        "candidate": 0.7642698574824124,
+        "delta_candidate_minus_baseline": -0.006657315676283582,
+        "direction": "higher_is_better"
+      },
+      "level_1_auc": {
+        "baseline": 0.82043709374451,
+        "candidate": 0.8215768592032371,
+        "delta_candidate_minus_baseline": 0.0011397654587270711,
+        "direction": "higher_is_better"
+      }
+    }
+  ],
+  "summary": {
+    "m1_valid_auc": {
+      "direction": "higher_is_better",
+      "baseline_mean": 0.8095231249479898,
+      "candidate_mean": 0.8100022059298754,
+      "mean_paired_delta": 0.00047908098188544914,
+      "sample_standard_deviation_of_paired_deltas": 0.0006084344371270353,
+      "minimum_paired_delta": -0.00038232983304764545,
+      "maximum_paired_delta": 0.0010418225036930018,
+      "paired_delta_range": 0.0014241523367406472,
+      "median_paired_delta": 0.0005869504173350304,
+      "seeds_improved": 4,
+      "seeds_worsened": 1,
+      "seeds_tied": 0
+    },
+    "m1_valid_fail_ap": {
+      "direction": "higher_is_better",
+      "baseline_mean": 0.32271733694239485,
+      "candidate_mean": 0.3222125940974888,
+      "mean_paired_delta": -0.000504742844905981,
+      "sample_standard_deviation_of_paired_deltas": 0.0016287234490156193,
+      "minimum_paired_delta": -0.0020452909482420734,
+      "maximum_paired_delta": 0.001543979975320131,
+      "paired_delta_range": 0.0035892709235622045,
+      "median_paired_delta": -0.0009860093828671923,
+      "seeds_improved": 2,
+      "seeds_worsened": 3,
+      "seeds_tied": 0
+    },
+    "m1_valid_brier": {
+      "direction": "lower_is_better",
+      "baseline_mean": 0.08074874149623157,
+      "candidate_mean": 0.0807062806162733,
+      "mean_paired_delta": -4.2460879958255984e-05,
+      "sample_standard_deviation_of_paired_deltas": 9.273958833891969e-05,
+      "minimum_paired_delta": -0.00010754376129462617,
+      "maximum_paired_delta": 0.00011923531354571248,
+      "paired_delta_range": 0.00022677907484033866,
+      "median_paired_delta": -8.092862971917358e-05,
+      "seeds_improved": 4,
+      "seeds_worsened": 1,
+      "seeds_tied": 0
+    },
+    "m1_train_valid_auc_gap": {
+      "direction": "lower_is_better",
+      "baseline_mean": 0.058059225616154286,
+      "candidate_mean": 0.0659815830419431,
+      "mean_paired_delta": 0.007922357425788817,
+      "sample_standard_deviation_of_paired_deltas": 0.01248722021258236,
+      "minimum_paired_delta": -0.005872539300216806,
+      "maximum_paired_delta": 0.026719837888467435,
+      "paired_delta_range": 0.03259237718868424,
+      "median_paired_delta": 0.0043288844661534265,
+      "seeds_improved": 1,
+      "seeds_worsened": 4,
+      "seeds_tied": 0
+    },
+    "m2_valid_mae": {
+      "direction": "lower_is_better",
+      "baseline_mean": 9.56537432413497,
+      "candidate_mean": 9.551282452439875,
+      "mean_paired_delta": -0.014091871695095648,
+      "sample_standard_deviation_of_paired_deltas": 0.037232667183725913,
+      "minimum_paired_delta": -0.05042267439290349,
+      "maximum_paired_delta": 0.04651963618608512,
+      "paired_delta_range": 0.09694231057898861,
+      "median_paired_delta": -0.01654950730425142,
+      "seeds_improved": 4,
+      "seeds_worsened": 1,
+      "seeds_tied": 0
+    },
+    "m2_valid_rmse": {
+      "direction": "lower_is_better",
+      "baseline_mean": 12.849730613663032,
+      "candidate_mean": 12.837752693038562,
+      "mean_paired_delta": -0.011977920624473271,
+      "sample_standard_deviation_of_paired_deltas": 0.05509041925874558,
+      "minimum_paired_delta": -0.06747671724108706,
+      "maximum_paired_delta": 0.07805045125627963,
+      "paired_delta_range": 0.1455271684973667,
+      "median_paired_delta": -0.021833574540638168,
+      "seeds_improved": 4,
+      "seeds_worsened": 1,
+      "seeds_tied": 0
+    },
+    "m2_valid_r2": {
+      "direction": "higher_is_better",
+      "baseline_mean": 0.35242802768738973,
+      "candidate_mean": 0.35363501177416345,
+      "mean_paired_delta": 0.0012069840867737548,
+      "sample_standard_deviation_of_paired_deltas": 0.005552652984343118,
+      "minimum_paired_delta": -0.007865168340148387,
+      "maximum_paired_delta": 0.006807127851252814,
+      "paired_delta_range": 0.014672296191401202,
+      "median_paired_delta": 0.002196333170996101,
+      "seeds_improved": 4,
+      "seeds_worsened": 1,
+      "seeds_tied": 0
+    },
+    "cold_start_auc": {
+      "direction": "higher_is_better",
+      "baseline_mean": 0.733627948727365,
+      "candidate_mean": 0.7340428160833199,
+      "mean_paired_delta": 0.0004148673559549954,
+      "sample_standard_deviation_of_paired_deltas": 0.008271154340691434,
+      "minimum_paired_delta": -0.011618455989708565,
+      "maximum_paired_delta": 0.008189871862925746,
+      "paired_delta_range": 0.01980832785263431,
+      "median_paired_delta": 0.0034986925611613096,
+      "seeds_improved": 3,
+      "seeds_worsened": 2,
+      "seeds_tied": 0
+    },
+    "low_difficulty_support_auc": {
+      "direction": "higher_is_better",
+      "baseline_mean": 0.7663854595830724,
+      "candidate_mean": 0.7676823967743766,
+      "mean_paired_delta": 0.0012969371913042148,
+      "sample_standard_deviation_of_paired_deltas": 0.006612997096390294,
+      "minimum_paired_delta": -0.006657315676283582,
+      "maximum_paired_delta": 0.008522142354917994,
+      "paired_delta_range": 0.015179458031201576,
+      "median_paired_delta": 0.0020604006567078725,
+      "seeds_improved": 3,
+      "seeds_worsened": 2,
+      "seeds_tied": 0
+    },
+    "level_1_auc": {
+      "direction": "higher_is_better",
+      "baseline_mean": 0.8210191151746266,
+      "candidate_mean": 0.8212672316668035,
+      "mean_paired_delta": 0.000248116492176953,
+      "sample_standard_deviation_of_paired_deltas": 0.0006238301811361607,
+      "minimum_paired_delta": -0.0005381598276260613,
+      "maximum_paired_delta": 0.0011397654587270711,
+      "paired_delta_range": 0.0016779252863531324,
+      "median_paired_delta": 0.0003343365029435663,
+      "seeds_improved": 3,
+      "seeds_worsened": 2,
+      "seeds_tied": 0
+    }
+  },
+  "feature_usage": {
+    "m1": {
+      "concurrent_peer_difficulty_mean": {
+        "seeds_used": [
+          42,
+          52,
+          62,
+          72,
+          82
+        ],
+        "number_of_five_seeds_used": 5
+      },
+      "concurrent_peer_difficulty_max": {
+        "seeds_used": [
+          42,
+          52,
+          62,
+          72,
+          82
+        ],
+        "number_of_five_seeds_used": 5
+      },
+      "concurrent_peer_difficulty_missing": {
+        "seeds_used": [
+          52
+        ],
+        "number_of_five_seeds_used": 1
+      }
+    },
+    "m2": {
+      "concurrent_peer_difficulty_mean": {
+        "seeds_used": [
+          42,
+          52,
+          62,
+          72,
+          82
+        ],
+        "number_of_five_seeds_used": 5
+      },
+      "concurrent_peer_difficulty_max": {
+        "seeds_used": [
+          42,
+          52,
+          62,
+          72,
+          82
+        ],
+        "number_of_five_seeds_used": 5
+      },
+      "concurrent_peer_difficulty_missing": {
+        "seeds_used": [
+          82
+        ],
+        "number_of_five_seeds_used": 1
+      }
+    },
+    "missing_feature_overall": {
+      "seeds_used_by_either_model": [
+        52,
+        82
+      ],
+      "number_of_five_seeds_used_by_either_model": 2,
+      "unused_in_all_five_seeds": false
+    }
+  },
+  "verdicts": {
+    "m1": {
+      "status": "INCONCLUSIVE",
+      "reason": "AUC and Brier improved in 4/5 seeds, but fail AP improved in only 2/5, the train-valid AUC gap worsened in 4/5, and segment direction was mixed.",
+      "detail": "The candidate shows a consistent but small VALID AUC/Brier direction, yet the operational fail-class AP result is mixed and the generalization gap usually worsens, sometimes by more than the VALID AUC benefit. Cold-start improves in only 3/5 seeds and is identical to first_semester, so it is not independent confirmation. The M1 improvement is inside observed seed variability and does not satisfy strong support."
+    },
+    "m2": {
+      "status": "SUPPORTED",
+      "reason": "MAE, RMSE, and R2 improve together in 4/5 seeds; the mean benefit is not caused by a single seed, though it is small.",
+      "detail": "Four seeds improve all three VALID regression metrics and one seed (62) worsens all three. Multiple improving seeds contribute to the mean, including seeds 42, 52, 72, and 82. This is a stable direction across seeds and consistent but small, with no claim of statistical significance."
+    }
+  },
+  "failed_or_rerun_seeds": [],
+  "seed52_provenance_incident": "Baseline Git metadata was repaired from the immediately adjacent candidate after the initial background launcher failed to pass the safe-directory environment. Training artifacts were not rerun or altered.",
+  "integrity": {
+    "test_never_read": true,
+    "dataset_modified": false,
+    "live_model_modified": false,
+    "promotion_marker_modified": false,
+    "current_version_modified": false,
+    "recommendation_wiring_modified": false,
+    "inference_wiring_modified": false,
+    "committed": false,
+    "pushed": false
+  }
+}

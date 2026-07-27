@@ -37,8 +37,20 @@ reports/
 # =========================
 # Models / artifacts
 # =========================
-models/
+models/*
+!models/runs/
 artifacts/
+
+# Provenance/report files under models/runs/ are tracked; model binaries,
+# parquet, and logs stay ignored everywhere (including under models/runs/).
+models/runs/*
+!models/runs/*/
+!models/runs/*.json
+!models/runs/*.md
+models/runs/*/*
+!models/runs/*/*.json
+!models/runs/*/*.csv
+!models/runs/*/*.md
 
 # =========================
 # Logs / temp
