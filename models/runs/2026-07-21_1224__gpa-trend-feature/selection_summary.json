@@ -1,0 +1,21 @@
+{
+  "selection_split": "valid",
+  "test_policy": "descriptive_only; never supplied to fitting or early stopping",
+  "directions": {
+    "fail_avg_precision": "higher_is_better",
+    "auc": "higher_is_better",
+    "brier": "lower_is_better",
+    "train_valid_auc_gap": "lower_is_better"
+  },
+  "valid": {
+    "fail_avg_precision": 0.3219831593412697,
+    "auc": 0.80918853274908,
+    "brier": 0.08077845438389275,
+    "train_valid_auc_gap": 0.05538395020283782
+  },
+  "test_descriptive": {
+    "fail_avg_precision": 0.25665079869635565,
+    "auc": 0.7906591610928633,
+    "brier": 0.07373421931823615
+  }
+}

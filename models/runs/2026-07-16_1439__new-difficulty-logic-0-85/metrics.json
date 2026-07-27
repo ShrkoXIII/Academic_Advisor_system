@@ -1,0 +1,103 @@
+{
+  "m1_pass_classifier": {
+    "train": {
+      "auc": 0.8707634310247154,
+      "avg_precision": 0.9716342884054042,
+      "fail_avg_precision": 0.5840181953026916,
+      "accuracy": 0.7357,
+      "precision": 0.9633,
+      "recall": 0.713,
+      "f1": 0.8195,
+      "fail_precision": 0.36,
+      "fail_recall": 0.856,
+      "fail_f1": 0.5069,
+      "brier": 0.0944016900689393,
+      "confusion_matrix": {
+        "tn": 61186,
+        "fp": 10296,
+        "fn": 108767,
+        "tp": 270216
+      }
+    },
+    "valid": {
+      "auc": 0.8085576195021211,
+      "avg_precision": 0.9724734687678773,
+      "fail_avg_precision": 0.3221597080287826,
+      "accuracy": 0.7987,
+      "precision": 0.945,
+      "recall": 0.8234,
+      "f1": 0.88,
+      "fail_precision": 0.2764,
+      "fail_recall": 0.5848,
+      "fail_f1": 0.3754,
+      "brier": 0.08071005553144568,
+      "confusion_matrix": {
+        "tn": 9442,
+        "fp": 6705,
+        "fn": 24718,
+        "tp": 115232
+      },
+      "train_valid_auc_gap": 0.0622058115225943
+    },
+    "test": {
+      "auc": 0.7880213273691253,
+      "avg_precision": 0.9732620294033936,
+      "fail_avg_precision": 0.2536080497405342,
+      "accuracy": 0.8032,
+      "precision": 0.9466,
+      "recall": 0.8306,
+      "f1": 0.8848,
+      "fail_precision": 0.2334,
+      "fail_recall": 0.5242,
+      "fail_f1": 0.323,
+      "brier": 0.07404115883721779,
+      "confusion_matrix": {
+        "tn": 5166,
+        "fp": 4689,
+        "fn": 16963,
+        "tp": 83190
+      }
+    }
+  },
+  "m2_grade_regressor": {
+    "train": {
+      "mae": 8.7992,
+      "rmse": 12.5013,
+      "r2": 0.4883
+    },
+    "valid": {
+      "mae": 9.5956,
+      "rmse": 12.8917,
+      "r2": 0.3482
+    },
+    "test": {
+      "mae": 10.3434,
+      "rmse": 13.9246,
+      "r2": 0.2805
+    }
+  },
+  "segments": {
+    "valid": {
+      "first_semester": {
+        "n": 14732,
+        "auc": 0.7366,
+        "status": "ok"
+      },
+      "retake_attempt": {
+        "n": 17958,
+        "auc": 0.6726,
+        "status": "ok"
+      },
+      "low_difficulty_support": {
+        "n": 25627,
+        "auc": 0.7709,
+        "status": "ok"
+      },
+      "cold_start_gpa": {
+        "n": 14732,
+        "auc": 0.7366,
+        "status": "ok"
+      }
+    }
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "m1_pass_classifier": {
+    "train": {
+      "auc": 0.9059,
+      "avg_precision": 0.9764,
+      "accuracy": 0.891,
+      "precision": 0.8878,
+      "recall": 0.9964,
+      "f1": 0.939,
+      "fail_precision": 0.946,
+      "fail_recall": 0.332,
+      "fail_f1": 0.4915,
+      "brier": 0.0816,
+      "confusion_matrix": {
+        "tn": 23734,
+        "fp": 47748,
+        "fn": 1356,
+        "tp": 377627
+      }
+    },
+    "valid": {
+      "auc": 0.782,
+      "avg_precision": 0.9678,
+      "accuracy": 0.8909,
+      "precision": 0.899,
+      "recall": 0.9895,
+      "f1": 0.9421,
+      "fail_precision": 0.2849,
+      "fail_recall": 0.0361,
+      "fail_f1": 0.0641,
+      "brier": 0.0855,
+      "confusion_matrix": {
+        "tn": 583,
+        "fp": 15564,
+        "fn": 1463,
+        "tp": 138487
+      }
+    },
+    "test": {
+      "auc": 0.7722,
+      "avg_precision": 0.9704,
+      "accuracy": 0.9019,
+      "precision": 0.9121,
+      "recall": 0.9874,
+      "f1": 0.9483,
+      "fail_precision": 0.2062,
+      "fail_recall": 0.0333,
+      "fail_f1": 0.0573,
+      "brier": 0.0781,
+      "confusion_matrix": {
+        "tn": 328,
+        "fp": 9527,
+        "fn": 1263,
+        "tp": 98890
+      }
+    }
+  },
+  "m2_grade_regressor": {
+    "train": {
+      "mae": 9.1656,
+      "rmse": 12.7334,
+      "r2": 0.4691
+    },
+    "valid": {
+      "mae": 9.9064,
+      "rmse": 13.1186,
+      "r2": 0.3251
+    },
+    "test": {
+      "mae": 10.5282,
+      "rmse": 14.0545,
+      "r2": 0.267
+    }
+  },
+  "segments": {
+    "valid": {
+      "first_semester": {
+        "n": 14732,
+        "auc": 0.6368,
+        "status": "ok"
+      },
+      "retake_attempt": {
+        "n": 17958,
+        "auc": 0.6435,
+        "status": "ok"
+      },
+      "low_difficulty_support": {
+        "n": 25627,
+        "auc": 0.7524,
+        "status": "ok"
+      },
+      "cold_start_gpa": {
+        "n": 14732,
+        "auc": 0.6368,
+        "status": "ok"
+      }
+    }
+  }
+}

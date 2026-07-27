@@ -1,0 +1,292 @@
+{
+  "diagnostic": "A1 course-stat coverage audit",
+  "run_directory": "D:\\AI\\Real projects\\Academic_Advisor\\models\\runs\\2026-07-12_1513__remove-dead-const",
+  "m1_model_path": "D:\\AI\\Real projects\\Academic_Advisor\\models\\runs\\2026-07-12_1513__remove-dead-const\\m1_pass_model.lgbm",
+  "split_paths": {
+    "train": "D:\\AI\\Real projects\\Academic_Advisor\\data\\model_data\\df_train_final.parquet",
+    "valid": "D:\\AI\\Real projects\\Academic_Advisor\\data\\model_data\\df_valid_final.parquet",
+    "test": "D:\\AI\\Real projects\\Academic_Advisor\\data\\model_data\\df_test_final.parquet"
+  },
+  "coverage_definition": "covered = df[\"course_id\"].isin(train_covered_course_ids), where train_covered_course_ids is cid_stats[\"course_id\"] from the train-only Level-2 course-stat table",
+  "train_cid_stats_course_id_count": 811,
+  "subset_metrics": [
+    {
+      "subset": "valid-covered",
+      "row_count": 130470,
+      "subset_pct": 83.58264412512733,
+      "fail_rate": 0.09593009887330421,
+      "auc": 0.7861859311899614,
+      "fail_class_average_precision": 0.2390831850165867,
+      "brier_score": 0.08068344548694333,
+      "metric_status": "ok"
+    },
+    {
+      "subset": "valid-uncovered",
+      "row_count": 25627,
+      "subset_pct": 16.417355874872676,
+      "fail_rate": 0.14168650251687673,
+      "auc": 0.752394635583576,
+      "fail_class_average_precision": 0.31386640456207077,
+      "brier_score": 0.11015816195338608,
+      "metric_status": "ok"
+    },
+    {
+      "subset": "test-covered",
+      "row_count": 75309,
+      "subset_pct": 68.45774852737982,
+      "fail_rate": 0.08868793902455217,
+      "auc": 0.779209079187766,
+      "fail_class_average_precision": 0.2047394874274464,
+      "brier_score": 0.07848642625012153,
+      "metric_status": "ok"
+    },
+    {
+      "subset": "test-uncovered",
+      "row_count": 34699,
+      "subset_pct": 31.542251472620176,
+      "fail_rate": 0.09153001527421539,
+      "auc": 0.7625961564507975,
+      "fail_class_average_precision": 0.2330317385483469,
+      "brier_score": 0.0771655245670301,
+      "metric_status": "ok"
+    }
+  ],
+  "coverage_by_year": [
+    {
+      "part_year": 2022,
+      "row_count": 76941,
+      "covered_rows": 68969,
+      "coverage_rate_pct": 89.63881415630158
+    },
+    {
+      "part_year": 2023,
+      "row_count": 79156,
+      "covered_rows": 61501,
+      "coverage_rate_pct": 77.69594219010561
+    },
+    {
+      "part_year": 2024,
+      "row_count": 75380,
+      "covered_rows": 53248,
+      "coverage_rate_pct": 70.63942690368799
+    },
+    {
+      "part_year": 2025,
+      "row_count": 34628,
+      "covered_rows": 22061,
+      "coverage_rate_pct": 63.70855954718725
+    }
+  ],
+  "uncovered_fail_probability_describe": {
+    "valid": {
+      "count": 25627.0,
+      "mean": 0.13655217905669212,
+      "std": 0.09518348953856877,
+      "min": 0.0416722286755683,
+      "1%": 0.0416722286755683,
+      "5%": 0.04501895500661368,
+      "10%": 0.04501895500661368,
+      "25%": 0.05982763021309989,
+      "50%": 0.11581252112795837,
+      "75%": 0.171522241549254,
+      "90%": 0.2682497946484711,
+      "95%": 0.3402405372852133,
+      "99%": 0.4591435383709826,
+      "max": 0.5394001718683469
+    },
+    "test": {
+      "count": 34699.0,
+      "mean": 0.11635963266537835,
+      "std": 0.08027088995530494,
+      "min": 0.0416722286755683,
+      "1%": 0.0416722286755683,
+      "5%": 0.0416722286755683,
+      "10%": 0.04501895500661368,
+      "25%": 0.05275570268241425,
+      "50%": 0.0955881659207195,
+      "75%": 0.1501960411343053,
+      "90%": 0.22415099780529535,
+      "95%": 0.27805804674765533,
+      "99%": 0.4293073027511659,
+      "max": 0.5514311424634041
+    }
+  },
+  "uncovered_fail_probability_histogram": {
+    "valid": {
+      "bin_edges": [
+        0.0,
+        0.05,
+        0.1,
+        0.15000000000000002,
+        0.2,
+        0.25,
+        0.30000000000000004,
+        0.35000000000000003,
+        0.4,
+        0.45,
+        0.5,
+        0.55,
+        0.6000000000000001,
+        0.65,
+        0.7000000000000001,
+        0.75,
+        0.8,
+        0.8500000000000001,
+        0.9,
+        0.9500000000000001,
+        1.0
+      ],
+      "counts": [
+        4948,
+        5925,
+        5870,
+        4131,
+        1059,
+        1856,
+        683,
+        463,
+        342,
+        308,
+        42,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "test": {
+      "bin_edges": [
+        0.0,
+        0.05,
+        0.1,
+        0.15000000000000002,
+        0.2,
+        0.25,
+        0.30000000000000004,
+        0.35000000000000003,
+        0.4,
+        0.45,
+        0.5,
+        0.55,
+        0.6000000000000001,
+        0.65,
+        0.7000000000000001,
+        0.75,
+        0.8,
+        0.8500000000000001,
+        0.9,
+        0.9500000000000001,
+        1.0
+      ],
+      "counts": [
+        7476,
+        10455,
+        8069,
+        4578,
+        1364, 
+        1499,
+        500,
+        275,
+        243,
+        205,
+        31,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  "diploma_type_51_course_sanity_sample": [
+    {
+      "course_id": "1423.111",
+      "part_year": 2025,
+      "covered": 0,
+      "difficulty_fallback_level": 5,
+      "row_count": 302,
+      "membership_result": "UNCOVERED — course_id is absent from train cid_stats"
+    },
+    {
+      "course_id": "1421.111",
+      "part_year": 2025,
+      "covered": 0,
+      "difficulty_fallback_level": 4,
+      "row_count": 288,
+      "membership_result": "UNCOVERED — course_id is absent from train cid_stats"
+    },
+    {
+      "course_id": "1422.111",
+      "part_year": 2025,
+      "covered": 0,
+      "difficulty_fallback_level": 4,
+      "row_count": 281,
+      "membership_result": "UNCOVERED — course_id is absent from train cid_stats"
+    },
+    {
+      "course_id": "1423.111",
+      "part_year": 2025,
+      "covered": 0,
+      "difficulty_fallback_level": 4,
+      "row_count": 265,
+      "membership_result": "UNCOVERED — course_id is absent from train cid_stats"
+    },
+    {
+      "course_id": "1440.111",
+      "part_year": 2025,
+      "covered": 0,
+      "difficulty_fallback_level": 5,
+      "row_count": 244,
+      "membership_result": "UNCOVERED — course_id is absent from train cid_stats"
+    },
+    {
+      "course_id": "1441.111",
+      "part_year": 2025,
+      "covered": 0,
+      "difficulty_fallback_level": 5,
+      "row_count": 198,
+      "membership_result": "UNCOVERED — course_id is absent from train cid_stats"
+    },
+    {
+      "course_id": "1442.111",
+      "part_year": 2025,
+      "covered": 0,
+      "difficulty_fallback_level": 5,
+      "row_count": 189,
+      "membership_result": "UNCOVERED — course_id is absent from train cid_stats"
+    },
+    {
+      "course_id": "1445.111",
+      "part_year": 2025,
+      "covered": 0,
+      "difficulty_fallback_level": 5,
+      "row_count": 161,
+      "membership_result": "UNCOVERED — course_id is absent from train cid_stats"
+    },
+    {
+      "course_id": "1443.111",
+      "part_year": 2025,
+      "covered": 0,
+      "difficulty_fallback_level": 5,
+      "row_count": 148,
+      "membership_result": "UNCOVERED — course_id is absent from train cid_stats"
+    },
+    {
+      "course_id": "301.111",
+      "part_year": 2025,
+      "covered": 1,
+      "difficulty_fallback_level": 2,
+      "row_count": 134,
+      "membership_result": "COVERED — course_id is present in train cid_stats"
+    }
+  ]
+}
