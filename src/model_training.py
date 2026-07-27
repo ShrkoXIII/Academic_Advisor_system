@@ -550,6 +550,34 @@ _SHARED_PARAMS = {
     "seed": 42,
 }
 
+NUM_BOOST_ROUND = 2000
+EARLY_STOPPING_ROUNDS = 50
+EFFECTIVE_SEED_PARAM_NAMES = (
+    "seed",
+    "data_random_seed",
+    "feature_fraction_seed",
+    "bagging_seed",
+    "drop_seed",
+)
+
+
+def _effective_seed_settings(model_path: "str | Path") -> Dict[str, int]:
+    """Read LightGBM's resolved stochastic seeds from a serialized model."""
+    values: Dict[str, int] = {}
+    with Path(model_path).open("r", encoding="utf-8") as handle:
+        for line in handle:
+            if not line.startswith("[") or ": " not in line:
+                continue
+            name, raw_value = line[1:-2].split(": ", 1)
+            if name in EFFECTIVE_SEED_PARAM_NAMES:
+                values[name] = int(raw_value)
+                if len(values) == len(EFFECTIVE_SEED_PARAM_NAMES):
+                    break
+    missing = [name for name in EFFECTIVE_SEED_PARAM_NAMES if name not in values]
+    if missing:
+        raise AssertionError(f"LightGBM did not expose effective seed parameters: {missing}")
+    return {name: values[name] for name in EFFECTIVE_SEED_PARAM_NAMES}
+
 
 def _make_datasets(X_tr, y_tr, X_va, y_va, categorical_features=None):
     categorical = list(categorical_features or CATEGORICAL_FEATURES)
@@ -569,7 +597,8 @@ def _make_datasets(X_tr, y_tr, X_va, y_va, categorical_features=None):
 
 def train_pass_model(  # M1 classifier
     df_train, df_valid, categorical_levels,
-    params=None, num_boost_round=2000, early_stopping_rounds=50,
+    params=None, num_boost_round=NUM_BOOST_ROUND,
+    early_stopping_rounds=EARLY_STOPPING_ROUNDS,
     contract: "str | FeatureContract | None" = None,
 ) -> Tuple[lgb.Booster, dict]:
     """M1 — LightGBM binary classifier for pass/fail. NO scale_pos_weight in V1."""
@@ -610,7 +639,8 @@ def train_pass_model(  # M1 classifier
 
 def train_grade_model(  # M2 regressor
     df_train, df_valid, categorical_levels,
-    params=None, num_boost_round=2000, early_stopping_rounds=50,
+    params=None, num_boost_round=NUM_BOOST_ROUND,
+    early_stopping_rounds=EARLY_STOPPING_ROUNDS,
     contract: "str | FeatureContract | None" = None,
 ) -> Tuple[lgb.Booster, dict]:
     """M2 — LightGBM regressor for final_mark (0-100), MAE loss."""
@@ -951,6 +981,10 @@ def build_run_contract(
     valid_path: "str | Path",
     test_policy: str,
     created_at: str,
+    effective_seed_settings: Optional[Dict[str, int]] = None,
+    training_control: Optional[Dict[str, Any]] = None,
+    diploma_gpa_handling: Optional[Dict[str, Any]] = None,
+    data_rows: Optional[Dict[str, int]] = None,
 ) -> Dict[str, Any]:
     """Assemble the complete, self-describing contract persisted with every run."""
     return {
@@ -975,7 +1009,11 @@ def build_run_contract(
             "early stopping"
         ),
         "random_seed": lgbm_params.get("seed"),
+        "effective_seed_settings": effective_seed_settings,
         "lightgbm_params": lgbm_params,
+        "training_control": training_control,
+        "diploma_gpa_handling": diploma_gpa_handling,
+        "data_rows": data_rows,
         "requires_concurrent_plan_context": contract.requires_concurrent_plan_context,
         "serving_limitation": SERVING_LIMITATION_NOTE,
         "test_policy": test_policy,
@@ -1088,6 +1126,15 @@ def main(argv: List[str] | None = None) -> None:
         default=4,
         help="LightGBM worker threads (default: 4; raise for speed if RAM/CPU allow).",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=_SHARED_PARAMS["seed"],
+        help=(
+            "Master LightGBM random seed. LightGBM deterministically derives "
+            "data, feature-fraction, bagging, and drop seeds from this value."
+        ),
+    )
     args = parser.parse_args(argv)
     if args.num_threads < 1:
         parser.error("--num-threads must be at least 1")
@@ -1132,7 +1179,8 @@ def main(argv: List[str] | None = None) -> None:
 
     # TEMPORARY: remove after rebuilding final splits from 02_merge_diploma.
     # Fit once on train only; valid/test must reuse the same frozen value.
-    diploma_gpa_median = df_train["diploma_gpa"].median()
+    diploma_gpa_median = float(df_train["diploma_gpa"].median())
+    diploma_gpa_nulls: Dict[str, Dict[str, int]] = {}
     for split_name, df_split in (
         ("train", df_train),
         ("valid", df_valid),
@@ -1141,6 +1189,10 @@ def main(argv: List[str] | None = None) -> None:
         missing_before = int(df_split["diploma_gpa"].isna().sum())
         df_split["diploma_gpa"] = df_split["diploma_gpa"].fillna(diploma_gpa_median)
         missing_after = int(df_split["diploma_gpa"].isna().sum())
+        diploma_gpa_nulls[split_name] = {
+            "missing_before": missing_before,
+            "missing_after": missing_after,
+        }
         assert missing_after == 0, f"{split_name}: diploma_gpa still contains missing values"
         print(
             f"  [temporary diploma_gpa fill] {split_name}: "
@@ -1179,9 +1231,11 @@ def main(argv: List[str] | None = None) -> None:
 
     # --- M1: pass/fail classifier ---
     print("\n=== Training M1 (pass/fail classifier) ===")
-    training_params = {"num_threads": args.num_threads}
+    training_params = {"num_threads": args.num_threads, "seed": args.seed}
     pass_model, m1_evals = train_pass_model(
         df_train, df_valid, categorical_levels, params=training_params,
+        num_boost_round=NUM_BOOST_ROUND,
+        early_stopping_rounds=EARLY_STOPPING_ROUNDS,
         contract=contract,
     )
     eval_kwargs = {"contract": contract, "threshold": reporting_threshold}
@@ -1211,6 +1265,8 @@ def main(argv: List[str] | None = None) -> None:
     print("\n=== Training M2 (final_mark regressor) ===")
     grade_model, m2_evals = train_grade_model(
         df_train, df_valid, categorical_levels, params=training_params,
+        num_boost_round=NUM_BOOST_ROUND,
+        early_stopping_rounds=EARLY_STOPPING_ROUNDS,
         contract=contract,
     )
     m2_train = evaluate_grade(grade_model, df_train, categorical_levels, "train", contract)
@@ -1227,6 +1283,26 @@ def main(argv: List[str] | None = None) -> None:
     _save_feature_importance(grade_model, out_dir / "m2_feature_importance.csv")
 
     # --- Artifacts ---
+    m1_effective_seeds = _effective_seed_settings(out_dir / "m1_pass_model.lgbm")
+    m2_effective_seeds = _effective_seed_settings(out_dir / "m2_grade_model.lgbm")
+    assert m1_effective_seeds == m2_effective_seeds, (
+        "M1 and M2 received different effective LightGBM seed settings"
+    )
+    training_control = {
+        "num_boost_round": NUM_BOOST_ROUND,
+        "early_stopping_rounds": EARLY_STOPPING_ROUNDS,
+        "early_stopping_selection_split": "valid_only",
+    }
+    diploma_gpa_handling = {
+        "method": "train_median_fill",
+        "learned_from": "train_only",
+        "fill_value": diploma_gpa_median,
+        "null_counts": diploma_gpa_nulls,
+    }
+    data_rows = {
+        "train": int(len(df_train)),
+        "valid": int(len(df_valid)),
+    }
     run_contract = build_run_contract(
         contract,
         dtypes,
@@ -1236,6 +1312,10 @@ def main(argv: List[str] | None = None) -> None:
         valid_path=args.valid,
         test_policy=test_policy,
         created_at=run_context.created_at.isoformat(timespec="seconds"),
+        effective_seed_settings=m1_effective_seeds,
+        training_control=training_control,
+        diploma_gpa_handling=diploma_gpa_handling,
+        data_rows=data_rows,
     )
     _save_feature_contract(out_dir / "feature_contract.json", run_contract)
     _save_training_curves(out_dir / "training_curves.json", m1_evals, m2_evals)
@@ -1282,8 +1362,12 @@ def main(argv: List[str] | None = None) -> None:
         "feature_count": contract.expected_feature_count,
         "reporting_threshold": reporting_threshold,
         "test_policy": test_policy,
-        "random_seed": _SHARED_PARAMS["seed"],
+        "random_seed": args.seed,
+        "effective_seed_settings": m1_effective_seeds,
         "num_threads": args.num_threads,
+        "training_control": training_control,
+        "diploma_gpa_handling": diploma_gpa_handling,
+        "data_rows": data_rows,
         "train_path": str(args.train),
         "valid_path": str(args.valid),
         "dataset_version": _dataset_version(args.train),

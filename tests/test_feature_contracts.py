@@ -179,13 +179,14 @@ class PrepareXYContractTest(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    (VERSION_DIR / "df_test_final.parquet").is_file(),
+    (VERSION_DIR / "df_valid_final.parquet").is_file(),
     "versioned final splits not present (data/ is gitignored)",
 )
 class VersionedSplitReadTest(unittest.TestCase):
-    """Contract-driven reading of the real 84-column versioned final files."""
+    """Contract-driven reading of the real 84-column VALID file."""
 
-    PATH = VERSION_DIR / "df_test_final.parquet"
+    # Deliberately use VALID: controlled experiments must never read TEST.
+    PATH = VERSION_DIR / "df_valid_final.parquet"
 
     def test_07_baseline_reads_versioned_file_and_ignores_concurrent_columns(self):
         on_disk = set(pq.ParquetFile(self.PATH).schema_arrow.names)
@@ -261,7 +262,9 @@ class CliAndRunArtifactTest(unittest.TestCase):
     def test_12_and_13_test_stays_closed_and_contract_is_recorded(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp)
-            run_dir = self._run("baseline_41", out)
+            run_dir = self._run(
+                "baseline_41", out, extra=("--seed", "52")
+            )
 
             # (12) The test path does not exist. The run completing at all
             # proves TEST was never read.
@@ -276,7 +279,14 @@ class CliAndRunArtifactTest(unittest.TestCase):
             self.assertEqual(contract["ordered_features"], BASELINE_41_FEATURES)
             self.assertEqual(contract["reporting_threshold"], 0.80)
             self.assertEqual(contract["test_policy"], "closed_not_read")
-            self.assertEqual(contract["random_seed"], 42)
+            self.assertEqual(contract["random_seed"], 52)
+            self.assertEqual(contract["effective_seed_settings"]["seed"], 52)
+            self.assertEqual(
+                set(contract["effective_seed_settings"]),
+                set(mt.EFFECTIVE_SEED_PARAM_NAMES),
+            )
+            for value in contract["effective_seed_settings"].values():
+                self.assertIsInstance(value, int)
             self.assertEqual(contract["categorical_levels_learned_from"], "train_only")
             self.assertIn("git", contract)
             self.assertIn("lightgbm_params", contract)
@@ -287,6 +297,11 @@ class CliAndRunArtifactTest(unittest.TestCase):
             self.assertEqual(metrics["run_settings"]["feature_contract"], "baseline_41")
             self.assertEqual(metrics["run_settings"]["reporting_threshold"], 0.80)
             self.assertEqual(metrics["run_settings"]["test_policy"], "closed_not_read")
+            self.assertEqual(metrics["run_settings"]["random_seed"], 52)
+            self.assertEqual(
+                metrics["run_settings"]["effective_seed_settings"],
+                contract["effective_seed_settings"],
+            )
             # metrics.json now carries the threshold each P/R/F1 was cut at.
             self.assertEqual(
                 metrics["m1_pass_classifier"]["valid"]["reporting_threshold"], 0.80
@@ -297,11 +312,21 @@ class CliAndRunArtifactTest(unittest.TestCase):
     def test_14b_both_contracts_produce_identical_non_feature_settings(self):
         with tempfile.TemporaryDirectory() as tmp_a, tempfile.TemporaryDirectory() as tmp_b:
             a = json.loads(
-                (self._run("baseline_41", Path(tmp_a)) / "feature_contract.json")
+                (
+                    self._run(
+                        "baseline_41", Path(tmp_a), extra=("--seed", "62")
+                    )
+                    / "feature_contract.json"
+                )
                 .read_text(encoding="utf-8")
             )
             b = json.loads(
-                (self._run("concurrent_44", Path(tmp_b)) / "feature_contract.json")
+                (
+                    self._run(
+                        "concurrent_44", Path(tmp_b), extra=("--seed", "62")
+                    )
+                    / "feature_contract.json"
+                )
                 .read_text(encoding="utf-8")
             )
         shared_keys = [
@@ -314,7 +339,11 @@ class CliAndRunArtifactTest(unittest.TestCase):
             "target_m2_regressor",
             "reporting_threshold",
             "random_seed",
+            "effective_seed_settings",
             "lightgbm_params",
+            "training_control",
+            "diploma_gpa_handling",
+            "data_rows",
             "test_policy",
             "train_path",
             "valid_path",
@@ -328,6 +357,31 @@ class CliAndRunArtifactTest(unittest.TestCase):
         self.assertEqual(
             set(b["ordered_features"]) - set(a["ordered_features"]),
             set(CONCURRENT_MODEL_FEATURES),
+        )
+
+    def test_15_changing_seed_does_not_change_the_selected_feature_contract(self):
+        with tempfile.TemporaryDirectory() as tmp_a, tempfile.TemporaryDirectory() as tmp_b:
+            seed_52 = json.loads(
+                (
+                    self._run(
+                        "baseline_41", Path(tmp_a), extra=("--seed", "52")
+                    )
+                    / "feature_contract.json"
+                ).read_text(encoding="utf-8")
+            )
+            seed_62 = json.loads(
+                (
+                    self._run(
+                        "baseline_41", Path(tmp_b), extra=("--seed", "62")
+                    )
+                    / "feature_contract.json"
+                ).read_text(encoding="utf-8")
+            )
+        self.assertEqual(seed_52["contract_name"], seed_62["contract_name"])
+        self.assertEqual(seed_52["ordered_features"], seed_62["ordered_features"])
+        self.assertNotEqual(
+            seed_52["effective_seed_settings"],
+            seed_62["effective_seed_settings"],
         )
 
 
