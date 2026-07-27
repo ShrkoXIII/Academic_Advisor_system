@@ -1,0 +1,3811 @@
+{
+  "experiment": "r2_num_leaves_31_five_seed_confirmation",
+  "pre_registered_plan": "docs/EXPERIMENT_R2_CONFIRMATION_PLAN.md",
+  "noise_band_source": "models/runs/NOISE_BAND.md",
+  "noise_band_limitation": "Band measured from contract-change deltas across seeds, not from hyperparameter-change deltas. Best available yardstick, not exact.",
+  "noise_band": {
+    "m1_valid_auc": {
+      "min": -0.000382,
+      "max": 0.001042
+    },
+    "m1_valid_fail_ap": {
+      "min": -0.002045,
+      "max": 0.001544
+    },
+    "m1_valid_brier": {
+      "min": -0.000108,
+      "max": 0.000119
+    },
+    "m1_train_valid_auc_gap": {
+      "min": -0.005873,
+      "max": 0.02672
+    },
+    "m2_valid_mae": {
+      "min": -0.050423,
+      "max": 0.04652
+    },
+    "m2_valid_rmse": {
+      "min": -0.067477,
+      "max": 0.07805
+    },
+    "m2_valid_r2": {
+      "min": -0.007865,
+      "max": 0.006807
+    },
+    "cold_start_auc": {
+      "min": -0.011618,
+      "max": 0.00819
+    },
+    "low_difficulty_support_auc": {
+      "min": -0.006657,
+      "max": 0.008522
+    },
+    "level_1_auc": {
+      "min": -0.000538,
+      "max": 0.00114
+    }
+  },
+  "operational_definitions": {
+    "large_harmful_outlier_multiplier": 2.0,
+    "train_sharp_drop": 0.01,
+    "valid_flat_floor": -0.000382
+  },
+  "controls": {
+    "baseline_41": {
+      "42": "2026-07-26_1551__baseline-41-gpa-trend-control",
+      "52": "2026-07-27_1027__seed52-baseline-41-gpa-trend-control",
+      "62": "2026-07-27_1031__seed62-baseline-41-gpa-trend-control",
+      "72": "2026-07-27_1035__seed72-baseline-41-gpa-trend-control",
+      "82": "2026-07-27_1038__seed82-baseline-41-gpa-trend-control"
+    },
+    "concurrent_43": {
+      "42": "2026-07-27_1327__seed42-concurrent-43-drop-dead-missing-flag",
+      "52": "2026-07-27_1328__seed52-concurrent-43-drop-dead-missing-flag",
+      "62": "2026-07-27_1329__seed62-concurrent-43-drop-dead-missing-flag",
+      "72": "2026-07-27_1330__seed72-concurrent-43-drop-dead-missing-flag",
+      "82": "2026-07-27_1331__seed82-concurrent-43-drop-dead-missing-flag"
+    }
+  },
+  "reused_seed42_r2": {
+    "baseline_41": "2026-07-27_1456__reg-r2-leaves31-baseline-41",
+    "concurrent_43": "2026-07-27_1457__reg-r2-leaves31-concurrent-43"
+  },
+  "provenance": {
+    "train_sha256": "8aaff32aeac5b37506b24584d56913b52ab284f1b551f107a2e3c55969d5641f",
+    "valid_sha256": "228719fa492da84bd4696e24c88c574d2ce68a3143dac8bb6bc925fc1e432b75",
+    "train_rows": 450465,
+    "valid_rows": 156097,
+    "test_path": "data/model_data/versions/2026-07-26_batched_fixes__registration_roster_concurrent/df_test_CLOSED_DO_NOT_READ.parquet",
+    "test_path_exists": false,
+    "git_commit": "235a1db21be1ff4d43e2eab3153b624cc5b2a317",
+    "git_clean": false,
+    "dataset_version": "2026-07-26_batched_fixes__registration_roster_concurrent",
+    "seeds": [
+      42,
+      52,
+      62,
+      72,
+      82
+    ],
+    "memory": {
+      "total_physical_gb": 15.7,
+      "available_physical_gb": 2.63,
+      "memory_load_percent": 83,
+      "total_commit_gb": 27.7,
+      "available_commit_gb": 5.43,
+      "pagefile": "C:\\pagefile.sys",
+      "pagefile_active": true
+    },
+    "test_command": "python -m unittest discover -s tests -t .",
+    "test_count": 117,
+    "test_result": "OK",
+    "shared_params_num_leaves": 127,
+    "shared_params_min_child_samples": 50,
+    "shared_params_reg_lambda": 1.0,
+    "current_version": "2026-07-21_gpa_trend_feature"
+  },
+  "runs": {
+    "control_baseline_41_42": {
+      "kind": "control",
+      "arm": "baseline_41",
+      "seed": 42,
+      "run_path": "models/runs/2026-07-26_1551__baseline-41-gpa-trend-control",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8645724829519178,
+          "fail_average_precision": 0.5679958456883846,
+          "brier_score": 0.09613034467119051,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.80918853274908,
+          "fail_average_precision": 0.3219831593412697,
+          "brier_score": 0.08077845438389275,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.05538395020283782,
+          "best_iteration": 137
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.756642818020739,
+          "rmse": 12.46608465526612,
+          "r2": 0.4911358977441326
+        },
+        "valid": {
+          "mae": 9.56670973063096,
+          "rmse": 12.854908853104188,
+          "r2": 0.35190917004813094,
+          "best_iteration": 438
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7329310827134857
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7329310827134857
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6768272871085127
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7644051315707036
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8209615204193982
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "r2_baseline_41_42": {
+      "kind": "r2",
+      "arm": "baseline_41",
+      "seed": 42,
+      "run_path": "models/runs/2026-07-27_1456__reg-r2-leaves31-baseline-41",
+      "reused_from_screening": true,
+      "m1": {
+        "train": {
+          "roc_auc": 0.858999220967388,
+          "fail_average_precision": 0.5535337359343198,
+          "brier_score": 0.09769921397990053,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8107081015428698,
+          "fail_average_precision": 0.3242928467098611,
+          "brier_score": 0.08074131531870388,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.04829111942451825,
+          "best_iteration": 456
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.318166403538562,
+          "rmse": 13.004003694285153,
+          "r2": 0.446272822658926
+        },
+        "valid": {
+          "mae": 9.598180100112568,
+          "rmse": 12.881184622339692,
+          "r2": 0.34925703315109546,
+          "best_iteration": 680
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7358335058223385
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7358335058223385
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6791109061512753
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7658064529296005
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8224280024753485
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "control_baseline_41_52": {
+      "kind": "control",
+      "arm": "baseline_41",
+      "seed": 52,
+      "run_path": "models/runs/2026-07-27_1027__seed52-baseline-41-gpa-trend-control",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8787079850192796,
+          "fail_average_precision": 0.6043611421942608,
+          "brier_score": 0.0922290155471752,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8099725366177877,
+          "fail_average_precision": 0.3223876966589215,
+          "brier_score": 0.08068400479483179,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.06873544840149193,
+          "best_iteration": 227
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.943266018027714,
+          "rmse": 12.64486936450576,
+          "r2": 0.4764352911169405
+        },
+        "valid": {
+          "mae": 9.571450517082688,
+          "rmse": 12.855157806946629,
+          "r2": 0.35188406737855193,
+          "best_iteration": 308
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7357368285169952
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7357368285169952
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6733750777569675
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7652953687931744
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8217310474344764
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "r2_baseline_41_52": {
+      "kind": "r2",
+      "arm": "baseline_41",
+      "seed": 52,
+      "run_path": "models/runs/2026-07-27_1600__seed52-regr2-leaves31-baseline-41",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8449788699597309,
+          "fail_average_precision": 0.521040501603507,
+          "brier_score": 0.10113893823273244,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8092445501099413,
+          "fail_average_precision": 0.32323899865329253,
+          "brier_score": 0.08071320510249078,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.035734319849789586,
+          "best_iteration": 235
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.313478747656623,
+          "rmse": 13.001761281852588,
+          "r2": 0.44646377579578367
+        },
+        "valid": {
+          "mae": 9.585060117315226,
+          "rmse": 12.868481203747649,
+          "r2": 0.35053992509893817,
+          "best_iteration": 680
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7403288266407599
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7403288266407599
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.674622270571092
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7675955166030287
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8202700947805329
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "control_baseline_41_62": {
+      "kind": "control",
+      "arm": "baseline_41",
+      "seed": 62,
+      "run_path": "models/runs/2026-07-27_1031__seed62-baseline-41-gpa-trend-control",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8707581963042526,
+          "fail_average_precision": 0.5820933136631433,
+          "brier_score": 0.09459696650417329,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8091809346395975,
+          "fail_average_precision": 0.32327512466144837,
+          "brier_score": 0.08073913911857501,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.06157726166465505,
+          "best_iteration": 172
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.844281445153166,
+          "rmse": 12.563946260886995,
+          "r2": 0.48311514009492296
+        },
+        "valid": {
+          "mae": 9.538716288429402,
+          "rmse": 12.808063845401405,
+          "r2": 0.3566240229723635,
+          "best_iteration": 379
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7283975778370546
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7283975778370546
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6760072941954213
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7624302913992174
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8211002964021674
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "r2_baseline_41_62": {
+      "kind": "r2",
+      "arm": "baseline_41",
+      "seed": 62,
+      "run_path": "models/runs/2026-07-27_1817__seed62-regr2-leaves31-baseline-41",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8569232828447088,
+          "fail_average_precision": 0.5476343653390072,
+          "brier_score": 0.0982723327320243,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8098473720354125,
+          "fail_average_precision": 0.32257739376770694,
+          "brier_score": 0.08073473948656412,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.047075910809296295,
+          "best_iteration": 423
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.492683473435271,
+          "rmse": 13.17767986809161,
+          "r2": 0.4313833442786259
+        },
+        "valid": {
+          "mae": 9.590831984776669,
+          "rmse": 12.86964903524706,
+          "r2": 0.3504220410477149,
+          "best_iteration": 461
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7418843749165375
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7418843749165375
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6766981311921018
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7698148680697008
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8205904843560651
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "control_baseline_41_72": {
+      "kind": "control",
+      "arm": "baseline_41",
+      "seed": 72,
+      "run_path": "models/runs/2026-07-27_1035__seed72-baseline-41-gpa-trend-control",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8677461191173715,
+          "fail_average_precision": 0.5759430051781707,
+          "brier_score": 0.09529545945877692,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8095465260631418,
+          "fail_average_precision": 0.32210829879484304,
+          "brier_score": 0.08074219073529276,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.058199593054229726,
+          "best_iteration": 151
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.576222726117305,
+          "rmse": 12.290547020958662,
+          "r2": 0.5053658508091865
+        },
+        "valid": {
+          "mae": 9.549175952897139,
+          "rmse": 12.835566407271592,
+          "r2": 0.35385803345502753,
+          "best_iteration": 576
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7353883033536314
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7353883033536314
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6753342460156302
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7688693329935705
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8208656178725807
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "r2_baseline_41_72": {
+      "kind": "r2",
+      "arm": "baseline_41",
+      "seed": 72,
+      "run_path": "models/runs/2026-07-27_1820__seed72-regr2-leaves31-baseline-41",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.846015348653398,
+          "fail_average_precision": 0.5232923890404592,
+          "brier_score": 0.10093248907599135,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8089640535298983,
+          "fail_average_precision": 0.32081079648103267,
+          "brier_score": 0.08092274539399796,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.037051295123499695,
+          "best_iteration": 250
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.284806345637401,
+          "rmse": 12.973243183970013,
+          "r2": 0.44888936838642024
+        },
+        "valid": {
+          "mae": 9.576132864993813,
+          "rmse": 12.869791461872522,
+          "r2": 0.3504076633893417,
+          "best_iteration": 716
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7362767086705215
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7362767086705215
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6777178743072767
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7665531461141954
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8199019551081265
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "control_baseline_41_82": {
+      "kind": "control",
+      "arm": "baseline_41",
+      "seed": 82,
+      "run_path": "models/runs/2026-07-27_1038__seed82-baseline-41-gpa-trend-control",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8561269694278992,
+          "fail_average_precision": 0.5475104082913635,
+          "brier_score": 0.09840206540966809,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8097270946703423,
+          "fail_average_precision": 0.32383240525549156,
+          "brier_score": 0.08079991844856552,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.046399874757556914,
+          "best_iteration": 100
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.138857468552336,
+          "rmse": 12.843883212953127,
+          "r2": 0.45982514125971585
+        },
+        "valid": {
+          "mae": 9.600819131634662,
+          "rmse": 12.894956155591352,
+          "r2": 0.3478648445828748,
+          "best_iteration": 223
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7356859512156579
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7356859512156579
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6805783778524221
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.770927173158696
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.82043709374451
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "r2_baseline_41_82": {
+      "kind": "r2",
+      "arm": "baseline_41",
+      "seed": 82,
+      "run_path": "models/runs/2026-07-27_1823__seed82-regr2-leaves31-baseline-41",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8543565952433216,
+          "fail_average_precision": 0.543374101140937,
+          "brier_score": 0.09882871845714669,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8095769698336689,
+          "fail_average_precision": 0.3208891764250459,
+          "brier_score": 0.08102725063838845,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.044779625409652746,
+          "best_iteration": 375
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.331213559444857,
+          "rmse": 13.012343817250601,
+          "r2": 0.44556232860125045
+        },
+        "valid": {
+          "mae": 9.577120636648797,
+          "rmse": 12.872485345844076,
+          "r2": 0.35013569168961245,
+          "best_iteration": 665
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7356475237255844
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7356475237255844
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6739032137465212
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7641072693971198
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8212882362292376
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "control_concurrent_43_42": {
+      "kind": "control",
+      "arm": "concurrent_43",
+      "seed": 42,
+      "run_path": "models/runs/2026-07-27_1327__seed42-concurrent-43-drop-dead-missing-flag",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8690473166182202,
+          "fail_average_precision": 0.5769511326331921,
+          "brier_score": 0.09510092659765346,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8099867130438985,
+          "fail_average_precision": 0.3232843237874901,
+          "brier_score": 0.08065972076841676,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.059060603574321746,
+          "best_iteration": 155
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.9681354029364,
+          "rmse": 12.661945117265445,
+          "r2": 0.47502028274127295
+        },
+        "valid": {
+          "mae": 9.578375578831,
+          "rmse": 12.862119935222113,
+          "r2": 0.35118186080742175,
+          "best_iteration": 300
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7325091801708865
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7325091801708865
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6785395989470581
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7673224767989413
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8212141154713009
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "r2_concurrent_43_42": {
+      "kind": "r2",
+      "arm": "concurrent_43",
+      "seed": 42,
+      "run_path": "models/runs/2026-07-27_1457__reg-r2-leaves31-concurrent-43",
+      "reused_from_screening": true,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8461427888350119,
+          "fail_average_precision": 0.5236908146894983,
+          "brier_score": 0.100834115458865,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.809687822578081,
+          "fail_average_precision": 0.3229558634034819,
+          "brier_score": 0.08073084719965087,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.0364549662569309,
+          "best_iteration": 242
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.46362584270171,
+          "rmse": 13.137578361453114,
+          "r2": 0.43483883711399407
+        },
+        "valid": {
+          "mae": 9.607860119520689,
+          "rmse": 12.898573357436732,
+          "r2": 0.34749892859049125,
+          "best_iteration": 480
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7371053688037498
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7371053688037498
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.67652234873782
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7690937046764819
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.82050911691228
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "control_concurrent_43_52": {
+      "kind": "control",
+      "arm": "concurrent_43",
+      "seed": 52,
+      "run_path": "models/runs/2026-07-27_1328__seed52-concurrent-43-drop-dead-missing-flag",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8759841662891079,
+          "fail_average_precision": 0.5975882517254664,
+          "brier_score": 0.09296604811192984,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8100606178236558,
+          "fail_average_precision": 0.32168750555421266,
+          "brier_score": 0.08067476199173922,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.06592354846545212,
+          "best_iteration": 199
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.865228283360457,
+          "rmse": 12.564151504825452,
+          "r2": 0.4830982523514239
+        },
+        "valid": {
+          "mae": 9.566677569057136,
+          "rmse": 12.853481140005309,
+          "r2": 0.35205312072018,
+          "best_iteration": 360
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7345612950808361
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7345612950808361
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6768983692045205
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7675082032140342
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8211186436233652
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "r2_concurrent_43_52": {
+      "kind": "r2",
+      "arm": "concurrent_43",
+      "seed": 52,
+      "run_path": "models/runs/2026-07-27_1601__seed52-regr2-leaves31-concurrent-43",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8539286224699132,
+          "fail_average_precision": 0.5418348105986851,
+          "brier_score": 0.09893511229315745,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8095586162174323,
+          "fail_average_precision": 0.3226512942394316,
+          "brier_score": 0.08073995943932535,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.04437000625248089,
+          "best_iteration": 353
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.320402421704062,
+          "rmse": 12.997354289100356,
+          "r2": 0.4468389583035345
+        },
+        "valid": {
+          "mae": 9.57427845419197,
+          "rmse": 12.860253425400032,
+          "r2": 0.35137015598202315,
+          "best_iteration": 648
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.733506225740256
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.733506225740256
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6761824099755782
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7665072262957202
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8205968814549052
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "control_concurrent_43_62": {
+      "kind": "control",
+      "arm": "concurrent_43",
+      "seed": 62,
+      "run_path": "models/runs/2026-07-27_1329__seed62-concurrent-43-drop-dead-missing-flag",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8720747918993672,
+          "fail_average_precision": 0.5845873335760976,
+          "brier_score": 0.09429087832559002,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8111789396158946,
+          "fail_average_precision": 0.3250406643222312,
+          "brier_score": 0.0804833010533101,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.06089585228347261,
+          "best_iteration": 173
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.069600447145993,
+          "rmse": 12.763683591509215,
+          "r2": 0.4665499866474673
+        },
+        "valid": {
+          "mae": 9.560699367403743,
+          "rmse": 12.834704632815408,
+          "r2": 0.3539447939347059,
+          "best_iteration": 247
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7343275655235654
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7343275655235654
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6773293902865125
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7711691114415585
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8221700335297191
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "r2_concurrent_43_62": {
+      "kind": "r2",
+      "arm": "concurrent_43",
+      "seed": 62,
+      "run_path": "models/runs/2026-07-27_1819__seed62-regr2-leaves31-concurrent-43",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8528109719071736,
+          "fail_average_precision": 0.5398557388435097,
+          "brier_score": 0.09918707488728355,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8091647715092047,
+          "fail_average_precision": 0.3215809693108216,
+          "brier_score": 0.08074662138727266,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.04364620039796885,
+          "best_iteration": 344
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.199906599717403,
+          "rmse": 12.878278906648251,
+          "r2": 0.4569281097755481
+        },
+        "valid": {
+          "mae": 9.584876531270117,
+          "rmse": 12.877966241670295,
+          "r2": 0.34958217047503626,
+          "best_iteration": 865
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7346268826340295
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7346268826340295
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6749117372239872
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7671375204094342
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8199449927135788
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "control_concurrent_43_72": {
+      "kind": "control",
+      "arm": "concurrent_43",
+      "seed": 72,
+      "run_path": "models/runs/2026-07-27_1330__seed72-concurrent-43-drop-dead-missing-flag",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8634357457458934,
+          "fail_average_precision": 0.5635030765982164,
+          "brier_score": 0.09657819843580939,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8101403990795268,
+          "fail_average_precision": 0.3241500121807506,
+          "brier_score": 0.08061180001419088,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.053295346666366594,
+          "best_iteration": 128
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.750055003360186,
+          "rmse": 12.451062471328209,
+          "r2": 0.4923615663521709
+        },
+        "valid": {
+          "mae": 9.555511510705312,
+          "rmse": 12.849506951860375,
+          "r2": 0.3524537382158244,
+          "best_iteration": 443
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7353305056264801
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7353305056264801
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6786342829331163
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7700072179569065
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8210036009599678
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "r2_concurrent_43_72": {
+      "kind": "r2",
+      "arm": "concurrent_43",
+      "seed": 72,
+      "run_path": "models/runs/2026-07-27_1822__seed72-regr2-leaves31-concurrent-43",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8579928543654132,
+          "fail_average_precision": 0.552591685329003,
+          "brier_score": 0.0978443520000657,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8095395184997924,
+          "fail_average_precision": 0.32012147818552883,
+          "brier_score": 0.08092484735953018,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.04845333586562073,
+          "best_iteration": 444
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.51540745913833,
+          "rmse": 13.18889877781022,
+          "r2": 0.43041474062423146
+        },
+        "valid": {
+          "mae": 9.582624874053906,
+          "rmse": 12.866012431926107,
+          "r2": 0.3507890943531006,
+          "best_iteration": 426
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7380040678193384
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7380040678193384
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6748400453650603
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7688228184398866
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8204298478460454
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "control_concurrent_43_82": {
+      "kind": "control",
+      "arm": "concurrent_43",
+      "seed": 82,
+      "run_path": "models/runs/2026-07-27_1331__seed82-concurrent-43-drop-dead-missing-flag",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8696126887423394,
+          "fail_average_precision": 0.5795497857461892,
+          "brier_score": 0.09485582580222958,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8108467792102891,
+          "fail_average_precision": 0.32314535918433407,
+          "brier_score": 0.08064845848065738,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.0587659095320503,
+          "best_iteration": 158
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.540229821454941,
+          "rmse": 12.251505045653369,
+          "r2": 0.508503355087432
+        },
+        "valid": {
+          "mae": 9.55396112313065,
+          "rmse": 12.837399896924117,
+          "r2": 0.3536734246601112,
+          "best_iteration": 612
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7331417557767124
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7331417557767124
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6791415487704968
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.769625742273363
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8218205725670464
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "r2_concurrent_43_82": {
+      "kind": "r2",
+      "arm": "concurrent_43",
+      "seed": 82,
+      "run_path": "models/runs/2026-07-27_1825__seed82-regr2-leaves31-concurrent-43",
+      "reused_from_screening": false,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8453507631633335,
+          "fail_average_precision": 0.5225231050955748,
+          "brier_score": 0.10098529721703427,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8090590604324732,
+          "fail_average_precision": 0.3212154404414808,
+          "brier_score": 0.08080425534455458,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.03629170273086024,
+          "best_iteration": 235
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.474082445833245,
+          "rmse": 13.14637680929632,
+          "r2": 0.4340815885597765
+        },
+        "valid": {
+          "mae": 9.59916014039752,
+          "rmse": 12.885663431714812,
+          "r2": 0.3488044256489482,
+          "best_iteration": 471
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7347796536420774
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7347796536420774
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6745343021073147
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7671348973141457
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8201330427743665
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    }
+  },
+  "verification": {
+    "baseline_41_42": {
+      "run_path": "models/runs/2026-07-27_1456__reg-r2-leaves31-baseline-41",
+      "control_path": "models/runs/2026-07-26_1551__baseline-41-gpa-trend-control",
+      "arm": "baseline_41",
+      "seed": 42,
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "baseline_41",
+          "control": "baseline_41"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 41,
+          "control": 41
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": "not recorded (predates the field)",
+          "note": "control predates data_rows; identical TRAIN/VALID SHA-256 proves identical row counts"
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "m1_pass_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m1_pass_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m2_grade_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": "not recorded (predates the field)",
+          "note": "control predates training_control; its serialized num_iterations is verified above"
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": "not recorded (predates the field)",
+          "note": "control predates diploma_gpa_handling; the fill is the TRAIN median of an identically hashed TRAIN file, so it is deterministic and equal"
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "check_count": 22,
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "baseline_41_52": {
+      "run_path": "models/runs/2026-07-27_1600__seed52-regr2-leaves31-baseline-41",
+      "control_path": "models/runs/2026-07-27_1027__seed52-baseline-41-gpa-trend-control",
+      "arm": "baseline_41",
+      "seed": 52,
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "baseline_41",
+          "control": "baseline_41"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 41,
+          "control": 41
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": {
+            "train": 450465,
+            "valid": 156097
+          }
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 52,
+            "data_random_seed": 208,
+            "feature_fraction_seed": 8545,
+            "bagging_seed": 9580,
+            "drop_seed": 32671
+          },
+          "control": {
+            "seed": 52,
+            "data_random_seed": 208,
+            "feature_fraction_seed": 8545,
+            "bagging_seed": 9580,
+            "drop_seed": 32671
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "m1_pass_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m1_pass_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m2_grade_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          }
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": 84.58
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "check_count": 22,
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "baseline_41_62": {
+      "run_path": "models/runs/2026-07-27_1817__seed62-regr2-leaves31-baseline-41",
+      "control_path": "models/runs/2026-07-27_1031__seed62-baseline-41-gpa-trend-control",
+      "arm": "baseline_41",
+      "seed": 62,
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "baseline_41",
+          "control": "baseline_41"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 41,
+          "control": 41
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": {
+            "train": 450465,
+            "valid": 156097
+          }
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 62,
+            "data_random_seed": 241,
+            "feature_fraction_seed": 19802,
+            "bagging_seed": 18760,
+            "drop_seed": 14704
+          },
+          "control": {
+            "seed": 62,
+            "data_random_seed": 241,
+            "feature_fraction_seed": 19802,
+            "bagging_seed": 18760,
+            "drop_seed": 14704
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "m1_pass_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m1_pass_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m2_grade_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          }
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": 84.58
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "check_count": 22,
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "baseline_41_72": {
+      "run_path": "models/runs/2026-07-27_1820__seed72-regr2-leaves31-baseline-41",
+      "control_path": "models/runs/2026-07-27_1035__seed72-baseline-41-gpa-trend-control",
+      "arm": "baseline_41",
+      "seed": 72,
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "baseline_41",
+          "control": "baseline_41"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 41,
+          "control": 41
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": {
+            "train": 450465,
+            "valid": 156097
+          }
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 72,
+            "data_random_seed": 273,
+            "feature_fraction_seed": 31059,
+            "bagging_seed": 27940,
+            "drop_seed": 29506
+          },
+          "control": {
+            "seed": 72,
+            "data_random_seed": 273,
+            "feature_fraction_seed": 31059,
+            "bagging_seed": 27940,
+            "drop_seed": 29506
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "m1_pass_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m1_pass_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m2_grade_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          }
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": 84.58
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "check_count": 22,
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "baseline_41_82": {
+      "run_path": "models/runs/2026-07-27_1823__seed82-regr2-leaves31-baseline-41",
+      "control_path": "models/runs/2026-07-27_1038__seed82-baseline-41-gpa-trend-control",
+      "arm": "baseline_41",
+      "seed": 82,
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "baseline_41",
+          "control": "baseline_41"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 41,
+          "control": 41
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": {
+            "train": 450465,
+            "valid": 156097
+          }
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 82,
+            "data_random_seed": 306,
+            "feature_fraction_seed": 9548,
+            "bagging_seed": 4352,
+            "drop_seed": 11540
+          },
+          "control": {
+            "seed": 82,
+            "data_random_seed": 306,
+            "feature_fraction_seed": 9548,
+            "bagging_seed": 4352,
+            "drop_seed": 11540
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "m1_pass_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m1_pass_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m2_grade_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          }
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": 84.58
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "check_count": 22,
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "concurrent_43_42": {
+      "run_path": "models/runs/2026-07-27_1457__reg-r2-leaves31-concurrent-43",
+      "control_path": "models/runs/2026-07-27_1327__seed42-concurrent-43-drop-dead-missing-flag",
+      "arm": "concurrent_43",
+      "seed": 42,
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "concurrent_43",
+          "control": "concurrent_43"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 43,
+          "control": 43
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": {
+            "train": 450465,
+            "valid": 156097
+          }
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "m1_pass_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m1_pass_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m2_grade_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          }
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": 84.58
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "check_count": 22,
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "concurrent_43_52": {
+      "run_path": "models/runs/2026-07-27_1601__seed52-regr2-leaves31-concurrent-43",
+      "control_path": "models/runs/2026-07-27_1328__seed52-concurrent-43-drop-dead-missing-flag",
+      "arm": "concurrent_43",
+      "seed": 52,
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "concurrent_43",
+          "control": "concurrent_43"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 43,
+          "control": 43
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": {
+            "train": 450465,
+            "valid": 156097
+          }
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 52,
+            "data_random_seed": 208,
+            "feature_fraction_seed": 8545,
+            "bagging_seed": 9580,
+            "drop_seed": 32671
+          },
+          "control": {
+            "seed": 52,
+            "data_random_seed": 208,
+            "feature_fraction_seed": 8545,
+            "bagging_seed": 9580,
+            "drop_seed": 32671
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "m1_pass_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m1_pass_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m2_grade_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          }
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": 84.58
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "check_count": 22,
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "concurrent_43_62": {
+      "run_path": "models/runs/2026-07-27_1819__seed62-regr2-leaves31-concurrent-43",
+      "control_path": "models/runs/2026-07-27_1329__seed62-concurrent-43-drop-dead-missing-flag",
+      "arm": "concurrent_43",
+      "seed": 62,
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "concurrent_43",
+          "control": "concurrent_43"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 43,
+          "control": 43
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": {
+            "train": 450465,
+            "valid": 156097
+          }
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 62,
+            "data_random_seed": 241,
+            "feature_fraction_seed": 19802,
+            "bagging_seed": 18760,
+            "drop_seed": 14704
+          },
+          "control": {
+            "seed": 62,
+            "data_random_seed": 241,
+            "feature_fraction_seed": 19802,
+            "bagging_seed": 18760,
+            "drop_seed": 14704
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "m1_pass_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m1_pass_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m2_grade_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          }
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": 84.58
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "check_count": 22,
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "concurrent_43_72": {
+      "run_path": "models/runs/2026-07-27_1822__seed72-regr2-leaves31-concurrent-43",
+      "control_path": "models/runs/2026-07-27_1330__seed72-concurrent-43-drop-dead-missing-flag",
+      "arm": "concurrent_43",
+      "seed": 72,
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "concurrent_43",
+          "control": "concurrent_43"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 43,
+          "control": 43
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": {
+            "train": 450465,
+            "valid": 156097
+          }
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 72,
+            "data_random_seed": 273,
+            "feature_fraction_seed": 31059,
+            "bagging_seed": 27940,
+            "drop_seed": 29506
+          },
+          "control": {
+            "seed": 72,
+            "data_random_seed": 273,
+            "feature_fraction_seed": 31059,
+            "bagging_seed": 27940,
+            "drop_seed": 29506
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "m1_pass_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m1_pass_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m2_grade_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          }
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": 84.58
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "check_count": 22,
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "concurrent_43_82": {
+      "run_path": "models/runs/2026-07-27_1825__seed82-regr2-leaves31-concurrent-43",
+      "control_path": "models/runs/2026-07-27_1331__seed82-concurrent-43-drop-dead-missing-flag",
+      "arm": "concurrent_43",
+      "seed": 82,
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "concurrent_43",
+          "control": "concurrent_43"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 43,
+          "control": 43
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": {
+            "train": 450465,
+            "valid": 156097
+          }
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 82,
+            "data_random_seed": 306,
+            "feature_fraction_seed": 9548,
+            "bagging_seed": 4352,
+            "drop_seed": 11540
+          },
+          "control": {
+            "seed": 82,
+            "data_random_seed": 306,
+            "feature_fraction_seed": 9548,
+            "bagging_seed": 4352,
+            "drop_seed": 11540
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": "identical",
+          "control": "identical"
+        },
+        "m1_pass_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m1_pass_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_num_leaves_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m2_grade_model.lgbm_num_leaves_values": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          }
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": 84.58
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "check_count": 22,
+      "failed_checks": [],
+      "all_passed": true
+    }
+  },
+  "evaluation": {
+    "per_arm": {
+      "baseline_41": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "deltas": {
+              "m1_valid_auc": 0.0015195687937897828,
+              "m1_valid_fail_ap": 0.0023096873685913843,
+              "m1_valid_brier": -3.7139065188873666e-05,
+              "m1_train_valid_auc_gap": -0.00709283077831957,
+              "m2_valid_mae": 0.03147036948160853,
+              "m2_valid_rmse": 0.026275769235503788,
+              "m2_valid_r2": -0.002652136897035473,
+              "cold_start_auc": 0.002902423108852803,
+              "low_difficulty_support_auc": 0.001401321358896923,
+              "level_1_auc": 0.0014664820559503466
+            },
+            "judgments": {
+              "m1_valid_auc": "outside_band_beneficial",
+              "m1_valid_fail_ap": "outside_band_beneficial",
+              "m1_valid_brier": "inside_band",
+              "m1_train_valid_auc_gap": "outside_band_beneficial",
+              "m2_valid_mae": "inside_band",
+              "m2_valid_rmse": "inside_band",
+              "m2_valid_r2": "inside_band",
+              "cold_start_auc": "inside_band",
+              "low_difficulty_support_auc": "inside_band",
+              "level_1_auc": "outside_band_beneficial"
+            }
+          },
+          {
+            "seed": 52,
+            "deltas": {
+              "m1_valid_auc": -0.0007279865078463343,
+              "m1_valid_fail_ap": 0.0008513019943710565,
+              "m1_valid_brier": 2.9200307658988622e-05,
+              "m1_train_valid_auc_gap": -0.03300112855170234,
+              "m2_valid_mae": 0.0136096002325381,
+              "m2_valid_rmse": 0.013323396801020237,
+              "m2_valid_r2": -0.0013441422796137692,
+              "cold_start_auc": 0.004591998123764762,
+              "low_difficulty_support_auc": 0.002300147809854325,
+              "level_1_auc": -0.0014609526539435258
+            },
+            "judgments": {
+              "m1_valid_auc": "outside_band_harmful",
+              "m1_valid_fail_ap": "inside_band",
+              "m1_valid_brier": "inside_band",
+              "m1_train_valid_auc_gap": "outside_band_beneficial",
+              "m2_valid_mae": "inside_band",
+              "m2_valid_rmse": "inside_band",
+              "m2_valid_r2": "inside_band",
+              "cold_start_auc": "inside_band",
+              "low_difficulty_support_auc": "inside_band",
+              "level_1_auc": "outside_band_harmful"
+            }
+          },
+          {
+            "seed": 62,
+            "deltas": {
+              "m1_valid_auc": 0.0006664373958149561,
+              "m1_valid_fail_ap": -0.0006977308937414217,
+              "m1_valid_brier": -4.39963201089022e-06,
+              "m1_train_valid_auc_gap": -0.014501350855358752,
+              "m2_valid_mae": 0.05211569634726665,
+              "m2_valid_rmse": 0.06158518984565475,
+              "m2_valid_r2": -0.006201981924648603,
+              "cold_start_auc": 0.01348679707948286,
+              "low_difficulty_support_auc": 0.007384576670483423,
+              "level_1_auc": -0.0005098120461023425
+            },
+            "judgments": {
+              "m1_valid_auc": "inside_band",
+              "m1_valid_fail_ap": "inside_band",
+              "m1_valid_brier": "inside_band",
+              "m1_train_valid_auc_gap": "outside_band_beneficial",
+              "m2_valid_mae": "outside_band_harmful",
+              "m2_valid_rmse": "inside_band",
+              "m2_valid_r2": "inside_band",
+              "cold_start_auc": "outside_band_beneficial",
+              "low_difficulty_support_auc": "inside_band",
+              "level_1_auc": "inside_band"
+            }
+          },
+          {
+            "seed": 72,
+            "deltas": {
+              "m1_valid_auc": -0.0005824725332435055,
+              "m1_valid_fail_ap": -0.0012975023138103725,
+              "m1_valid_brier": 0.00018055465870520093,
+              "m1_train_valid_auc_gap": -0.02114829793073003,
+              "m2_valid_mae": 0.026956912096673946,
+              "m2_valid_rmse": 0.03422505460092928,
+              "m2_valid_r2": -0.003450370065685826,
+              "cold_start_auc": 0.0008884053168901618,
+              "low_difficulty_support_auc": -0.0023161868793750706,
+              "level_1_auc": -0.0009636627644542539
+            },
+            "judgments": {
+              "m1_valid_auc": "outside_band_harmful",
+              "m1_valid_fail_ap": "inside_band",
+              "m1_valid_brier": "outside_band_harmful",
+              "m1_train_valid_auc_gap": "outside_band_beneficial",
+              "m2_valid_mae": "inside_band",
+              "m2_valid_rmse": "inside_band",
+              "m2_valid_r2": "inside_band",
+              "cold_start_auc": "inside_band",
+              "low_difficulty_support_auc": "inside_band",
+              "level_1_auc": "outside_band_harmful"
+            }
+          },
+          {
+            "seed": 82,
+            "deltas": {
+              "m1_valid_auc": -0.00015012483667342646,
+              "m1_valid_fail_ap": -0.0029432288304456766,
+              "m1_valid_brier": 0.0002273321898229319,
+              "m1_train_valid_auc_gap": -0.001620249347904168,
+              "m2_valid_mae": -0.02369849498586518,
+              "m2_valid_rmse": -0.022470809747275666,
+              "m2_valid_r2": 0.002270847106737639,
+              "cold_start_auc": -3.8427490073544845e-05,
+              "low_difficulty_support_auc": -0.0068199037615761515,
+              "level_1_auc": 0.0008511424847276183
+            },
+            "judgments": {
+              "m1_valid_auc": "inside_band",
+              "m1_valid_fail_ap": "outside_band_harmful",
+              "m1_valid_brier": "outside_band_harmful",
+              "m1_train_valid_auc_gap": "inside_band",
+              "m2_valid_mae": "inside_band",
+              "m2_valid_rmse": "inside_band",
+              "m2_valid_r2": "inside_band",
+              "cold_start_auc": "inside_band",
+              "low_difficulty_support_auc": "outside_band_harmful",
+              "level_1_auc": "inside_band"
+            }
+          }
+        ],
+        "summary": {
+          "m1_valid_auc": {
+            "mean": 0.00014508446236829453,
+            "median": -0.00015012483667342646,
+            "sd": 0.0009407120560607934,
+            "min": -0.0007279865078463343,
+            "max": 0.0015195687937897828,
+            "improved": 2,
+            "worsened": 3,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "outside_band_beneficial",
+              "outside_band_harmful",
+              "inside_band",
+              "outside_band_harmful",
+              "inside_band"
+            ]
+          },
+          "m1_valid_fail_ap": {
+            "mean": -0.000355494535007006,
+            "median": -0.0006977308937414217,
+            "sd": 0.002016210902097211,
+            "min": -0.0029432288304456766,
+            "max": 0.0023096873685913843,
+            "improved": 2,
+            "worsened": 3,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "outside_band_beneficial",
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "outside_band_harmful"
+            ]
+          },
+          "m1_valid_brier": {
+            "mean": 7.910969179747151e-05,
+            "median": 2.9200307658988622e-05,
+            "sd": 0.0001175154431561026,
+            "min": -3.7139065188873666e-05,
+            "max": 0.0002273321898229319,
+            "improved": 2,
+            "worsened": 3,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "outside_band_harmful",
+              "outside_band_harmful"
+            ]
+          },
+          "m1_train_valid_auc_gap": {
+            "mean": -0.015472771492802972,
+            "median": -0.014501350855358752,
+            "sd": 0.012273083717427104,
+            "min": -0.03300112855170234,
+            "max": -0.001620249347904168,
+            "improved": 5,
+            "worsened": 0,
+            "tied": 0,
+            "mean_judgment": "outside_band_beneficial",
+            "per_seed_judgments": [
+              "outside_band_beneficial",
+              "outside_band_beneficial",
+              "outside_band_beneficial",
+              "outside_band_beneficial",
+              "inside_band"
+            ]
+          },
+          "m2_valid_mae": {
+            "mean": 0.020090816634444408,
+            "median": 0.026956912096673946,
+            "sd": 0.028114677611291862,
+            "min": -0.02369849498586518,
+            "max": 0.05211569634726665,
+            "improved": 1,
+            "worsened": 4,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "inside_band",
+              "inside_band",
+              "outside_band_harmful",
+              "inside_band",
+              "inside_band"
+            ]
+          },
+          "m2_valid_rmse": {
+            "mean": 0.02258772014716648,
+            "median": 0.026275769235503788,
+            "sd": 0.030764958578964146,
+            "min": -0.022470809747275666,
+            "max": 0.06158518984565475,
+            "improved": 1,
+            "worsened": 4,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band"
+            ]
+          },
+          "m2_valid_r2": {
+            "mean": -0.0022755568120492063,
+            "median": -0.002652136897035473,
+            "sd": 0.0031014566952551515,
+            "min": -0.006201981924648603,
+            "max": 0.002270847106737639,
+            "improved": 1,
+            "worsened": 4,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band"
+            ]
+          },
+          "cold_start_auc": {
+            "mean": 0.0043662392277834085,
+            "median": 0.002902423108852803,
+            "sd": 0.005405430552752205,
+            "min": -3.8427490073544845e-05,
+            "max": 0.01348679707948286,
+            "improved": 4,
+            "worsened": 1,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "inside_band",
+              "inside_band",
+              "outside_band_beneficial",
+              "inside_band",
+              "inside_band"
+            ]
+          },
+          "low_difficulty_support_auc": {
+            "mean": 0.0003899910396566897,
+            "median": 0.001401321358896923,
+            "sd": 0.005312760535319977,
+            "min": -0.0068199037615761515,
+            "max": 0.007384576670483423,
+            "improved": 3,
+            "worsened": 2,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "outside_band_harmful"
+            ]
+          },
+          "level_1_auc": {
+            "mean": -0.00012336058476443147,
+            "median": -0.0005098120461023425,
+            "sd": 0.0012371197277726246,
+            "min": -0.0014609526539435258,
+            "max": 0.0014664820559503466,
+            "improved": 2,
+            "worsened": 3,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "outside_band_beneficial",
+              "outside_band_harmful",
+              "inside_band",
+              "outside_band_harmful",
+              "inside_band"
+            ]
+          }
+        },
+        "clause_1": {
+          "gap_improved_seeds": 5,
+          "gap_improved_at_least_4_of_5": true,
+          "leave_one_out_means": [
+            -0.017567756671423823,
+            -0.01109068222807813,
+            -0.015715626652164028,
+            -0.014053889883321208,
+            -0.018935902029027674
+          ],
+          "leave_one_out_all_improving": true,
+          "satisfied": true
+        },
+        "clause_2": {
+          "per_metric": {
+            "m1_valid_auc": {
+              "mean_delta": 0.00014508446236829453,
+              "mean_judgment": "inside_band",
+              "mean_is_harmful": false,
+              "harmful_edge": -0.000382,
+              "large_outlier_edge": -0.000764,
+              "large_harmful_outliers": []
+            },
+            "m1_valid_fail_ap": {
+              "mean_delta": -0.000355494535007006,
+              "mean_judgment": "inside_band",
+              "mean_is_harmful": false,
+              "harmful_edge": -0.002045,
+              "large_outlier_edge": -0.00409,
+              "large_harmful_outliers": []
+            },
+            "m1_valid_brier": {
+              "mean_delta": 7.910969179747151e-05,
+              "mean_judgment": "inside_band",
+              "mean_is_harmful": false,
+              "harmful_edge": 0.000119,
+              "large_outlier_edge": 0.000238,
+              "large_harmful_outliers": []
+            }
+          },
+          "satisfied": true
+        },
+        "verdict": "CONFIRMED",
+        "verdict_reason": "clause 3.2.1 and clause 3.2.2 both satisfied",
+        "mechanisms": {
+          "42": {
+            "train_auc_delta": -0.005573261984529787,
+            "valid_auc_delta": 0.0015195687937897828,
+            "train_drop": 0.005573261984529787,
+            "train_drop_to_valid_change_ratio": 3.667660198937194,
+            "classification": "generalization_gain"
+          },
+          "52": {
+            "train_auc_delta": -0.033729115059548676,
+            "valid_auc_delta": -0.0007279865078463343,
+            "train_drop": 0.033729115059548676,
+            "train_drop_to_valid_change_ratio": 46.33206068520754,
+            "classification": "train_collapse"
+          },
+          "62": {
+            "train_auc_delta": -0.013834913459543796,
+            "valid_auc_delta": 0.0006664373958149561,
+            "train_drop": 0.013834913459543796,
+            "train_drop_to_valid_change_ratio": 20.759509514957077,
+            "classification": "mixed"
+          },
+          "72": {
+            "train_auc_delta": -0.021730770463973537,
+            "valid_auc_delta": -0.0005824725332435055,
+            "train_drop": 0.021730770463973537,
+            "train_drop_to_valid_change_ratio": 37.30780289838814,
+            "classification": "train_collapse"
+          },
+          "82": {
+            "train_auc_delta": -0.0017703741845775944,
+            "valid_auc_delta": -0.00015012483667342646,
+            "train_drop": 0.0017703741845775944,
+            "train_drop_to_valid_change_ratio": 11.792680170761962,
+            "classification": "generalization_gain"
+          }
+        },
+        "mechanism_counts": {
+          "generalization_gain": 2,
+          "train_collapse": 2,
+          "mixed": 1
+        }
+      },
+      "concurrent_43": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "deltas": {
+              "m1_valid_auc": -0.0002988904658174363,
+              "m1_valid_fail_ap": -0.000328460384008189,
+              "m1_valid_brier": 7.112643123410867e-05,
+              "m1_train_valid_auc_gap": -0.022605637317390848,
+              "m2_valid_mae": 0.029484540689688643,
+              "m2_valid_rmse": 0.03645342221461867,
+              "m2_valid_r2": -0.003682932216930501,
+              "cold_start_auc": 0.004596188632863263,
+              "low_difficulty_support_auc": 0.001771227877540582,
+              "level_1_auc": -0.0007049985590208419
+            },
+            "judgments": {
+              "m1_valid_auc": "inside_band",
+              "m1_valid_fail_ap": "inside_band",
+              "m1_valid_brier": "inside_band",
+              "m1_train_valid_auc_gap": "outside_band_beneficial",
+              "m2_valid_mae": "inside_band",
+              "m2_valid_rmse": "inside_band",
+              "m2_valid_r2": "inside_band",
+              "cold_start_auc": "inside_band",
+              "low_difficulty_support_auc": "inside_band",
+              "level_1_auc": "outside_band_harmful"
+            }
+          },
+          {
+            "seed": 52,
+            "deltas": {
+              "m1_valid_auc": -0.00050200160622349,
+              "m1_valid_fail_ap": 0.0009637886852189581,
+              "m1_valid_brier": 6.519744758613777e-05,
+              "m1_train_valid_auc_gap": -0.021553542212971233,
+              "m2_valid_mae": 0.007600885134834812,
+              "m2_valid_rmse": 0.0067722853947227435,
+              "m2_valid_r2": -0.0006829647381568771,
+              "cold_start_auc": -0.0010550693405800837,
+              "low_difficulty_support_auc": -0.0010009769183140227,
+              "level_1_auc": -0.0005217621684600049
+            },
+            "judgments": {
+              "m1_valid_auc": "outside_band_harmful",
+              "m1_valid_fail_ap": "inside_band",
+              "m1_valid_brier": "inside_band",
+              "m1_train_valid_auc_gap": "outside_band_beneficial",
+              "m2_valid_mae": "inside_band",
+              "m2_valid_rmse": "inside_band",
+              "m2_valid_r2": "inside_band",
+              "cold_start_auc": "inside_band",
+              "low_difficulty_support_auc": "inside_band",
+              "level_1_auc": "inside_band"
+            }
+          },
+          {
+            "seed": 62,
+            "deltas": {
+              "m1_valid_auc": -0.002014168106689862,
+              "m1_valid_fail_ap": -0.003459695011409636,
+              "m1_valid_brier": 0.0002633203339625634,
+              "m1_train_valid_auc_gap": -0.01724965188550376,
+              "m2_valid_mae": 0.024177163866374585,
+              "m2_valid_rmse": 0.04326160885488761,
+              "m2_valid_r2": -0.004362623459669646,
+              "cold_start_auc": 0.000299317110464159,
+              "low_difficulty_support_auc": -0.00403159103212436,
+              "level_1_auc": -0.002225040816140278
+            },
+            "judgments": {
+              "m1_valid_auc": "outside_band_harmful",
+              "m1_valid_fail_ap": "outside_band_harmful",
+              "m1_valid_brier": "outside_band_harmful",
+              "m1_train_valid_auc_gap": "outside_band_beneficial",
+              "m2_valid_mae": "inside_band",
+              "m2_valid_rmse": "inside_band",
+              "m2_valid_r2": "inside_band",
+              "cold_start_auc": "inside_band",
+              "low_difficulty_support_auc": "inside_band",
+              "level_1_auc": "outside_band_harmful"
+            }
+          },
+          {
+            "seed": 72,
+            "deltas": {
+              "m1_valid_auc": -0.0006008805797343975,
+              "m1_valid_fail_ap": -0.004028533995221795,
+              "m1_valid_brier": 0.0003130473453392957,
+              "m1_train_valid_auc_gap": -0.004842010800745866,
+              "m2_valid_mae": 0.027113363348593822,
+              "m2_valid_rmse": 0.016505480065731604,
+              "m2_valid_r2": -0.0016646438627238025,
+              "cold_start_auc": 0.002673562192858303,
+              "low_difficulty_support_auc": -0.001184399517019874,
+              "level_1_auc": -0.0005737531139223817
+            },
+            "judgments": {
+              "m1_valid_auc": "outside_band_harmful",
+              "m1_valid_fail_ap": "outside_band_harmful",
+              "m1_valid_brier": "outside_band_harmful",
+              "m1_train_valid_auc_gap": "inside_band",
+              "m2_valid_mae": "inside_band",
+              "m2_valid_rmse": "inside_band",
+              "m2_valid_r2": "inside_band",
+              "cold_start_auc": "inside_band",
+              "low_difficulty_support_auc": "inside_band",
+              "level_1_auc": "outside_band_harmful"
+            }
+          },
+          {
+            "seed": 82,
+            "deltas": {
+              "m1_valid_auc": -0.0017877187778159165,
+              "m1_valid_fail_ap": -0.0019299187428532538,
+              "m1_valid_brier": 0.00015579686389720349,
+              "m1_train_valid_auc_gap": -0.022474206801190055,
+              "m2_valid_mae": 0.04519901726687081,
+              "m2_valid_rmse": 0.04826353479069567,
+              "m2_valid_r2": -0.004868999011163,
+              "cold_start_auc": 0.0016378978653650567,
+              "low_difficulty_support_auc": -0.0024908449592172532,
+              "level_1_auc": -0.0016875297926799426
+            },
+            "judgments": {
+              "m1_valid_auc": "outside_band_harmful",
+              "m1_valid_fail_ap": "inside_band",
+              "m1_valid_brier": "outside_band_harmful",
+              "m1_train_valid_auc_gap": "outside_band_beneficial",
+              "m2_valid_mae": "inside_band",
+              "m2_valid_rmse": "inside_band",
+              "m2_valid_r2": "inside_band",
+              "cold_start_auc": "inside_band",
+              "low_difficulty_support_auc": "inside_band",
+              "level_1_auc": "outside_band_harmful"
+            }
+          }
+        ],
+        "summary": {
+          "m1_valid_auc": {
+            "mean": -0.0010407319072562205,
+            "median": -0.0006008805797343975,
+            "sd": 0.0007968054453512915,
+            "min": -0.002014168106689862,
+            "max": -0.0002988904658174363,
+            "improved": 0,
+            "worsened": 5,
+            "tied": 0,
+            "mean_judgment": "outside_band_harmful",
+            "per_seed_judgments": [
+              "inside_band",
+              "outside_band_harmful",
+              "outside_band_harmful",
+              "outside_band_harmful",
+              "outside_band_harmful"
+            ]
+          },
+          "m1_valid_fail_ap": {
+            "mean": -0.001756563889654783,
+            "median": -0.0019299187428532538,
+            "sd": 0.002093582661257364,
+            "min": -0.004028533995221795,
+            "max": 0.0009637886852189581,
+            "improved": 1,
+            "worsened": 4,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "inside_band",
+              "inside_band",
+              "outside_band_harmful",
+              "outside_band_harmful",
+              "inside_band"
+            ]
+          },
+          "m1_valid_brier": {
+            "mean": 0.0001736976844038618,
+            "median": 0.00015579686389720349,
+            "sd": 0.00011187509782997914,
+            "min": 6.519744758613777e-05,
+            "max": 0.0003130473453392957,
+            "improved": 0,
+            "worsened": 5,
+            "tied": 0,
+            "mean_judgment": "outside_band_harmful",
+            "per_seed_judgments": [
+              "inside_band",
+              "inside_band",
+              "outside_band_harmful",
+              "outside_band_harmful",
+              "outside_band_harmful"
+            ]
+          },
+          "m1_train_valid_auc_gap": {
+            "mean": -0.017745009803560353,
+            "median": -0.021553542212971233,
+            "sd": 0.007537053235810097,
+            "min": -0.022605637317390848,
+            "max": -0.004842010800745866,
+            "improved": 5,
+            "worsened": 0,
+            "tied": 0,
+            "mean_judgment": "outside_band_beneficial",
+            "per_seed_judgments": [
+              "outside_band_beneficial",
+              "outside_band_beneficial",
+              "outside_band_beneficial",
+              "inside_band",
+              "outside_band_beneficial"
+            ]
+          },
+          "m2_valid_mae": {
+            "mean": 0.026714994061272535,
+            "median": 0.027113363348593822,
+            "sd": 0.013428309113874031,
+            "min": 0.007600885134834812,
+            "max": 0.04519901726687081,
+            "improved": 0,
+            "worsened": 5,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band"
+            ]
+          },
+          "m2_valid_rmse": {
+            "mean": 0.03025126626413126,
+            "median": 0.03645342221461867,
+            "sd": 0.01783526528478231,
+            "min": 0.0067722853947227435,
+            "max": 0.04826353479069567,
+            "improved": 0,
+            "worsened": 5,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band"
+            ]
+          },
+          "m2_valid_r2": {
+            "mean": -0.0030524326577287654,
+            "median": -0.003682932216930501,
+            "sd": 0.0017996096041569044,
+            "min": -0.004868999011163,
+            "max": -0.0006829647381568771,
+            "improved": 0,
+            "worsened": 5,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band"
+            ]
+          },
+          "cold_start_auc": {
+            "mean": 0.0016303792921941395,
+            "median": 0.0016378978653650567,
+            "sd": 0.002171846738911471,
+            "min": -0.0010550693405800837,
+            "max": 0.004596188632863263,
+            "improved": 4,
+            "worsened": 1,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band"
+            ]
+          },
+          "low_difficulty_support_auc": {
+            "mean": -0.0013873169098269854,
+            "median": -0.001184399517019874,
+            "sd": 0.002143408443390768,
+            "min": -0.00403159103212436,
+            "max": 0.001771227877540582,
+            "improved": 1,
+            "worsened": 4,
+            "tied": 0,
+            "mean_judgment": "inside_band",
+            "per_seed_judgments": [
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band",
+              "inside_band"
+            ]
+          },
+          "level_1_auc": {
+            "mean": -0.0011426168900446898,
+            "median": -0.0007049985590208419,
+            "sd": 0.0007696018470593724,
+            "min": -0.002225040816140278,
+            "max": -0.0005217621684600049,
+            "improved": 0,
+            "worsened": 5,
+            "tied": 0,
+            "mean_judgment": "outside_band_harmful",
+            "per_seed_judgments": [
+              "outside_band_harmful",
+              "inside_band",
+              "outside_band_harmful",
+              "outside_band_harmful",
+              "outside_band_harmful"
+            ]
+          }
+        },
+        "clause_1": {
+          "gap_improved_seeds": 5,
+          "gap_improved_at_least_4_of_5": true,
+          "leave_one_out_means": [
+            -0.016529852925102728,
+            -0.016792876701207632,
+            -0.0178688492830745,
+            -0.020970759554263974,
+            -0.016562710554152926
+          ],
+          "leave_one_out_all_improving": true,
+          "satisfied": true
+        },
+        "clause_2": {
+          "per_metric": {
+            "m1_valid_auc": {
+              "mean_delta": -0.0010407319072562205,
+              "mean_judgment": "outside_band_harmful",
+              "mean_is_harmful": true,
+              "harmful_edge": -0.000382,
+              "large_outlier_edge": -0.000764,
+              "large_harmful_outliers": [
+                {
+                  "seed": 62,
+                  "delta": -0.002014168106689862
+                },
+                {
+                  "seed": 82,
+                  "delta": -0.0017877187778159165
+                }
+              ]
+            },
+            "m1_valid_fail_ap": {
+              "mean_delta": -0.001756563889654783,
+              "mean_judgment": "inside_band",
+              "mean_is_harmful": false,
+              "harmful_edge": -0.002045,
+              "large_outlier_edge": -0.00409,
+              "large_harmful_outliers": []
+            },
+            "m1_valid_brier": {
+              "mean_delta": 0.0001736976844038618,
+              "mean_judgment": "outside_band_harmful",
+              "mean_is_harmful": true,
+              "harmful_edge": 0.000119,
+              "large_outlier_edge": 0.000238,
+              "large_harmful_outliers": [
+                {
+                  "seed": 62,
+                  "delta": 0.0002633203339625634
+                },
+                {
+                  "seed": 72,
+                  "delta": 0.0003130473453392957
+                }
+              ]
+            }
+          },
+          "satisfied": false
+        },
+        "verdict": "NOT CONFIRMED",
+        "verdict_reason": "clause 3.2.2 breached (M1 VALID guardrail)",
+        "mechanisms": {
+          "42": {
+            "train_auc_delta": -0.022904527783208284,
+            "valid_auc_delta": -0.0002988904658174363,
+            "train_drop": 0.022904527783208284,
+            "train_drop_to_valid_change_ratio": 76.63184478155445,
+            "classification": "train_collapse"
+          },
+          "52": {
+            "train_auc_delta": -0.022055543819194723,
+            "valid_auc_delta": -0.00050200160622349,
+            "train_drop": 0.022055543819194723,
+            "train_drop_to_valid_change_ratio": 43.93520567616599,
+            "classification": "train_collapse"
+          },
+          "62": {
+            "train_auc_delta": -0.01926381999219362,
+            "valid_auc_delta": -0.002014168106689862,
+            "train_drop": 0.01926381999219362,
+            "train_drop_to_valid_change_ratio": 9.564156997725627,
+            "classification": "train_collapse"
+          },
+          "72": {
+            "train_auc_delta": -0.005442891380480264,
+            "valid_auc_delta": -0.0006008805797343975,
+            "train_drop": 0.005442891380480264,
+            "train_drop_to_valid_change_ratio": 9.058191534308103,
+            "classification": "mixed"
+          },
+          "82": {
+            "train_auc_delta": -0.024261925579005972,
+            "valid_auc_delta": -0.0017877187778159165,
+            "train_drop": 0.024261925579005972,
+            "train_drop_to_valid_change_ratio": 13.571444166764943,
+            "classification": "train_collapse"
+          }
+        },
+        "mechanism_counts": {
+          "train_collapse": 4,
+          "mixed": 1
+        }
+      }
+    },
+    "mechanism_finding": {
+      "baseline_41_generalization_gain_seeds": 2,
+      "concurrent_43_train_collapse_seeds": 4,
+      "split_repeats": false,
+      "rule": "repeats only if baseline_41 is generalization_gain in >=4/5 AND concurrent_43 is train_collapse in >=4/5"
+    },
+    "m2_impact": {
+      "status": "HARMED_WITHIN_NOISE",
+      "reason": "VALID MAE worsened in >=4 of 5 seeds in both arms; every five-seed mean is inside the band",
+      "mae_worsened_seeds": {
+        "baseline_41": 4,
+        "concurrent_43": 5
+      },
+      "mae_improved_seeds": {
+        "baseline_41": 1,
+        "concurrent_43": 0
+      },
+      "means_outside_band_harmful": []
+    }
+  }
+}

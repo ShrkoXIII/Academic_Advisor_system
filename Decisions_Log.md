@@ -368,3 +368,92 @@ inference wiring, or recommendation wiring was touched. TEST was not read.
 seeds 52/62/72/82 in both arms, watching `level_1_auc` and VALID Brier in
 `concurrent_43` specifically. Requires separate explicit approval — do not
 start it, and do not treat this screening PASS as a decision.
+
+---
+
+## 2026-07-27 — R2 five-seed confirmation: CONFIRMED for `baseline_41`, NOT CONFIRMED for `concurrent_43`
+
+**Scope.** Eight new runs (seeds 52, 62, 72, 82 × two arms), each
+`--num-leaves 31` with everything else at defaults, compared against its
+same-seed same-contract DEFAULT-parameter control. The seed-42 R2 pair from
+screening was reused after verifying it matches this protocol exactly; the
+ten controls were reused unchanged. Nothing was retrained. `concurrent_44`
+was not run. TEST stayed `closed_not_read` throughout. Full evidence:
+[`models/runs/R2_CONFIRMATION_5SEED_REPORT.md`](models/runs/R2_CONFIRMATION_5SEED_REPORT.md)
+and its JSON. Rule: the pre-registered
+[`docs/EXPERIMENT_R2_CONFIRMATION_PLAN.md`](docs/EXPERIMENT_R2_CONFIRMATION_PLAN.md),
+committed before any confirmation run existed.
+
+**M1 `baseline_41`: CONFIRMED.** Gap improved in 5/5 seeds (mean −0.01547),
+stable under leave-one-seed-out (all five LOO means between −0.0111 and
+−0.0189). No M1 VALID guardrail breached: VALID AUC +0.000145, fail AP
+−0.000355, Brier +0.000079 — all inside the band, no seed beyond twice a
+harmful edge.
+
+**M1 `concurrent_43`: NOT CONFIRMED.** It fails on the guardrails, not on
+the gap. Its gap improved in 5/5 seeds and by more than either arm (mean
+−0.01775), but VALID quality paid for it: VALID AUC mean −0.001041 and
+VALID Brier mean +0.000174 are both **outside the band on the harmful
+side**, each with two seeds beyond twice the harmful edge (AUC: seeds 62
+−0.002014, 82 −0.001788; Brier: seeds 62 +0.000263, 72 +0.000313). This is
+exactly the failure mode clause 3.2.2 exists to catch.
+
+**The seed-42 MECHANISM story did NOT hold — this is the most important
+finding.** Screening reported `baseline_41` = `generalization_gain` and
+`concurrent_43` = `train_collapse`. Across five seeds the split does **not**
+repeat: `baseline_41` classifies `generalization_gain` in only **2/5** seeds
+(42, 82), with 2/5 `train_collapse` (52, 72) and 1/5 `mixed` (62).
+`concurrent_43` is `train_collapse` in 4/5. Seed 42 was not representative
+of `baseline_41`. **CONFIRMED for `baseline_41` therefore means the
+pre-registered clauses were met — not that R2 buys a clean generalization
+gain.** A shrinking gap was never the goal in itself; both arms shrink it in
+5/5 seeds and differ only in what it cost.
+
+**M2 impact: HARMED_WITHIN_NOISE.** VALID MAE worsened in 4/5 seeds
+(`baseline_41`, mean +0.0201) and 5/5 seeds (`concurrent_43`, mean +0.0267);
+RMSE and R² move the same way. Every M2 five-seed mean is inside the band,
+so the degradation is consistent in direction but small — inside observed
+seed variability. `_SHARED_PARAMS` is shared by M1 and M2, so R2 cannot move
+one without the other. **Per-model parameters were NOT implemented and are
+NOT recommended here** — that decision belongs to the user; this pass
+reports evidence only.
+
+**Watch items.**
+
+- `level_1_difficulty` AUC (reported, not scored — segments are not clauses):
+  the seed-42 flag was not a fluke and got worse. `concurrent_43` mean
+  −0.001143, outside the band harmful, harmful in **4/5** seeds.
+  `baseline_41` mean −0.000123 (inside band), harmful in 2/5.
+- VALID Brier margin: this metric **is** a clause-3.2.2 guardrail, so unlike
+  the other watch items it was scored. The seed-42 margin of 0.000048 was an
+  early warning — in `concurrent_43` it crossed the harmful edge in 3/5
+  seeds (62, 72, 82).
+- Round cap: **no run reached the 2000-round cap** (max best_iteration
+  observed M1 456, M2 865), so every comparison is between converged models,
+  not truncated ones. At 31 leaves this was a real risk and did not
+  materialise.
+
+**Verification.** All ten R2/control pairs passed 22 parity checks each, run
+inline after every training and again in the report from one shared
+implementation (`scripts/r2_parity.py`). In every pair the only differing
+serialized LightGBM parameter is `num_leaves` (127→31), verified
+independently for M1 and M2. All metrics were recomputed by re-scoring the
+saved models against TRAIN/VALID; only `best_iteration` is read from
+`metrics.json`.
+
+**No statistical significance is claimed from five seeds.**
+
+**Nothing changed, frozen, or promoted.** `_SHARED_PARAMS` defaults are
+untouched (`num_leaves` still 127) — R2 was applied per run via
+`--num-leaves 31`, never by editing a default. M1 is not frozen. No
+`CURRENT_VERSION.txt`, promotion marker, live model artifact, inference
+wiring, or recommendation wiring was touched. TEST was not read.
+
+**Next action — a decision for the user, not for a session.** The evidence
+now supports several distinct readings and the project rule is that the
+accept/reject call is made by the human. The open question: whether a
+gap reduction that is only sometimes a generalization gain, and that costs
+M2 a small consistent amount, is worth adopting for `baseline_41` — and
+separately, whether `concurrent_43`'s guardrail failure ends the "unify both
+models on one contract" direction. Do not start further runs without
+explicit approval.
