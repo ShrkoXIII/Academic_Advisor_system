@@ -1,0 +1,135 @@
+{
+  "m1_pass_classifier": {
+    "train": {
+      "reporting_threshold": 0.8,
+      "auc": 0.8720747918993672,
+      "avg_precision": 0.9720688159692541,
+      "fail_avg_precision": 0.5845873335760976,
+      "accuracy": 0.7906,
+      "precision": 0.9505,
+      "recall": 0.7923,
+      "f1": 0.8642,
+      "fail_precision": 0.415,
+      "fail_recall": 0.7812,
+      "fail_f1": 0.5421,
+      "brier": 0.09429087832559002,
+      "confusion_matrix": {
+        "tn": 55844,
+        "fp": 15638,
+        "fn": 78708,
+        "tp": 300275
+      }
+    },
+    "valid": {
+      "reporting_threshold": 0.8,
+      "auc": 0.8111789396158946,
+      "avg_precision": 0.9729233603681297,
+      "fail_avg_precision": 0.3250406643222312,
+      "accuracy": 0.8475,
+      "precision": 0.9334,
+      "recall": 0.8937,
+      "f1": 0.9131,
+      "fail_precision": 0.3268,
+      "fail_recall": 0.4473,
+      "fail_f1": 0.3777,
+      "brier": 0.0804833010533101,
+      "confusion_matrix": {
+        "tn": 7223,
+        "fp": 8924,
+        "fn": 14877,
+        "tp": 125073
+      },
+      "train_valid_auc_gap": 0.06089585228347261,
+      "best_iteration": 173
+    },
+    "test": null
+  },
+  "m2_grade_regressor": {
+    "train": {
+      "mae": 9.0696,
+      "rmse": 12.7637,
+      "r2": 0.4665
+    },
+    "valid": {
+      "mae": 9.5607,
+      "rmse": 12.8347,
+      "r2": 0.3539,
+      "best_iteration": 247
+    },
+    "test": null
+  },
+  "segments": {
+    "valid": {
+      "first_semester": {
+        "n": 14732,
+        "auc": 0.7343,
+        "auc_unrounded": 0.7343275655235654,
+        "positive_rate": 0.842791202823785,
+        "status": "ok"
+      },
+      "retake_attempt": {
+        "n": 17958,
+        "auc": 0.6773,
+        "auc_unrounded": 0.6773293902865125,
+        "positive_rate": 0.7435126406058581,
+        "status": "ok"
+      },
+      "low_difficulty_support": {
+        "n": 25627,
+        "auc": 0.7712,
+        "auc_unrounded": 0.7711691114415585,
+        "positive_rate": 0.8583134974831232,
+        "status": "ok"
+      },
+      "cold_start_gpa": {
+        "n": 14732,
+        "auc": 0.7343,
+        "auc_unrounded": 0.7343275655235654,
+        "positive_rate": 0.842791202823785,
+        "status": "ok"
+      }
+    }
+  },
+  "run_settings": {
+    "feature_contract": "concurrent_43",
+    "feature_count": 43,
+    "reporting_threshold": 0.8,
+    "test_policy": "closed_not_read",
+    "random_seed": 62,
+    "effective_seed_settings": {
+      "seed": 62,
+      "data_random_seed": 241,
+      "feature_fraction_seed": 19802,
+      "bagging_seed": 18760,
+      "drop_seed": 14704
+    },
+    "num_threads": 4,
+    "training_control": {
+      "num_boost_round": 2000,
+      "early_stopping_rounds": 50,
+      "early_stopping_selection_split": "valid_only"
+    },
+    "diploma_gpa_handling": {
+      "method": "train_median_fill",
+      "learned_from": "train_only",
+      "fill_value": 84.58,
+      "null_counts": {
+        "train": {
+          "missing_before": 31,
+          "missing_after": 0
+        },
+        "valid": {
+          "missing_before": 0,
+          "missing_after": 0
+        }
+      }
+    },
+    "data_rows": {
+      "train": 450465,
+      "valid": 156097
+    },
+    "train_path": "data/model_data/versions/2026-07-26_batched_fixes__registration_roster_concurrent/df_train_final.parquet",
+    "valid_path": "data/model_data/versions/2026-07-26_batched_fixes__registration_roster_concurrent/df_valid_final.parquet",
+    "dataset_version": "2026-07-26_batched_fixes__registration_roster_concurrent"
+  }
+}

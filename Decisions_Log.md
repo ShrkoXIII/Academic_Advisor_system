@@ -114,3 +114,87 @@ recompute the `level_1_difficulty` segment AUC, which is not stored in
 `concurrent_44` as supported-but-small; no promotion or wiring change
 follows from this task. Await explicit human review before acting on the
 two-contract direction.
+
+---
+
+## 2026-07-27 — Define `concurrent_43`; re-base the position gate; five-seed validation against `concurrent_44`
+
+**Scope.** Defined `concurrent_43` = `concurrent_44` minus
+`concurrent_peer_difficulty_missing` (the feature the entry above calls
+effectively dead), order of the remaining 43 features preserved exactly.
+`baseline_41` and `concurrent_44` are untouched and remain selectable;
+`DEFAULT_FEATURE_CONTRACT` stays `concurrent_44`. Trained `concurrent_43`
+on the same immutable dataset version
+(`data/model_data/versions/2026-07-26_batched_fixes__registration_roster_concurrent`)
+at the same five seeds (42, 52, 62, 72, 82) already used for the
+`baseline_41` vs `concurrent_44` experiment above; TEST stayed
+`closed_not_read` in all five new runs (nonexistent `--test` path). The
+five existing `concurrent_44` runs from that earlier experiment were reused
+unchanged as the comparison arm — nothing was retrained except
+`concurrent_43`. Full evidence:
+[`models/runs/MULTISEED_CONCURRENT43_VS_CONCURRENT44_REPORT.md`](models/runs/MULTISEED_CONCURRENT43_VS_CONCURRENT44_REPORT.md),
+verified pairwise against
+[`models/runs/CONCURRENT43_VS_CONCURRENT44_VERIFICATION.json`](models/runs/CONCURRENT43_VS_CONCURRENT44_VERIFICATION.json).
+Acceptance yardstick: [`models/runs/NOISE_BAND.md`](models/runs/NOISE_BAND.md)
+(derived from the `baseline_41` vs `concurrent_44` paired deltas above).
+
+**Position-gate re-base
+(`scripts/build_concurrent_group_features.py:_assert_contract`).** The
+dataset builder's `EXPECTED_LEGACY_MODEL_POSITION = 35` gate previously read
+`MODEL_FEATURES` / `EXPECTED_FEATURE_COUNT`, deprecated globals in
+`src/model_training.py` that are aliases for "whichever list a maintainer
+last pointed them at" (in practice, always `CONCURRENT_44_FEATURES`, since
+nothing had ever repointed them). Before: `legacy in MODEL_FEATURES and
+MODEL_FEATURES.index(legacy) == 35`. After: the same check against the
+explicit, named `CONCURRENT_44_FEATURES` list imported directly, so the gate
+is pinned to `concurrent_44` specifically rather than to an ambiguous
+global. Same gate values today (44 features, legacy indicator at index 35,
+all seven gates pass); the dataset's column layout is unaffected — the
+builder still writes all 8 concurrent columns (3 model + 5 audit) regardless
+of which named model contract is selected for training. The re-base matters
+going forward: now that `concurrent_43` is a real, selectable contract that
+legitimately excludes this column, a gate still keyed off the deprecated
+globals would risk breaking (or silently no-op) the moment anyone repointed
+those globals — the re-based gate cannot break that way, because it no
+longer reads them.
+
+**Validation outcome — mixed by model, matching the M1/M2 split above.**
+
+- **M2 (grade regressor): EQUIVALENT.** All three primary VALID deltas
+  (MAE mean +0.0118, RMSE mean +0.0097, R2 mean -0.0010) fall inside the
+  noise band, including the full per-seed range for RMSE and R2. `concurrent_43`
+  and `concurrent_44` are indistinguishable for M2 on this evidence.
+- **M1 (pass/fail classifier): INCONCLUSIVE.** VALID AUC, fail-class AP, and
+  Brier all landed inside the noise band (mean deltas +0.00044, +0.00125,
+  -0.00009 respectively — all improving or flat). The train-valid AUC gap
+  improved on average (mean -0.0064) and in 3/5 seeds by more than the
+  largest improvement recorded in the noise band (band min -0.005873); no
+  seed worsened the gap beyond the band's harmful edge (+0.02672). This is
+  an out-of-band result on the **beneficial** side, not evidence of harm —
+  but per the band-is-the-bar rule, a metric outside the band in either
+  direction blocks a clean EQUIVALENT verdict rather than being folded into
+  one after the fact. Best-iteration also dropped materially for M1 (mean
+  -42.4 rounds, -21% of the `concurrent_44` mean, in 3/5 seeds), directionally
+  consistent with the smaller AUC gap; M2's best-iteration shift was noisy
+  and not systematic (mixed direction, no band-relevant effect).
+
+**No blanket "`concurrent_43` replaces `concurrent_44`" — split by model,
+direction only, nothing wired.** M2's evidence supports treating
+`concurrent_43` as the concurrent arm for M2 in future comparisons. M1's
+evidence does not yet support that swap; `concurrent_44` remains the M1
+concurrent arm pending more seeds or a repeated check specifically on the
+train-valid AUC gap. This mirrors the M1=`baseline_41`/M2=candidate split
+already recorded above, and is likewise **not implemented or wired** — no
+promotion, no inference/recommendation change, no contract default change.
+`baseline_41` and `concurrent_44` are untouched by this task; `concurrent_43`
+is simply now available for the future regularization pass to select
+explicitly.
+
+**No production contract changed; nothing promoted.** `DEFAULT_FEATURE_CONTRACT`
+is still `concurrent_44`. No dataset, live `MODEL_DATA_DIR`,
+`CURRENT_VERSION.txt`, promotion marker, inference wiring, or recommendation
+wiring was touched. TEST was not read by any of the five new runs.
+
+**Next action (named, not started).** Regularization pass, two arms:
+`baseline_41` vs `concurrent_43` — direction only; do not start it without
+separate explicit approval.
