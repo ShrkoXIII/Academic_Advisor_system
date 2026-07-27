@@ -517,6 +517,31 @@ class ConcurrentGroupFeatureTest(unittest.TestCase):
         self.assertNotIn("concurrent_peer_set_empty", MODEL_FEATURES)
         self.assertNotIn("concurrent_peer_difficulty_values_missing", MODEL_FEATURES)
 
+    # --- 24. the re-based dataset-builder position gate stays protective ---
+    def test_24_position_gate_stays_protective_once_concurrent_43_exists(self):
+        from scripts.build_concurrent_group_features import (
+            EXPECTED_LEGACY_MODEL_POSITION,
+            _assert_contract,
+        )
+        from src.model_training import CONCURRENT_43_FEATURES, CONCURRENT_44_FEATURES
+
+        legacy = "concurrent_peer_difficulty_missing"
+        # The gate is pinned to concurrent_44 explicitly now, not to the
+        # deprecated MODEL_FEATURES/EXPECTED_FEATURE_COUNT globals, so it must
+        # keep passing exactly as before even though a second, real contract
+        # (concurrent_43) now exists and drops this exact column.
+        result = _assert_contract()
+        self.assertTrue(all(result["gates"].values()), result["gates"])
+        self.assertEqual(result["expected_feature_count"], 44)
+        self.assertEqual(result["model_feature_count"], 44)
+        self.assertEqual(result["legacy_indicator_zero_based_position"], 35)
+        self.assertEqual(EXPECTED_LEGACY_MODEL_POSITION, 35)
+        self.assertEqual(CONCURRENT_44_FEATURES.index(legacy), 35)
+        # concurrent_43 legitimately drops the indicator; the dataset-builder
+        # gate must not be sensitive to that (it only guards concurrent_44).
+        self.assertNotIn(legacy, CONCURRENT_43_FEATURES)
+        self.assertEqual(len(CONCURRENT_43_FEATURES), 43)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -50,10 +50,7 @@ from src.course_difficulty import (  # noqa: E402
     load_difficulty_state,
 )
 from src.feature_engineering import SEMESTER_KEY  # noqa: E402
-from src.model_training import (  # noqa: E402
-    EXPECTED_FEATURE_COUNT,
-    MODEL_FEATURES,
-)
+from src.model_training import CONCURRENT_44_FEATURES  # noqa: E402
 from src.paths import (  # noqa: E402
     MODEL_DATA_DIR,
     MODEL_DATA_VERSIONS_DIR,
@@ -93,7 +90,7 @@ SUPERSESSION_STATEMENT = (
     "training by the registration-time peer-roster implementation."
 )
 
-EXPECTED_LEGACY_MODEL_POSITION = 35  # zero-based; pinned by the 44-feature contract.
+EXPECTED_LEGACY_MODEL_POSITION = 35  # zero-based; pinned by the concurrent_44 contract.
 MATERIAL_MEAN_SHIFT_THRESHOLD = 0.02
 MATERIALLY_UNCHANGED_GAP_RATIO = 0.80
 CHANGE_ATOL = 1e-12
@@ -261,21 +258,33 @@ def _assert_template_alignment(diff_path: Path, final_path: Path, split: str) ->
 
 
 def _assert_contract() -> dict[str, Any]:
+    # Re-based 2026-07-27 for the concurrent_43 contract task: this gate used
+    # to read the deprecated MODEL_FEATURES / EXPECTED_FEATURE_COUNT globals
+    # from src.model_training, which are aliases for "whichever list a
+    # maintainer last pointed them at". Now that concurrent_43 exists
+    # (concurrent_44 minus this exact legacy indicator) and is a real,
+    # separately selectable contract, this gate is re-pinned to the explicit,
+    # named CONCURRENT_44_FEATURES list so it keeps protecting concurrent_44's
+    # column position specifically, and does not silently start failing (or
+    # silently stop checking anything) if those deprecated globals are ever
+    # repointed. The dataset layout itself is unaffected: the builder still
+    # writes all 8 concurrent columns (3 model + 5 audit) regardless of which
+    # named model contract is selected for training.
     legacy = "concurrent_peer_difficulty_missing"
     semantic_audits = {
         "concurrent_peer_set_empty",
         "concurrent_peer_difficulty_values_missing",
     }
     gates = {
-        "expected_feature_count_is_44": EXPECTED_FEATURE_COUNT == 44,
-        "model_feature_count_is_44": len(MODEL_FEATURES) == 44,
-        "legacy_indicator_in_model_features": legacy in MODEL_FEATURES,
+        "expected_feature_count_is_44": len(CONCURRENT_44_FEATURES) == 44,
+        "model_feature_count_is_44": len(CONCURRENT_44_FEATURES) == 44,
+        "legacy_indicator_in_model_features": legacy in CONCURRENT_44_FEATURES,
         "legacy_indicator_position_preserved": (
-            legacy in MODEL_FEATURES
-            and MODEL_FEATURES.index(legacy) == EXPECTED_LEGACY_MODEL_POSITION
+            legacy in CONCURRENT_44_FEATURES
+            and CONCURRENT_44_FEATURES.index(legacy) == EXPECTED_LEGACY_MODEL_POSITION
         ),
         "semantic_indicators_are_audit_only": semantic_audits.isdisjoint(
-            MODEL_FEATURES
+            CONCURRENT_44_FEATURES
         ),
         "model_concurrent_contract_unchanged": MODEL_CONCURRENT_FEATURES
         == [
@@ -291,10 +300,10 @@ def _assert_contract() -> dict[str, Any]:
         raise AssertionError(f"44-feature contract gates failed: {failed}")
     return {
         "gates": gates,
-        "expected_feature_count": EXPECTED_FEATURE_COUNT,
-        "model_feature_count": len(MODEL_FEATURES),
+        "expected_feature_count": len(CONCURRENT_44_FEATURES),
+        "model_feature_count": len(CONCURRENT_44_FEATURES),
         "legacy_indicator": legacy,
-        "legacy_indicator_zero_based_position": MODEL_FEATURES.index(legacy),
+        "legacy_indicator_zero_based_position": CONCURRENT_44_FEATURES.index(legacy),
         "model_concurrent_features": MODEL_CONCURRENT_FEATURES,
         "audit_concurrent_features": AUDIT_CONCURRENT_FEATURES,
     }

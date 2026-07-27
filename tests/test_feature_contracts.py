@@ -19,6 +19,7 @@ from src import model_training as mt
 from src.concurrent_group_features import AUDIT_CONCURRENT_FEATURES
 from src.model_training import (
     BASELINE_41_FEATURES,
+    CONCURRENT_43_FEATURES,
     CONCURRENT_44_FEATURES,
     CONCURRENT_MODEL_FEATURES,
     FEATURE_CONTRACTS,
@@ -383,6 +384,183 @@ class CliAndRunArtifactTest(unittest.TestCase):
             seed_52["effective_seed_settings"],
             seed_62["effective_seed_settings"],
         )
+
+
+CONCURRENT_44_RUN_DIRS = {
+    42: PROJECT_ROOT / "models/runs/2026-07-26_1554__concurrent-44-registration-roster-candidate",
+    52: PROJECT_ROOT / "models/runs/2026-07-27_1028__seed52-concurrent-44-registration-roster-candidate",
+    62: PROJECT_ROOT / "models/runs/2026-07-27_1033__seed62-concurrent-44-registration-roster-candidate",
+    72: PROJECT_ROOT / "models/runs/2026-07-27_1036__seed72-concurrent-44-registration-roster-candidate",
+    82: PROJECT_ROOT / "models/runs/2026-07-27_1039__seed82-concurrent-44-registration-roster-candidate",
+}
+MULTISEED_REPORT_PATH = (
+    PROJECT_ROOT / "models/runs/MULTISEED_BASELINE41_VS_CONCURRENT44_REPORT.json"
+)
+
+
+def _recorded_effective_seed_settings(seed: int) -> dict:
+    """The effective_seed_settings already recorded for this seed's concurrent_44 run.
+
+    Seed 42's own run folder predates the --seed CLI flag, so its
+    feature_contract.json has no effective_seed_settings; that seed's value
+    was independently recovered and recorded in the multiseed report's
+    contract_verification section instead.
+    """
+    run_dir = CONCURRENT_44_RUN_DIRS[seed]
+    contract = json.loads(
+        (run_dir / "feature_contract.json").read_text(encoding="utf-8")
+    )
+    if contract.get("effective_seed_settings") is not None:
+        return contract["effective_seed_settings"]
+    report = json.loads(MULTISEED_REPORT_PATH.read_text(encoding="utf-8"))
+    return report["contract_verification"][str(seed)]["effective_seed_settings"]
+
+
+class Concurrent43IdentityTest(unittest.TestCase):
+    """concurrent_43 = concurrent_44 minus the dead legacy indicator."""
+
+    def test_16_identity_concurrent_43_is_concurrent_44_minus_legacy_indicator(self):
+        self.assertEqual(
+            [
+                f
+                for f in CONCURRENT_44_FEATURES
+                if f != "concurrent_peer_difficulty_missing"
+            ],
+            CONCURRENT_43_FEATURES,
+        )
+        self.assertEqual(len(CONCURRENT_43_FEATURES), 43)
+        self.assertEqual(len(set(CONCURRENT_43_FEATURES)), 43)
+        self.assertNotIn("concurrent_peer_difficulty_missing", CONCURRENT_43_FEATURES)
+        self.assertEqual(
+            list(FEATURE_CONTRACTS["concurrent_43"].features), CONCURRENT_43_FEATURES
+        )
+
+    def test_17_selecting_concurrent_43_does_not_alter_baseline_41_or_concurrent_44(self):
+        before_baseline = list(FEATURE_CONTRACTS["baseline_41"].features)
+        before_concurrent_44 = list(FEATURE_CONTRACTS["concurrent_44"].features)
+        resolve_feature_contract("concurrent_43")  # merely resolving must not mutate anything
+        self.assertEqual(list(FEATURE_CONTRACTS["baseline_41"].features), before_baseline)
+        self.assertEqual(
+            list(FEATURE_CONTRACTS["concurrent_44"].features), before_concurrent_44
+        )
+        self.assertEqual(len(FEATURE_CONTRACTS["baseline_41"].features), 41)
+        self.assertEqual(len(FEATURE_CONTRACTS["concurrent_44"].features), 44)
+        self.assertEqual(mt.DEFAULT_FEATURE_CONTRACT, "concurrent_44")
+
+
+@unittest.skipUnless(
+    all(
+        (run_dir / "feature_contract.json").is_file()
+        for run_dir in CONCURRENT_44_RUN_DIRS.values()
+    )
+    and MULTISEED_REPORT_PATH.is_file(),
+    "concurrent_44 five-seed comparison run artifacts not present",
+)
+class Concurrent43CliTest(unittest.TestCase):
+    """End-to-end main() on tiny synthetic data for the concurrent_43 contract."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.TemporaryDirectory()
+        root = Path(cls._tmp.name)
+        cls.train_path = root / "train.parquet"
+        cls.valid_path = root / "valid.parquet"
+        _synthetic_split(400, seed=1).to_parquet(cls.train_path)
+        _synthetic_split(200, seed=2).to_parquet(cls.valid_path)
+        # Deliberately nonexistent: reading TEST would raise FileNotFoundError.
+        cls.absent_test_path = root / "test_MUST_NOT_BE_READ.parquet"
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._tmp.cleanup()
+
+    def _run(self, contract_name: str, out_dir: Path, seed: int):
+        mt.main([
+            "--train", str(self.train_path),
+            "--valid", str(self.valid_path),
+            "--test", str(self.absent_test_path),
+            "--out", str(out_dir),
+            "--run-name", f"unit-{contract_name}-seed{seed}",
+            "--feature-contract", contract_name,
+            "--num-threads", "1",
+            "--seed", str(seed),
+        ])
+        runs = sorted((out_dir / "runs").glob("*__unit-*"))
+        self.assertEqual(len(runs), 1, runs)
+        return runs[0]
+
+    def test_18_cli_accepts_concurrent_43_and_records_the_full_contract(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = self._run("concurrent_43", Path(tmp), seed=42)
+
+            # TEST stays closed: the run completing at all proves it was never read.
+            self.assertFalse(self.absent_test_path.exists())
+
+            contract = json.loads(
+                (run_dir / "feature_contract.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(contract["contract_name"], "concurrent_43")
+            self.assertEqual(contract["feature_count"], 43)
+            self.assertEqual(contract["ordered_features"], CONCURRENT_43_FEATURES)
+            self.assertEqual(contract["reporting_threshold"], 0.80)
+            self.assertEqual(contract["test_policy"], "closed_not_read")
+            self.assertEqual(contract["random_seed"], 42)
+            self.assertEqual(
+                set(contract["effective_seed_settings"]), set(mt.EFFECTIVE_SEED_PARAM_NAMES)
+            )
+
+            metrics = json.loads(
+                (run_dir / "metrics.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(metrics["run_settings"]["feature_contract"], "concurrent_43")
+            self.assertEqual(metrics["run_settings"]["feature_count"], 43)
+            self.assertEqual(metrics["run_settings"]["test_policy"], "closed_not_read")
+            self.assertIsNone(metrics["m1_pass_classifier"]["test"])
+            self.assertIsNone(metrics["m2_grade_regressor"]["test"])
+
+    def test_19_seed_derivation_matches_existing_concurrent_44_run_artifacts(self):
+        for seed in (42, 52, 62, 72, 82):
+            with self.subTest(seed=seed):
+                recorded = _recorded_effective_seed_settings(seed)
+                with tempfile.TemporaryDirectory() as tmp:
+                    run_dir = self._run("concurrent_43", Path(tmp), seed=seed)
+                    contract = json.loads(
+                        (run_dir / "feature_contract.json").read_text(encoding="utf-8")
+                    )
+                    self.assertEqual(contract["effective_seed_settings"], recorded)
+
+    def test_20_selecting_concurrent_43_does_not_alter_baseline_41_or_concurrent_44_runs(self):
+        with tempfile.TemporaryDirectory() as tmp_a, \
+                tempfile.TemporaryDirectory() as tmp_b, \
+                tempfile.TemporaryDirectory() as tmp_c:
+            a = json.loads(
+                (self._run("baseline_41", Path(tmp_a), seed=52) / "feature_contract.json")
+                .read_text(encoding="utf-8")
+            )
+            b = json.loads(
+                (self._run("concurrent_44", Path(tmp_b), seed=52) / "feature_contract.json")
+                .read_text(encoding="utf-8")
+            )
+            c = json.loads(
+                (self._run("concurrent_43", Path(tmp_c), seed=52) / "feature_contract.json")
+                .read_text(encoding="utf-8")
+            )
+        self.assertEqual(a["feature_count"], 41)
+        self.assertEqual(a["ordered_features"], BASELINE_41_FEATURES)
+        self.assertEqual(b["feature_count"], 44)
+        self.assertEqual(b["ordered_features"], CONCURRENT_44_FEATURES)
+        self.assertEqual(c["feature_count"], 43)
+        self.assertEqual(c["ordered_features"], CONCURRENT_43_FEATURES)
+        # concurrent_43 differs from concurrent_44 by exactly the dead legacy indicator.
+        self.assertEqual(
+            set(b["ordered_features"]) - set(c["ordered_features"]),
+            {"concurrent_peer_difficulty_missing"},
+        )
+        # All three runs shared the same seed; only contract identity differs.
+        self.assertEqual(a["random_seed"], b["random_seed"])
+        self.assertEqual(b["random_seed"], c["random_seed"])
+        self.assertEqual(a["effective_seed_settings"], b["effective_seed_settings"])
+        self.assertEqual(b["effective_seed_settings"], c["effective_seed_settings"])
 
 
 if __name__ == "__main__":

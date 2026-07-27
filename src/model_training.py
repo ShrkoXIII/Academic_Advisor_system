@@ -63,12 +63,16 @@ from src.paths import MODELS_DIR, model_split_path
 # because that list contains diagnostic / string / leakage columns and is not a
 # model allowlist.
 #
-# Two contracts exist so the concurrent-feature effect can be measured in
+# Three contracts exist so the concurrent-feature effect can be measured in
 # isolation:
 #
 #   baseline_41   the established list including GPA trend, WITHOUT the three
 #                 concurrent model features
 #   concurrent_44 baseline_41 plus exactly those three
+#   concurrent_43 concurrent_44 minus concurrent_peer_difficulty_missing, the
+#                 one of the three found effectively dead (Decisions_Log.md:
+#                 used by any model in only 2 of 5 seeds, under 0.001% of
+#                 total gain, zero splits everywhere else)
 #
 # ORDER NOTE (deliberate, see the module tests): the three concurrent features
 # sit at zero-based positions 33/34/35 of the accepted 44-feature contract, not
@@ -76,7 +80,8 @@ from src.paths import MODELS_DIR, model_split_path
 # (scripts/build_concurrent_group_features.py EXPECTED_LEGACY_MODEL_POSITION=35)
 # and by tests. baseline_41 is therefore the 44-list with those three removed,
 # preserving every other feature's relative order. The relationship is a
-# set-difference identity, not a list concatenation.
+# set-difference identity, not a list concatenation. concurrent_43 preserves
+# the order of the remaining 43 features exactly as they sit in concurrent_44.
 
 CONCURRENT_MODEL_FEATURES: List[str] = [
     "concurrent_peer_difficulty_mean",
@@ -173,6 +178,30 @@ assert [
 for _gpa_feature in ("gpa_trend_delta", "gpa_trend_missing"):
     assert _gpa_feature in BASELINE_41_FEATURES, _gpa_feature
     assert _gpa_feature in CONCURRENT_44_FEATURES, _gpa_feature
+
+# concurrent_43 = concurrent_44 minus the dead legacy indicator, order preserved.
+CONCURRENT_43_FEATURES: List[str] = [
+    feature
+    for feature in CONCURRENT_44_FEATURES
+    if feature != "concurrent_peer_difficulty_missing"
+]
+
+assert len(CONCURRENT_43_FEATURES) == 43, len(CONCURRENT_43_FEATURES)
+assert len(set(CONCURRENT_43_FEATURES)) == 43, "duplicate in CONCURRENT_43_FEATURES"
+assert "concurrent_peer_difficulty_missing" not in CONCURRENT_43_FEATURES
+assert set(CONCURRENT_44_FEATURES) - set(CONCURRENT_43_FEATURES) == {
+    "concurrent_peer_difficulty_missing"
+}, "concurrent_44 minus concurrent_43 must be exactly the dead legacy indicator"
+assert set(CONCURRENT_43_FEATURES) - set(CONCURRENT_44_FEATURES) == set(), (
+    "concurrent_43 must be a subset of concurrent_44"
+)
+for _gpa_feature in ("gpa_trend_delta", "gpa_trend_missing"):
+    assert _gpa_feature in CONCURRENT_43_FEATURES, _gpa_feature
+for _remaining_concurrent_feature in (
+    "concurrent_peer_difficulty_mean",
+    "concurrent_peer_difficulty_max",
+):
+    assert _remaining_concurrent_feature in CONCURRENT_43_FEATURES, _remaining_concurrent_feature
 
 # Columns deliberately EXCLUDED (kept here as a guard list, asserted absent from X).
 DROPPED_FEATURES: List[str] = [
@@ -290,6 +319,23 @@ CONCURRENT_44_CONTRACT = FeatureContract(
     ),
 )
 
+CONCURRENT_43_CONTRACT = FeatureContract(
+    name="concurrent_43",
+    version="v1",
+    features=tuple(CONCURRENT_43_FEATURES),
+    categorical_features=tuple(CATEGORICAL_FEATURES),
+    derived_feature_sources=DERIVED_FEATURE_SOURCES,
+    reporting_threshold=REPORTING_THRESHOLD,
+    requires_concurrent_plan_context=True,
+    description=(
+        "concurrent_44 minus concurrent_peer_difficulty_missing (dead: used by "
+        "any model in only 2 of 5 seeds, under 0.001% of total gain, zero "
+        "splits everywhere else; see Decisions_Log.md). Still requires plan "
+        "context at serve time because concurrent_peer_difficulty_mean/max "
+        "remain in the contract."
+    ),
+)
+
 # Known production limitation, recorded with every run so it cannot be lost.
 # NOT wired into recommendation by this experiment.
 SERVING_LIMITATION_NOTE = (
@@ -301,6 +347,7 @@ SERVING_LIMITATION_NOTE = (
 FEATURE_CONTRACTS: Dict[str, FeatureContract] = {
     BASELINE_41_CONTRACT.name: BASELINE_41_CONTRACT,
     CONCURRENT_44_CONTRACT.name: CONCURRENT_44_CONTRACT,
+    CONCURRENT_43_CONTRACT.name: CONCURRENT_43_CONTRACT,
 }
 
 DEFAULT_FEATURE_CONTRACT = CONCURRENT_44_CONTRACT.name
