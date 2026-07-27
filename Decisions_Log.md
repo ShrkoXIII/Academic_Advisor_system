@@ -198,3 +198,76 @@ wiring was touched. TEST was not read by any of the five new runs.
 **Next action (named, not started).** Regularization pass, two arms:
 `baseline_41` vs `concurrent_43` — direction only; do not start it without
 separate explicit approval.
+
+---
+
+## 2026-07-27 — CORRECTION to the `concurrent_43` entry above
+
+This log is append-only: the entry above is left in place as written, and
+this entry supersedes the part of it that is wrong. Specifically, the
+sentence "`concurrent_44` remains the M1 concurrent arm pending more seeds
+or a repeated check specifically on the train-valid AUC gap" is **wrong**
+and is corrected here.
+
+```text
+Correction to the concurrent_43 entry (2026-07-27):
+concurrent_44 has NO remaining role. M1's contract is baseline_41, decided by
+the 5-seed baseline_41 vs concurrent_44 experiment (concurrent features were
+rejected for M1 because the train-valid AUC gap worsened in 4/5 seeds).
+concurrent_43 is the only concurrent arm going forward: M2's contract, and the
+concurrent arm of the regularization pass. concurrent_44 is ARCHIVED — it must
+not be used in any new run; it survives only inside past reports.
+```
+
+**What this changes in practice.**
+
+- M1's contract is `baseline_41`. It is decided, not pending. The
+  "INCONCLUSIVE" wording in the first entry above describes the strength
+  of the evidence, not an open question about which contract M1 uses.
+- `concurrent_43` is the sole concurrent arm from here on — M2's contract,
+  and the concurrent arm of the regularization pass.
+- `concurrent_44` is ARCHIVED. It must not appear in any new run. It
+  survives only inside past reports
+  (`MULTISEED_BASELINE41_VS_CONCURRENT44_REPORT.md`,
+  `MULTISEED_CONCURRENT43_VS_CONCURRENT44_REPORT.md`,
+  `CONCURRENT43_VS_CONCURRENT44_VERIFICATION.json`) and inside the
+  archived run folders those reports cite. Those artifacts are not edited.
+
+**Not changed by this correction.** `DEFAULT_FEATURE_CONTRACT` in
+`src/model_training.py` is still `concurrent_44` — stale, and it affects
+quick runs only, because a persistent run (`--run-name`) is test-enforced
+to pass `--feature-contract` explicitly and is never silently defaulted.
+Repointing the default is wiring, deferred until after the M1/M2 freeze.
+`CONCURRENT_44_FEATURES` also stays in the code as the named list the
+dataset builder's position gate is pinned to
+(`scripts/build_concurrent_group_features.py:_assert_contract`); archived
+means "not selectable for new runs", not "deleted". No dataset, live model
+artifact, `CURRENT_VERSION.txt`, promotion marker, inference wiring, or
+recommendation wiring is touched by this correction — it is a
+documentation-only entry.
+
+---
+
+## 2026-07-27 — Regularization pass: criterion pre-registered before any run
+
+**Scope.** Created [`docs/EXPERIMENT_REGULARIZATION_PLAN.md`](docs/EXPERIMENT_REGULARIZATION_PLAN.md),
+the pre-registered plan and acceptance rule for the regularization pass
+(`baseline_41` vs `concurrent_43`, both arms always). It is committed
+**before any regularization run is trained**, so the success criterion is
+locked before any result exists. It may not be revised after results are
+seen.
+
+**Why it is a separate committed file.** The acceptance rule is only
+meaningful if it demonstrably predates the numbers it judges. Committing
+it first makes that ordering verifiable from git history rather than
+asserted in prose.
+
+**Stated limitation, carried into the plan and every report that uses
+it.** [`models/runs/NOISE_BAND.md`](models/runs/NOISE_BAND.md) was
+measured from contract-change deltas across seeds, not from
+hyperparameter-change deltas. It is the best available yardstick, not an
+exact one for this pass, and must not be treated as precise.
+
+**Next action.** Seed-42 screening only: four single-lever configurations
+× two arms = 8 runs, then STOP. Confirmation across seeds 52/62/72/82 is a
+separate task requiring separate explicit approval.

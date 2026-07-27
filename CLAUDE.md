@@ -42,9 +42,15 @@ expected AGPA gain and fail risk. M2 feeds deterministic AGPA math, so
 
 - Goal: shrink M1's train–valid AUC gap without losing more VALID
   performance than the noise band allows.
-- The design (parameter configurations, run budget, pre-registered success
-  criterion) is **awaiting explicit human approval — do not start without
-  it**. The success criterion must be locked BEFORE any result is seen.
+- The design is pre-registered in
+  `docs/EXPERIMENT_REGULARIZATION_PLAN.md` — parameter configurations, run
+  budget, and the locked success criterion. It was committed BEFORE any
+  regularization run was trained and **may not be revised after results are
+  seen**.
+- Approved so far: **seed-42 screening only** — four single-lever
+  configurations × two arms = 8 runs, then STOP. Confirmation across seeds
+  52/62/72/82 is a separate task needing separate explicit approval; so is
+  any change to `_SHARED_PARAMS` defaults.
 - Open question the pass answers: does stronger regularization tame the gap
   enough for M1 to accept the concurrent features? If yes, both models may
   unify on `concurrent_43`; if not, M1 freezes on `baseline_41`.
@@ -183,6 +189,11 @@ threshold(s), possibly per segment, as a business decision.
 - `Decisions_Log.md` (repo root) — decision history used by tasks. If it
   conflicts with the Obsidian vault, stop and ask — do not pick a winner.
 - `models/runs/NOISE_BAND.md` — the noise band (acceptance yardstick).
+  Measured from contract-change deltas across seeds, NOT from
+  hyperparameter-change deltas — the best available yardstick for the
+  regularization pass, not an exact one. Never treat it as precise.
+- `docs/EXPERIMENT_REGULARIZATION_PLAN.md` — pre-registered plan and locked
+  acceptance rule for the regularization pass. Frozen once committed.
 - `docs/pipeline_rules.md` — CLI and pipeline rules.
 - Latest reports:
   `models/runs/MULTISEED_BASELINE41_VS_CONCURRENT44_REPORT.md`,
