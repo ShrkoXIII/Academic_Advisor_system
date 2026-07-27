@@ -1,0 +1,2569 @@
+{
+  "experiment": "regularization_screening_seed42",
+  "pre_registered_plan": "docs/EXPERIMENT_REGULARIZATION_PLAN.md",
+  "noise_band_source": "models/runs/NOISE_BAND.md",
+  "noise_band_limitation": "Band measured from contract-change deltas across seeds, not from hyperparameter-change deltas. Best available yardstick, not exact.",
+  "noise_band": {
+    "m1_valid_auc": {
+      "min": -0.000382,
+      "max": 0.001042
+    },
+    "m1_valid_fail_ap": {
+      "min": -0.002045,
+      "max": 0.001544
+    },
+    "m1_valid_brier": {
+      "min": -0.000108,
+      "max": 0.000119
+    },
+    "m1_train_valid_auc_gap": {
+      "min": -0.005873,
+      "max": 0.02672
+    },
+    "m2_valid_mae": {
+      "min": -0.050423,
+      "max": 0.04652
+    },
+    "m2_valid_rmse": {
+      "min": -0.067477,
+      "max": 0.07805
+    },
+    "m2_valid_r2": {
+      "min": -0.007865,
+      "max": 0.006807
+    },
+    "cold_start_auc": {
+      "min": -0.011618,
+      "max": 0.00819
+    },
+    "low_difficulty_support_auc": {
+      "min": -0.006657,
+      "max": 0.008522
+    },
+    "level_1_auc": {
+      "min": -0.000538,
+      "max": 0.00114
+    }
+  },
+  "controls": {
+    "baseline_41": "2026-07-26_1551__baseline-41-gpa-trend-control",
+    "concurrent_43": "2026-07-27_1327__seed42-concurrent-43-drop-dead-missing-flag"
+  },
+  "configurations": {
+    "R1": {
+      "label": "num_leaves 127 -> 63",
+      "param": "num_leaves",
+      "model_file_alias": "num_leaves",
+      "control_value": 127.0,
+      "value": 63.0,
+      "slug": "reg-r1-leaves63"
+    },
+    "R2": {
+      "label": "num_leaves 127 -> 31",
+      "param": "num_leaves",
+      "model_file_alias": "num_leaves",
+      "control_value": 127.0,
+      "value": 31.0,
+      "slug": "reg-r2-leaves31"
+    },
+    "R3": {
+      "label": "min_child_samples 50 -> 200",
+      "param": "min_child_samples",
+      "model_file_alias": "min_data_in_leaf",
+      "control_value": 50.0,
+      "value": 200.0,
+      "slug": "reg-r3-minchild200"
+    },
+    "R4": {
+      "label": "reg_lambda 1.0 -> 10.0",
+      "param": "reg_lambda",
+      "model_file_alias": "lambda_l2",
+      "control_value": 1.0,
+      "value": 10.0,
+      "slug": "reg-r4-lambda10"
+    }
+  },
+  "provenance": {
+    "train_sha256": "8aaff32aeac5b37506b24584d56913b52ab284f1b551f107a2e3c55969d5641f",
+    "valid_sha256": "228719fa492da84bd4696e24c88c574d2ce68a3143dac8bb6bc925fc1e432b75",
+    "train_rows": 450465,
+    "valid_rows": 156097,
+    "test_path": "data/model_data/versions/2026-07-26_batched_fixes__registration_roster_concurrent/df_test_CLOSED_DO_NOT_READ.parquet",
+    "test_path_exists": false,
+    "git_commit": "a6ec653841ebafe8978ac9a6edec4b7371029df6",
+    "git_clean": false,
+    "dataset_version": "2026-07-26_batched_fixes__registration_roster_concurrent",
+    "seed": 42
+  },
+  "runs": {
+    "control_baseline_41": {
+      "configuration": "control",
+      "arm": "baseline_41",
+      "run_path": "models/runs/2026-07-26_1551__baseline-41-gpa-trend-control",
+      "lever": null,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8645724829519178,
+          "fail_average_precision": 0.5679958456883846,
+          "brier_score": 0.09613034467119051,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.80918853274908,
+          "fail_average_precision": 0.3219831593412697,
+          "brier_score": 0.08077845438389275,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.05538395020283782,
+          "best_iteration": 137
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.756642818020739,
+          "rmse": 12.46608465526612,
+          "r2": 0.4911358977441326
+        },
+        "valid": {
+          "mae": 9.56670973063096,
+          "rmse": 12.854908853104188,
+          "r2": 0.35190917004813094,
+          "best_iteration": 438
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7329310827134857
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7329310827134857
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6768272871085127
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7644051315707036
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8209615204193982
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "R1_baseline_41": {
+      "configuration": "R1",
+      "arm": "baseline_41",
+      "run_path": "models/runs/2026-07-27_1454__reg-r1-leaves63-baseline-41",
+      "lever": "num_leaves 127 -> 63",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8779242134886103,
+          "fail_average_precision": 0.6030671787458939,
+          "brier_score": 0.0924339167372095,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8110612903913144,
+          "fail_average_precision": 0.3239241368951236,
+          "brier_score": 0.0806395731642624,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.06686292309729591,
+          "best_iteration": 455
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.156896672280654,
+          "rmse": 12.851653711242923,
+          "r2": 0.4591713362600923
+        },
+        "valid": {
+          "mae": 9.591951326273966,
+          "rmse": 12.90037875674695,
+          "r2": 0.3473162560739219,
+          "best_iteration": 430
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7395759260433915
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7395759260433915
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6740951833737587
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7675559448003589
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8226887150594676
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "R2_baseline_41": {
+      "configuration": "R2",
+      "arm": "baseline_41",
+      "run_path": "models/runs/2026-07-27_1456__reg-r2-leaves31-baseline-41",
+      "lever": "num_leaves 127 -> 31",
+      "m1": {
+        "train": {
+          "roc_auc": 0.858999220967388,
+          "fail_average_precision": 0.5535337359343198,
+          "brier_score": 0.09769921397990053,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8107081015428698,
+          "fail_average_precision": 0.3242928467098611,
+          "brier_score": 0.08074131531870388,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.04829111942451825,
+          "best_iteration": 456
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.318166403538562,
+          "rmse": 13.004003694285153,
+          "r2": 0.446272822658926
+        },
+        "valid": {
+          "mae": 9.598180100112568,
+          "rmse": 12.881184622339692,
+          "r2": 0.34925703315109546,
+          "best_iteration": 680
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7358335058223385
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7358335058223385
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6791109061512753
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7658064529296005
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8224280024753485
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "R3_baseline_41": {
+      "configuration": "R3",
+      "arm": "baseline_41",
+      "run_path": "models/runs/2026-07-27_1458__reg-r3-minchild200-baseline-41",
+      "lever": "min_child_samples 50 -> 200",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8654929193312653,
+          "fail_average_precision": 0.5677694392947863,
+          "brier_score": 0.09599321460486464,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8097172288548585,
+          "fail_average_precision": 0.322349834538902,
+          "brier_score": 0.08077901514100604,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.055775690476406736,
+          "best_iteration": 152
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.081849540915266,
+          "rmse": 12.790839213554026,
+          "r2": 0.4642776681587101
+        },
+        "valid": {
+          "mae": 9.579480383704828,
+          "rmse": 12.87619077176829,
+          "r2": 0.34976150277846296,
+          "best_iteration": 258
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7330803587326177
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7330803587326177
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6776606541549602
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7685695113239838
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8210573202126432
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "R4_baseline_41": {
+      "configuration": "R4",
+      "arm": "baseline_41",
+      "run_path": "models/runs/2026-07-27_1459__reg-r4-lambda10-baseline-41",
+      "lever": "reg_lambda 1.0 -> 10.0",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8637967648827771,
+          "fail_average_precision": 0.5665187470528946,
+          "brier_score": 0.09620307020994873,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.809097290827022,
+          "fail_average_precision": 0.3205871630457795,
+          "brier_score": 0.08090075147421043,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.05469947405575515,
+          "best_iteration": 152
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.77669802588159,
+          "rmse": 12.493618580142922,
+          "r2": 0.4888855521905031
+        },
+        "valid": {
+          "mae": 9.596393536605397,
+          "rmse": 12.902724676280842,
+          "r2": 0.3470788548639916,
+          "best_iteration": 420
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.727129627156669
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.727129627156669
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6760532865798563
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7643069626990592
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8207433356097882
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "control_concurrent_43": {
+      "configuration": "control",
+      "arm": "concurrent_43",
+      "run_path": "models/runs/2026-07-27_1327__seed42-concurrent-43-drop-dead-missing-flag",
+      "lever": null,
+      "m1": {
+        "train": {
+          "roc_auc": 0.8690473166182202,
+          "fail_average_precision": 0.5769511326331921,
+          "brier_score": 0.09510092659765346,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8099867130438985,
+          "fail_average_precision": 0.3232843237874901,
+          "brier_score": 0.08065972076841676,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.059060603574321746,
+          "best_iteration": 155
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.9681354029364,
+          "rmse": 12.661945117265445,
+          "r2": 0.47502028274127295
+        },
+        "valid": {
+          "mae": 9.578375578831,
+          "rmse": 12.862119935222113,
+          "r2": 0.35118186080742175,
+          "best_iteration": 300
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7325091801708865
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7325091801708865
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6785395989470581
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7673224767989413
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8212141154713009
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "R1_concurrent_43": {
+      "configuration": "R1",
+      "arm": "concurrent_43",
+      "run_path": "models/runs/2026-07-27_1455__reg-r1-leaves63-concurrent-43",
+      "lever": "num_leaves 127 -> 63",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8575343122729817,
+          "fail_average_precision": 0.5508212483991043,
+          "brier_score": 0.0979804239074697,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8103140537168639,
+          "fail_average_precision": 0.32373408225654654,
+          "brier_score": 0.08060668640438265,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.04722025855611778,
+          "best_iteration": 199
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.411694710443617,
+          "rmse": 13.088970131498359,
+          "r2": 0.43901322323212477
+        },
+        "valid": {
+          "mae": 9.59733112217969,
+          "rmse": 12.889289881123302,
+          "r2": 0.3484378383756235,
+          "best_iteration": 252
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7354548298590708
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7354548298590708
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6752537817008424
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7669086725615318
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8218716552654151
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "R2_concurrent_43": {
+      "configuration": "R2",
+      "arm": "concurrent_43",
+      "run_path": "models/runs/2026-07-27_1457__reg-r2-leaves31-concurrent-43",
+      "lever": "num_leaves 127 -> 31",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8461427888350119,
+          "fail_average_precision": 0.5236908146894983,
+          "brier_score": 0.100834115458865,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.809687822578081,
+          "fail_average_precision": 0.3229558634034819,
+          "brier_score": 0.08073084719965087,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.0364549662569309,
+          "best_iteration": 242
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.46362584270171,
+          "rmse": 13.137578361453114,
+          "r2": 0.43483883711399407
+        },
+        "valid": {
+          "mae": 9.607860119520689,
+          "rmse": 12.898573357436732,
+          "r2": 0.34749892859049125,
+          "best_iteration": 480
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7371053688037498
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7371053688037498
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.67652234873782
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7690937046764819
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.82050911691228
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "R3_concurrent_43": {
+      "configuration": "R3",
+      "arm": "concurrent_43",
+      "run_path": "models/runs/2026-07-27_1458__reg-r3-minchild200-concurrent-43",
+      "lever": "min_child_samples 50 -> 200",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8795689158814439,
+          "fail_average_precision": 0.6022920082083038,
+          "brier_score": 0.09216796001875882,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8101053145766677,
+          "fail_average_precision": 0.32138469586093893,
+          "brier_score": 0.08072077099351448,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.06946360130477625,
+          "best_iteration": 232
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 9.03639705223509,
+          "rmse": 12.737441072514772,
+          "r2": 0.46874131029634614
+        },
+        "valid": {
+          "mae": 9.573395829144939,
+          "rmse": 12.87621470130427,
+          "r2": 0.3497590859270432,
+          "best_iteration": 277
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.734005191919057
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.734005191919057
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.673832310514303
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7669208176805287
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8211511232008348
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    },
+    "R4_concurrent_43": {
+      "configuration": "R4",
+      "arm": "concurrent_43",
+      "run_path": "models/runs/2026-07-27_1500__reg-r4-lambda10-concurrent-43",
+      "lever": "reg_lambda 1.0 -> 10.0",
+      "m1": {
+        "train": {
+          "roc_auc": 0.8659752741582603,
+          "fail_average_precision": 0.5728907374586423,
+          "brier_score": 0.09554428609485147,
+          "reporting_threshold": 0.8
+        },
+        "valid": {
+          "roc_auc": 0.8097960316937194,
+          "fail_average_precision": 0.3227592250633835,
+          "brier_score": 0.08071808092570587,
+          "reporting_threshold": 0.8,
+          "train_valid_auc_gap": 0.05617924246454087,
+          "best_iteration": 160
+        }
+      },
+      "m2": {
+        "train": {
+          "mae": 8.607275249634819,
+          "rmse": 12.326689712738313,
+          "r2": 0.5024524417429498
+        },
+        "valid": {
+          "mae": 9.538478563732623,
+          "rmse": 12.804046965654049,
+          "r2": 0.35702751232214336,
+          "best_iteration": 540
+        }
+      },
+      "valid_segments": {
+        "first_semester": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7318314653052276
+        },
+        "cold_start_gpa": {
+          "n": 14732,
+          "positive_rate": 0.842791202823785,
+          "auc": 0.7318314653052276
+        },
+        "retake_attempt": {
+          "n": 17958,
+          "positive_rate": 0.7435126406058581,
+          "auc": 0.6767627660615131
+        },
+        "low_difficulty_support": {
+          "n": 25627,
+          "positive_rate": 0.8583134974831232,
+          "auc": 0.7669772110990462
+        },
+        "level_1_difficulty": {
+          "n": 120858,
+          "positive_rate": 0.9037961905707524,
+          "auc": 0.8210216942499236
+        }
+      },
+      "hit_round_cap": {
+        "m1": false,
+        "m2": false
+      }
+    }
+  },
+  "verification": {
+    "R1_baseline_41": {
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "baseline_41",
+          "control": "baseline_41"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 41,
+          "control": 41
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "see run"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": "not recorded (predates the field)",
+          "note": "control predates data_rows; identical train/valid SHA-256 proves identical row counts"
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_pass_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m1_pass_model.lgbm_lever_value": {
+          "match": true,
+          "run": 63.0,
+          "control": 127.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m2_grade_model.lgbm_lever_value": {
+          "match": true,
+          "run": 63.0,
+          "control": 127.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": "not recorded (predates the field)",
+          "note": "control predates training_control; its serialized num_iterations is verified above and its REPORT.md records the same 50-round VALID-only early stopping"
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": "not recorded (predates the field)",
+          "note": "control predates diploma_gpa_handling; the fill is the TRAIN median of an identically hashed TRAIN file, so it is deterministic and equal"
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "R2_baseline_41": {
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "baseline_41",
+          "control": "baseline_41"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 41,
+          "control": 41
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "see run"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": "not recorded (predates the field)",
+          "note": "control predates data_rows; identical train/valid SHA-256 proves identical row counts"
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_pass_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m1_pass_model.lgbm_lever_value": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m2_grade_model.lgbm_lever_value": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": "not recorded (predates the field)",
+          "note": "control predates training_control; its serialized num_iterations is verified above and its REPORT.md records the same 50-round VALID-only early stopping"
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": "not recorded (predates the field)",
+          "note": "control predates diploma_gpa_handling; the fill is the TRAIN median of an identically hashed TRAIN file, so it is deterministic and equal"
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "R3_baseline_41": {
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "baseline_41",
+          "control": "baseline_41"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 41,
+          "control": 41
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "see run"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": "not recorded (predates the field)",
+          "note": "control predates data_rows; identical train/valid SHA-256 proves identical row counts"
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_pass_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "min_data_in_leaf"
+          ],
+          "control": "expected exactly ['min_data_in_leaf']"
+        },
+        "m1_pass_model.lgbm_lever_value": {
+          "match": true,
+          "run": 200.0,
+          "control": 50.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "min_data_in_leaf"
+          ],
+          "control": "expected exactly ['min_data_in_leaf']"
+        },
+        "m2_grade_model.lgbm_lever_value": {
+          "match": true,
+          "run": 200.0,
+          "control": 50.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": "not recorded (predates the field)",
+          "note": "control predates training_control; its serialized num_iterations is verified above and its REPORT.md records the same 50-round VALID-only early stopping"
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": "not recorded (predates the field)",
+          "note": "control predates diploma_gpa_handling; the fill is the TRAIN median of an identically hashed TRAIN file, so it is deterministic and equal"
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "R4_baseline_41": {
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "baseline_41",
+          "control": "baseline_41"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 41,
+          "control": 41
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "see run"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": "not recorded (predates the field)",
+          "note": "control predates data_rows; identical train/valid SHA-256 proves identical row counts"
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_pass_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "lambda_l2"
+          ],
+          "control": "expected exactly ['lambda_l2']"
+        },
+        "m1_pass_model.lgbm_lever_value": {
+          "match": true,
+          "run": 10.0,
+          "control": 1.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "lambda_l2"
+          ],
+          "control": "expected exactly ['lambda_l2']"
+        },
+        "m2_grade_model.lgbm_lever_value": {
+          "match": true,
+          "run": 10.0,
+          "control": 1.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": "not recorded (predates the field)",
+          "note": "control predates training_control; its serialized num_iterations is verified above and its REPORT.md records the same 50-round VALID-only early stopping"
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": "not recorded (predates the field)",
+          "note": "control predates diploma_gpa_handling; the fill is the TRAIN median of an identically hashed TRAIN file, so it is deterministic and equal"
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "R1_concurrent_43": {
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "concurrent_43",
+          "control": "concurrent_43"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 43,
+          "control": 43
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "see run"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": {
+            "train": 450465,
+            "valid": 156097
+          }
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_pass_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m1_pass_model.lgbm_lever_value": {
+          "match": true,
+          "run": 63.0,
+          "control": 127.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m2_grade_model.lgbm_lever_value": {
+          "match": true,
+          "run": 63.0,
+          "control": 127.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          }
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": 84.58
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "R2_concurrent_43": {
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "concurrent_43",
+          "control": "concurrent_43"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 43,
+          "control": 43
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "see run"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": {
+            "train": 450465,
+            "valid": 156097
+          }
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_pass_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m1_pass_model.lgbm_lever_value": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "num_leaves"
+          ],
+          "control": "expected exactly ['num_leaves']"
+        },
+        "m2_grade_model.lgbm_lever_value": {
+          "match": true,
+          "run": 31.0,
+          "control": 127.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          }
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": 84.58
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "R3_concurrent_43": {
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "concurrent_43",
+          "control": "concurrent_43"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 43,
+          "control": 43
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "see run"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": {
+            "train": 450465,
+            "valid": 156097
+          }
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_pass_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "min_data_in_leaf"
+          ],
+          "control": "expected exactly ['min_data_in_leaf']"
+        },
+        "m1_pass_model.lgbm_lever_value": {
+          "match": true,
+          "run": 200.0,
+          "control": 50.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "min_data_in_leaf"
+          ],
+          "control": "expected exactly ['min_data_in_leaf']"
+        },
+        "m2_grade_model.lgbm_lever_value": {
+          "match": true,
+          "run": 200.0,
+          "control": 50.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          }
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": 84.58
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "failed_checks": [],
+      "all_passed": true
+    },
+    "R4_concurrent_43": {
+      "checks": {
+        "feature_contract": {
+          "match": true,
+          "run": "concurrent_43",
+          "control": "concurrent_43"
+        },
+        "ordered_features": {
+          "match": true,
+          "run": 43,
+          "control": 43
+        },
+        "categorical_levels": {
+          "match": true,
+          "run": "identical",
+          "control": "see run"
+        },
+        "reporting_threshold": {
+          "match": true,
+          "run": 0.8,
+          "control": 0.8
+        },
+        "test_policy": {
+          "match": true,
+          "run": "closed_not_read",
+          "control": "closed_not_read"
+        },
+        "train_sha256": {
+          "match": true,
+          "run": "8aaff32aeac5b375\u2026",
+          "control": "8aaff32aeac5b375\u2026"
+        },
+        "valid_sha256": {
+          "match": true,
+          "run": "228719fa492da84b\u2026",
+          "control": "228719fa492da84b\u2026"
+        },
+        "dataset_version": {
+          "match": true,
+          "run": "2026-07-26_batched_fixes__registration_roster_concurrent",
+          "control": "2026-07-26_batched_fixes__registration_roster_concurrent"
+        },
+        "data_rows": {
+          "match": true,
+          "run": {
+            "train": 450465,
+            "valid": 156097
+          },
+          "control": {
+            "train": 450465,
+            "valid": 156097
+          }
+        },
+        "effective_seed_settings": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_m2_same_seeds": {
+          "match": true,
+          "run": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          },
+          "control": {
+            "seed": 42,
+            "data_random_seed": 175,
+            "feature_fraction_seed": 30056,
+            "bagging_seed": 400,
+            "drop_seed": 17869
+          }
+        },
+        "m1_pass_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "lambda_l2"
+          ],
+          "control": "expected exactly ['lambda_l2']"
+        },
+        "m1_pass_model.lgbm_lever_value": {
+          "match": true,
+          "run": 10.0,
+          "control": 1.0
+        },
+        "m1_pass_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m1_pass_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "m2_grade_model.lgbm_only_lever_differs": {
+          "match": true,
+          "run": [
+            "lambda_l2"
+          ],
+          "control": "expected exactly ['lambda_l2']"
+        },
+        "m2_grade_model.lgbm_lever_value": {
+          "match": true,
+          "run": 10.0,
+          "control": 1.0
+        },
+        "m2_grade_model.lgbm_num_iterations": {
+          "match": true,
+          "run": 2000,
+          "control": 2000
+        },
+        "m2_grade_model.lgbm_num_threads": {
+          "match": true,
+          "run": 4,
+          "control": 4
+        },
+        "training_control": {
+          "match": true,
+          "run": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          },
+          "control": {
+            "num_boost_round": 2000,
+            "early_stopping_rounds": 50,
+            "early_stopping_selection_split": "valid_only"
+          }
+        },
+        "diploma_gpa_fill": {
+          "match": true,
+          "run": 84.58,
+          "control": 84.58
+        },
+        "test_never_read": {
+          "match": true,
+          "run": "null",
+          "control": "null"
+        }
+      },
+      "failed_checks": [],
+      "all_passed": true
+    }
+  },
+  "evaluation": {
+    "R1": {
+      "label": "num_leaves 127 -> 63",
+      "lever": "num_leaves",
+      "arms": {
+        "baseline_41": {
+          "control": {
+            "m1_valid_auc": 0.80918853274908,
+            "m1_valid_fail_ap": 0.3219831593412697,
+            "m1_valid_brier": 0.08077845438389275,
+            "m1_train_valid_auc_gap": 0.05538395020283782,
+            "m2_valid_mae": 9.56670973063096,
+            "m2_valid_rmse": 12.854908853104188,
+            "m2_valid_r2": 0.35190917004813094,
+            "cold_start_auc": 0.7329310827134857,
+            "low_difficulty_support_auc": 0.7644051315707036,
+            "level_1_auc": 0.8209615204193982
+          },
+          "candidate": {
+            "m1_valid_auc": 0.8110612903913144,
+            "m1_valid_fail_ap": 0.3239241368951236,
+            "m1_valid_brier": 0.0806395731642624,
+            "m1_train_valid_auc_gap": 0.06686292309729591,
+            "m2_valid_mae": 9.591951326273966,
+            "m2_valid_rmse": 12.90037875674695,
+            "m2_valid_r2": 0.3473162560739219,
+            "cold_start_auc": 0.7395759260433915,
+            "low_difficulty_support_auc": 0.7675559448003589,
+            "level_1_auc": 0.8226887150594676
+          },
+          "deltas": {
+            "m1_valid_auc": 0.0018727576422343795,
+            "m1_valid_fail_ap": 0.0019409775538539176,
+            "m1_valid_brier": -0.00013888121963034905,
+            "m1_train_valid_auc_gap": 0.011478972894458095,
+            "m2_valid_mae": 0.02524159564300632,
+            "m2_valid_rmse": 0.04546990364276127,
+            "m2_valid_r2": -0.004592913974209023,
+            "cold_start_auc": 0.006644843329905781,
+            "low_difficulty_support_auc": 0.0031508132296553804,
+            "level_1_auc": 0.0017271946400694294
+          },
+          "judgments": {
+            "m1_valid_auc": "outside_band_beneficial",
+            "m1_valid_fail_ap": "outside_band_beneficial",
+            "m1_valid_brier": "outside_band_beneficial",
+            "m1_train_valid_auc_gap": "inside_band",
+            "m2_valid_mae": "inside_band",
+            "m2_valid_rmse": "inside_band",
+            "m2_valid_r2": "inside_band",
+            "cold_start_auc": "inside_band",
+            "low_difficulty_support_auc": "inside_band",
+            "level_1_auc": "outside_band_beneficial"
+          }
+        },
+        "concurrent_43": {
+          "control": {
+            "m1_valid_auc": 0.8099867130438985,
+            "m1_valid_fail_ap": 0.3232843237874901,
+            "m1_valid_brier": 0.08065972076841676,
+            "m1_train_valid_auc_gap": 0.059060603574321746,
+            "m2_valid_mae": 9.578375578831,
+            "m2_valid_rmse": 12.862119935222113,
+            "m2_valid_r2": 0.35118186080742175,
+            "cold_start_auc": 0.7325091801708865,
+            "low_difficulty_support_auc": 0.7673224767989413,
+            "level_1_auc": 0.8212141154713009
+          },
+          "candidate": {
+            "m1_valid_auc": 0.8103140537168639,
+            "m1_valid_fail_ap": 0.32373408225654654,
+            "m1_valid_brier": 0.08060668640438265,
+            "m1_train_valid_auc_gap": 0.04722025855611778,
+            "m2_valid_mae": 9.59733112217969,
+            "m2_valid_rmse": 12.889289881123302,
+            "m2_valid_r2": 0.3484378383756235,
+            "cold_start_auc": 0.7354548298590708,
+            "low_difficulty_support_auc": 0.7669086725615318,
+            "level_1_auc": 0.8218716552654151
+          },
+          "deltas": {
+            "m1_valid_auc": 0.0003273406729654704,
+            "m1_valid_fail_ap": 0.00044975846905642713,
+            "m1_valid_brier": -5.3034364034115766e-05,
+            "m1_train_valid_auc_gap": -0.011840345018203968,
+            "m2_valid_mae": 0.01895554334869054,
+            "m2_valid_rmse": 0.027169945901189152,
+            "m2_valid_r2": -0.0027440224317982764,
+            "cold_start_auc": 0.0029456496881843375,
+            "low_difficulty_support_auc": -0.00041380423740944305,
+            "level_1_auc": 0.0006575397941142036
+          },
+          "judgments": {
+            "m1_valid_auc": "inside_band",
+            "m1_valid_fail_ap": "inside_band",
+            "m1_valid_brier": "inside_band",
+            "m1_train_valid_auc_gap": "outside_band_beneficial",
+            "m2_valid_mae": "inside_band",
+            "m2_valid_rmse": "inside_band",
+            "m2_valid_r2": "inside_band",
+            "cold_start_auc": "inside_band",
+            "low_difficulty_support_auc": "inside_band",
+            "level_1_auc": "inside_band"
+          }
+        }
+      },
+      "clauses": {
+        "clause_1_primary_gap_outside_band_beneficial_in_both_arms": {
+          "satisfied": false,
+          "per_arm": {
+            "baseline_41": "inside_band",
+            "concurrent_43": "outside_band_beneficial"
+          }
+        },
+        "clause_2_guardrail_m1": {
+          "satisfied": true,
+          "breaches": []
+        },
+        "clause_3_guardrail_m2": {
+          "satisfied": true,
+          "breaches": []
+        }
+      },
+      "failing_clauses": [
+        "clause_1_primary_gap_outside_band_beneficial_in_both_arms"
+      ],
+      "verdict": "FAIL",
+      "m1_m2_direction": {
+        "baseline_41": {
+          "m1_valid_auc_improved": true,
+          "m2_valid_mae_improved": false,
+          "same_direction": false
+        },
+        "concurrent_43": {
+          "m1_valid_auc_improved": true,
+          "m2_valid_mae_improved": false,
+          "same_direction": false
+        }
+      }
+    },
+    "R2": {
+      "label": "num_leaves 127 -> 31",
+      "lever": "num_leaves",
+      "arms": {
+        "baseline_41": {
+          "control": {
+            "m1_valid_auc": 0.80918853274908,
+            "m1_valid_fail_ap": 0.3219831593412697,
+            "m1_valid_brier": 0.08077845438389275,
+            "m1_train_valid_auc_gap": 0.05538395020283782,
+            "m2_valid_mae": 9.56670973063096,
+            "m2_valid_rmse": 12.854908853104188,
+            "m2_valid_r2": 0.35190917004813094,
+            "cold_start_auc": 0.7329310827134857,
+            "low_difficulty_support_auc": 0.7644051315707036,
+            "level_1_auc": 0.8209615204193982
+          },
+          "candidate": {
+            "m1_valid_auc": 0.8107081015428698,
+            "m1_valid_fail_ap": 0.3242928467098611,
+            "m1_valid_brier": 0.08074131531870388,
+            "m1_train_valid_auc_gap": 0.04829111942451825,
+            "m2_valid_mae": 9.598180100112568,
+            "m2_valid_rmse": 12.881184622339692,
+            "m2_valid_r2": 0.34925703315109546,
+            "cold_start_auc": 0.7358335058223385,
+            "low_difficulty_support_auc": 0.7658064529296005,
+            "level_1_auc": 0.8224280024753485
+          },
+          "deltas": {
+            "m1_valid_auc": 0.0015195687937897828,
+            "m1_valid_fail_ap": 0.0023096873685913843,
+            "m1_valid_brier": -3.7139065188873666e-05,
+            "m1_train_valid_auc_gap": -0.00709283077831957,
+            "m2_valid_mae": 0.03147036948160853,
+            "m2_valid_rmse": 0.026275769235503788,
+            "m2_valid_r2": -0.002652136897035473,
+            "cold_start_auc": 0.002902423108852803,
+            "low_difficulty_support_auc": 0.001401321358896923,
+            "level_1_auc": 0.0014664820559503466
+          },
+          "judgments": {
+            "m1_valid_auc": "outside_band_beneficial",
+            "m1_valid_fail_ap": "outside_band_beneficial",
+            "m1_valid_brier": "inside_band",
+            "m1_train_valid_auc_gap": "outside_band_beneficial",
+            "m2_valid_mae": "inside_band",
+            "m2_valid_rmse": "inside_band",
+            "m2_valid_r2": "inside_band",
+            "cold_start_auc": "inside_band",
+            "low_difficulty_support_auc": "inside_band",
+            "level_1_auc": "outside_band_beneficial"
+          }
+        },
+        "concurrent_43": {
+          "control": {
+            "m1_valid_auc": 0.8099867130438985,
+            "m1_valid_fail_ap": 0.3232843237874901,
+            "m1_valid_brier": 0.08065972076841676,
+            "m1_train_valid_auc_gap": 0.059060603574321746,
+            "m2_valid_mae": 9.578375578831,
+            "m2_valid_rmse": 12.862119935222113,
+            "m2_valid_r2": 0.35118186080742175,
+            "cold_start_auc": 0.7325091801708865,
+            "low_difficulty_support_auc": 0.7673224767989413,
+            "level_1_auc": 0.8212141154713009
+          },
+          "candidate": {
+            "m1_valid_auc": 0.809687822578081,
+            "m1_valid_fail_ap": 0.3229558634034819,
+            "m1_valid_brier": 0.08073084719965087,
+            "m1_train_valid_auc_gap": 0.0364549662569309,
+            "m2_valid_mae": 9.607860119520689,
+            "m2_valid_rmse": 12.898573357436732,
+            "m2_valid_r2": 0.34749892859049125,
+            "cold_start_auc": 0.7371053688037498,
+            "low_difficulty_support_auc": 0.7690937046764819,
+            "level_1_auc": 0.82050911691228
+          },
+          "deltas": {
+            "m1_valid_auc": -0.0002988904658174363,
+            "m1_valid_fail_ap": -0.000328460384008189,
+            "m1_valid_brier": 7.112643123410867e-05,
+            "m1_train_valid_auc_gap": -0.022605637317390848,
+            "m2_valid_mae": 0.029484540689688643,
+            "m2_valid_rmse": 0.03645342221461867,
+            "m2_valid_r2": -0.003682932216930501,
+            "cold_start_auc": 0.004596188632863263,
+            "low_difficulty_support_auc": 0.001771227877540582,
+            "level_1_auc": -0.0007049985590208419
+          },
+          "judgments": {
+            "m1_valid_auc": "inside_band",
+            "m1_valid_fail_ap": "inside_band",
+            "m1_valid_brier": "inside_band",
+            "m1_train_valid_auc_gap": "outside_band_beneficial",
+            "m2_valid_mae": "inside_band",
+            "m2_valid_rmse": "inside_band",
+            "m2_valid_r2": "inside_band",
+            "cold_start_auc": "inside_band",
+            "low_difficulty_support_auc": "inside_band",
+            "level_1_auc": "outside_band_harmful"
+          }
+        }
+      },
+      "clauses": {
+        "clause_1_primary_gap_outside_band_beneficial_in_both_arms": {
+          "satisfied": true,
+          "per_arm": {
+            "baseline_41": "outside_band_beneficial",
+            "concurrent_43": "outside_band_beneficial"
+          }
+        },
+        "clause_2_guardrail_m1": {
+          "satisfied": true,
+          "breaches": []
+        },
+        "clause_3_guardrail_m2": {
+          "satisfied": true,
+          "breaches": []
+        }
+      },
+      "failing_clauses": [],
+      "verdict": "PASS",
+      "m1_m2_direction": {
+        "baseline_41": {
+          "m1_valid_auc_improved": true,
+          "m2_valid_mae_improved": false,
+          "same_direction": false
+        },
+        "concurrent_43": {
+          "m1_valid_auc_improved": false,
+          "m2_valid_mae_improved": false,
+          "same_direction": true
+        }
+      }
+    },
+    "R3": {
+      "label": "min_child_samples 50 -> 200",
+      "lever": "min_child_samples",
+      "arms": {
+        "baseline_41": {
+          "control": {
+            "m1_valid_auc": 0.80918853274908,
+            "m1_valid_fail_ap": 0.3219831593412697,
+            "m1_valid_brier": 0.08077845438389275,
+            "m1_train_valid_auc_gap": 0.05538395020283782,
+            "m2_valid_mae": 9.56670973063096,
+            "m2_valid_rmse": 12.854908853104188,
+            "m2_valid_r2": 0.35190917004813094,
+            "cold_start_auc": 0.7329310827134857,
+            "low_difficulty_support_auc": 0.7644051315707036,
+            "level_1_auc": 0.8209615204193982
+          },
+          "candidate": {
+            "m1_valid_auc": 0.8097172288548585,
+            "m1_valid_fail_ap": 0.322349834538902,
+            "m1_valid_brier": 0.08077901514100604,
+            "m1_train_valid_auc_gap": 0.055775690476406736,
+            "m2_valid_mae": 9.579480383704828,
+            "m2_valid_rmse": 12.87619077176829,
+            "m2_valid_r2": 0.34976150277846296,
+            "cold_start_auc": 0.7330803587326177,
+            "low_difficulty_support_auc": 0.7685695113239838,
+            "level_1_auc": 0.8210573202126432
+          },
+          "deltas": {
+            "m1_valid_auc": 0.0005286961057785478,
+            "m1_valid_fail_ap": 0.0003666751976322824,
+            "m1_valid_brier": 5.607571132854039e-07,
+            "m1_train_valid_auc_gap": 0.00039174027356891905,
+            "m2_valid_mae": 0.012770653073868488,
+            "m2_valid_rmse": 0.02128191866410134,
+            "m2_valid_r2": -0.0021476672696679744,
+            "cold_start_auc": 0.00014927601913194977,
+            "low_difficulty_support_auc": 0.004164379753280212,
+            "level_1_auc": 9.579979324503274e-05
+          },
+          "judgments": {
+            "m1_valid_auc": "inside_band",
+            "m1_valid_fail_ap": "inside_band",
+            "m1_valid_brier": "inside_band",
+            "m1_train_valid_auc_gap": "inside_band",
+            "m2_valid_mae": "inside_band",
+            "m2_valid_rmse": "inside_band",
+            "m2_valid_r2": "inside_band",
+            "cold_start_auc": "inside_band",
+            "low_difficulty_support_auc": "inside_band",
+            "level_1_auc": "inside_band"
+          }
+        },
+        "concurrent_43": {
+          "control": {
+            "m1_valid_auc": 0.8099867130438985,
+            "m1_valid_fail_ap": 0.3232843237874901,
+            "m1_valid_brier": 0.08065972076841676,
+            "m1_train_valid_auc_gap": 0.059060603574321746,
+            "m2_valid_mae": 9.578375578831,
+            "m2_valid_rmse": 12.862119935222113,
+            "m2_valid_r2": 0.35118186080742175,
+            "cold_start_auc": 0.7325091801708865,
+            "low_difficulty_support_auc": 0.7673224767989413,
+            "level_1_auc": 0.8212141154713009
+          },
+          "candidate": {
+            "m1_valid_auc": 0.8101053145766677,
+            "m1_valid_fail_ap": 0.32138469586093893,
+            "m1_valid_brier": 0.08072077099351448,
+            "m1_train_valid_auc_gap": 0.06946360130477625,
+            "m2_valid_mae": 9.573395829144939,
+            "m2_valid_rmse": 12.87621470130427,
+            "m2_valid_r2": 0.3497590859270432,
+            "cold_start_auc": 0.734005191919057,
+            "low_difficulty_support_auc": 0.7669208176805287,
+            "level_1_auc": 0.8211511232008348
+          },
+          "deltas": {
+            "m1_valid_auc": 0.00011860153276921359,
+            "m1_valid_fail_ap": -0.001899627926551184,
+            "m1_valid_brier": 6.10502250977113e-05,
+            "m1_train_valid_auc_gap": 0.0104029977304545,
+            "m2_valid_mae": -0.004979749686061297,
+            "m2_valid_rmse": 0.014094766082157761,
+            "m2_valid_r2": -0.0014227748803785634,
+            "cold_start_auc": 0.0014960117481704893,
+            "low_difficulty_support_auc": -0.0004016591184126117,
+            "level_1_auc": -6.29922704660224e-05
+          },
+          "judgments": {
+            "m1_valid_auc": "inside_band",
+            "m1_valid_fail_ap": "inside_band",
+            "m1_valid_brier": "inside_band",
+            "m1_train_valid_auc_gap": "inside_band",
+            "m2_valid_mae": "inside_band",
+            "m2_valid_rmse": "inside_band",
+            "m2_valid_r2": "inside_band",
+            "cold_start_auc": "inside_band",
+            "low_difficulty_support_auc": "inside_band",
+            "level_1_auc": "inside_band"
+          }
+        }
+      },
+      "clauses": {
+        "clause_1_primary_gap_outside_band_beneficial_in_both_arms": {
+          "satisfied": false,
+          "per_arm": {
+            "baseline_41": "inside_band",
+            "concurrent_43": "inside_band"
+          }
+        },
+        "clause_2_guardrail_m1": {
+          "satisfied": true,
+          "breaches": []
+        },
+        "clause_3_guardrail_m2": {
+          "satisfied": true,
+          "breaches": []
+        }
+      },
+      "failing_clauses": [
+        "clause_1_primary_gap_outside_band_beneficial_in_both_arms"
+      ],
+      "verdict": "FAIL",
+      "m1_m2_direction": {
+        "baseline_41": {
+          "m1_valid_auc_improved": true,
+          "m2_valid_mae_improved": false,
+          "same_direction": false
+        },
+        "concurrent_43": {
+          "m1_valid_auc_improved": true,
+          "m2_valid_mae_improved": true,
+          "same_direction": true
+        }
+      }
+    },
+    "R4": {
+      "label": "reg_lambda 1.0 -> 10.0",
+      "lever": "reg_lambda",
+      "arms": {
+        "baseline_41": {
+          "control": {
+            "m1_valid_auc": 0.80918853274908,
+            "m1_valid_fail_ap": 0.3219831593412697,
+            "m1_valid_brier": 0.08077845438389275,
+            "m1_train_valid_auc_gap": 0.05538395020283782,
+            "m2_valid_mae": 9.56670973063096,
+            "m2_valid_rmse": 12.854908853104188,
+            "m2_valid_r2": 0.35190917004813094,
+            "cold_start_auc": 0.7329310827134857,
+            "low_difficulty_support_auc": 0.7644051315707036,
+            "level_1_auc": 0.8209615204193982
+          },
+          "candidate": {
+            "m1_valid_auc": 0.809097290827022,
+            "m1_valid_fail_ap": 0.3205871630457795,
+            "m1_valid_brier": 0.08090075147421043,
+            "m1_train_valid_auc_gap": 0.05469947405575515,
+            "m2_valid_mae": 9.596393536605397,
+            "m2_valid_rmse": 12.902724676280842,
+            "m2_valid_r2": 0.3470788548639916,
+            "cold_start_auc": 0.727129627156669,
+            "low_difficulty_support_auc": 0.7643069626990592,
+            "level_1_auc": 0.8207433356097882
+          },
+          "deltas": {
+            "m1_valid_auc": -9.124192205800519e-05,
+            "m1_valid_fail_ap": -0.0013959962954901983,
+            "m1_valid_brier": 0.00012229709031767733,
+            "m1_train_valid_auc_gap": -0.0006844761470826688,
+            "m2_valid_mae": 0.02968380597443776,
+            "m2_valid_rmse": 0.04781582317665389,
+            "m2_valid_r2": -0.004830315184139344,
+            "cold_start_auc": -0.00580145555681677,
+            "low_difficulty_support_auc": -9.816887164437738e-05,
+            "level_1_auc": -0.0002181848096100003
+          },
+          "judgments": {
+            "m1_valid_auc": "inside_band",
+            "m1_valid_fail_ap": "inside_band",
+            "m1_valid_brier": "outside_band_harmful",
+            "m1_train_valid_auc_gap": "inside_band",
+            "m2_valid_mae": "inside_band",
+            "m2_valid_rmse": "inside_band",
+            "m2_valid_r2": "inside_band",
+            "cold_start_auc": "inside_band",
+            "low_difficulty_support_auc": "inside_band",
+            "level_1_auc": "inside_band"
+          }
+        },
+        "concurrent_43": {
+          "control": {
+            "m1_valid_auc": 0.8099867130438985,
+            "m1_valid_fail_ap": 0.3232843237874901,
+            "m1_valid_brier": 0.08065972076841676,
+            "m1_train_valid_auc_gap": 0.059060603574321746,
+            "m2_valid_mae": 9.578375578831,
+            "m2_valid_rmse": 12.862119935222113,
+            "m2_valid_r2": 0.35118186080742175,
+            "cold_start_auc": 0.7325091801708865,
+            "low_difficulty_support_auc": 0.7673224767989413,
+            "level_1_auc": 0.8212141154713009
+          },
+          "candidate": {
+            "m1_valid_auc": 0.8097960316937194,
+            "m1_valid_fail_ap": 0.3227592250633835,
+            "m1_valid_brier": 0.08071808092570587,
+            "m1_train_valid_auc_gap": 0.05617924246454087,
+            "m2_valid_mae": 9.538478563732623,
+            "m2_valid_rmse": 12.804046965654049,
+            "m2_valid_r2": 0.35702751232214336,
+            "cold_start_auc": 0.7318314653052276,
+            "low_difficulty_support_auc": 0.7669772110990462,
+            "level_1_auc": 0.8210216942499236
+          },
+          "deltas": {
+            "m1_valid_auc": -0.00019068135017907828,
+            "m1_valid_fail_ap": -0.0005250987241066096,
+            "m1_valid_brier": 5.836015728910571e-05,
+            "m1_train_valid_auc_gap": -0.0028813611097808778,
+            "m2_valid_mae": -0.03989701509837751,
+            "m2_valid_rmse": -0.05807296956806418,
+            "m2_valid_r2": 0.005845651514721606,
+            "cold_start_auc": -0.0006777148656589294,
+            "low_difficulty_support_auc": -0.00034526569989512534,
+            "level_1_auc": -0.00019242122137730355
+          },
+          "judgments": {
+            "m1_valid_auc": "inside_band",
+            "m1_valid_fail_ap": "inside_band",
+            "m1_valid_brier": "inside_band",
+            "m1_train_valid_auc_gap": "inside_band",
+            "m2_valid_mae": "inside_band",
+            "m2_valid_rmse": "inside_band",
+            "m2_valid_r2": "inside_band",
+            "cold_start_auc": "inside_band",
+            "low_difficulty_support_auc": "inside_band",
+            "level_1_auc": "inside_band"
+          }
+        }
+      },
+      "clauses": {
+        "clause_1_primary_gap_outside_band_beneficial_in_both_arms": {
+          "satisfied": false,
+          "per_arm": {
+            "baseline_41": "inside_band",
+            "concurrent_43": "inside_band"
+          }
+        },
+        "clause_2_guardrail_m1": {
+          "satisfied": false,
+          "breaches": [
+            "baseline_41:m1_valid_brier"
+          ]
+        },
+        "clause_3_guardrail_m2": {
+          "satisfied": true,
+          "breaches": []
+        }
+      },
+      "failing_clauses": [
+        "clause_1_primary_gap_outside_band_beneficial_in_both_arms",
+        "clause_2_guardrail_m1"
+      ],
+      "verdict": "FAIL",
+      "m1_m2_direction": {
+        "baseline_41": {
+          "m1_valid_auc_improved": false,
+          "m2_valid_mae_improved": false,
+          "same_direction": true
+        },
+        "concurrent_43": {
+          "m1_valid_auc_improved": false,
+          "m2_valid_mae_improved": true,
+          "same_direction": false
+        }
+      }
+    }
+  }
+}

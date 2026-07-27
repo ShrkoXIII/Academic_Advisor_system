@@ -271,3 +271,100 @@ exact one for this pass, and must not be treated as precise.
 **Next action.** Seed-42 screening only: four single-lever configurations
 × two arms = 8 runs, then STOP. Confirmation across seeds 52/62/72/82 is a
 separate task requiring separate explicit approval.
+
+---
+
+## 2026-07-27 — Regularization screening, seed 42: R2 (`num_leaves` 31) is the only candidate
+
+**Scope.** Eight training runs at seed 42 — four single-lever
+configurations × two arms (`baseline_41`, `concurrent_43`), one at a time,
+never concurrent. `concurrent_44` was not run. The two seed-42
+default-parameter controls were reused unchanged, not retrained:
+`models/runs/2026-07-26_1551__baseline-41-gpa-trend-control` and
+`models/runs/2026-07-27_1327__seed42-concurrent-43-drop-dead-missing-flag`.
+TEST stayed `closed_not_read` in all eight runs (nonexistent `--test`
+path; `--evaluate-test` never passed). Full evidence:
+[`models/runs/REGULARIZATION_SCREENING_SEED42_REPORT.md`](models/runs/REGULARIZATION_SCREENING_SEED42_REPORT.md)
+and its JSON. Acceptance rule: the pre-registered
+[`docs/EXPERIMENT_REGULARIZATION_PLAN.md`](docs/EXPERIMENT_REGULARIZATION_PLAN.md),
+committed before any of these runs existed.
+
+**Outcome — one of four passes.**
+
+| Config | Lever | Verdict | Deciding clause |
+|---|---|---|---|
+| R1 | `num_leaves` 127→63 | FAIL | clause 1: gap inside band in `baseline_41` (+0.0115) |
+| R2 | `num_leaves` 127→31 | **PASS** | all three clauses satisfied in both arms |
+| R3 | `min_child_samples` 50→200 | FAIL | clause 1: gap inside band in both arms |
+| R4 | `reg_lambda` 1.0→10.0 | FAIL | clause 1 (gap inside band) **and** clause 2 (Brier +0.000122, out-of-band harmful in `baseline_41`) |
+
+**R2 detail.** Gap delta −0.0071 (`baseline_41`) and −0.0226
+(`concurrent_43`), both beyond the band's beneficial edge (−0.005873). The
+two arms got there differently, and this matters: in `baseline_41` TRAIN
+fell 0.0056 while VALID AUC *rose* 0.0015 — a genuine generalization gain.
+In `concurrent_43` TRAIN fell 0.0229 while VALID fell 0.0003 — the gap
+closed mostly by TRAIN coming down, with VALID holding. Guardrail 2 exists
+to reject a gap that closed via a VALID collapse; there is no collapse
+here, so R2 passes as written.
+
+**Caveats recorded now, before any confirmation run — none of them changes
+the verdict.**
+
+- **One seed.** Screening selects what is worth five seeds; it confirms
+  nothing. R2 is a candidate, not a result.
+- **`level_1_auc` moved out of band on the harmful side** in R2 ·
+  `concurrent_43` (−0.000705 against a band floor of −0.000538). Segment
+  AUCs are explicitly NOT clauses of the pre-registered rule, so this did
+  not and must not change the PASS. It is flagged for the confirmation
+  task to watch.
+- **Tightest guardrail margin is small.** R2 · `concurrent_43` VALID Brier
+  is +0.000071 against a harmful edge of +0.000119 — inside the band, but
+  close enough that another seed could land the other side.
+- **M2 got worse under R2 in both arms** (VALID MAE +0.0315 / +0.0295,
+  both inside the band). `_SHARED_PARAMS` is shared, so a configuration
+  cannot move M1 without moving M2. Per the plan's B3 this is a finding to
+  report, **not** a licence to split parameters per model — that
+  architectural decision is not made here.
+- **The band is not an exact yardstick for this pass.** `NOISE_BAND.md`
+  was measured from contract-change deltas across seeds, not from
+  hyperparameter-change deltas.
+
+**Fitting behaviour.** No run reached the 2000-round cap, so every
+comparison is between converged models, not truncated ones. R2's
+best_iteration rose materially (M1 137→456 in `baseline_41`, 155→242 in
+`concurrent_43`), which is the expected cost of smaller trees.
+
+**Verification.** Every screening run was checked against its
+same-contract control on 22 points — contract identity and ordered
+features, categorical levels, threshold 0.80, test policy, dataset version
+and TRAIN/VALID SHA-256, row counts, effective seeds read out of the
+serialized models, M1/M2 seed equality, the complete serialized LightGBM
+parameter block for both models, the 2000-round cap, four threads, early
+stopping, and the diploma-GPA fill. All 22 passed in all eight runs: the
+only serialized LightGBM parameter differing between a run and its control
+is that run's single lever. Two checks are satisfied by inference rather
+than JSON equality because the seed-42 `baseline_41` control predates the
+`data_rows` / `training_control` / `diploma_gpa_handling` fields — the
+provenance caveat already recorded above; both are labelled in the JSON.
+All metrics were recomputed by re-scoring the saved models against
+TRAIN/VALID rather than trusting stored values (only `best_iteration` is
+read from `metrics.json`).
+
+**CLI change that made this possible.** `src/model_training.py` gained
+three explicit typed flags — `--num-leaves`, `--min-child-samples`,
+`--reg-lambda` — with defaults read from `_SHARED_PARAMS`, so omitting
+them reproduces previous behaviour exactly. No free-form params argument:
+every deviation stays auditable. `metrics.json` now records the complete
+effective LightGBM parameter dict for M1 and M2 separately, verified
+against each trained booster's own parameters before being written.
+Committed BEFORE the runs so every run recorded a clean tree.
+
+**Nothing was changed, frozen, or promoted.** `_SHARED_PARAMS` defaults
+are untouched — R2 is a screening candidate, not a new default. M1 is not
+frozen. No `CURRENT_VERSION.txt`, promotion marker, live model artifact,
+inference wiring, or recommendation wiring was touched. TEST was not read.
+
+**Next action (named, NOT started).** Five-seed confirmation of R2 across
+seeds 52/62/72/82 in both arms, watching `level_1_auc` and VALID Brier in
+`concurrent_43` specifically. Requires separate explicit approval — do not
+start it, and do not treat this screening PASS as a decision.
