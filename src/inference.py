@@ -56,7 +56,12 @@ from src.concurrent_group_features import (
     MODEL_CONCURRENT_FEATURES,
     compute_concurrent_group_features,
 )
-from src.model_training import MODEL_FEATURES, REQUIREMENT_BUCKET_ORD, prepare_X_y
+from src.model_training import (
+    REQUIREMENT_BUCKET_ORD,
+    SERVING_LIMITATION_NOTE,
+    FeatureContract,
+    resolve_feature_contract,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -121,16 +126,24 @@ def _attempt_number(df_history: pd.DataFrame, course_id: str) -> int:
 class StudentScorer:
     """Load models once, score candidate courses for any student snapshot."""
 
+    # Known production limitation, surfaced on the class so callers can read it.
+    SERVING_LIMITATION = SERVING_LIMITATION_NOTE
+
     def __init__(
         self,
         grade_model: lgb.Booster,
         pass_model: lgb.Booster,
         difficulty_lookup: pd.DataFrame | DifficultyState,
+        feature_contract: "str | FeatureContract | None" = None,
     ) -> None:
         # Load expensive model and lookup artifacts once per scorer instance so
         # batch recommendation runs can score many students efficiently.
         self.grade_model = grade_model
         self.pass_model = pass_model
+        # Never assume 44 features: the matrix width follows the contract the
+        # model was trained under. Defaults to concurrent_44 for compatibility
+        # with existing callers and bundles.
+        self.feature_contract = resolve_feature_contract(feature_contract)
         # B2 persists all six lookup levels. Keep the old one-table artifact
         # readable for backward compatibility with pre-B2 model bundles.
         self._difficulty_state = (
@@ -431,8 +444,9 @@ class StudentScorer:
             .astype(int)
         )
 
-        # Build X using only MODEL_FEATURES so metadata cannot leak into models.
-        X = df_cand[MODEL_FEATURES].copy()
+        # Build X using only the contract's ordered features so metadata cannot
+        # leak into models and the width always matches the trained model.
+        X = df_cand[list(self.feature_contract.features)].copy()
 
         # Score both outcomes; recommendation ranking consumes marks and risk.
         pred_mark = self.grade_model.predict(X)

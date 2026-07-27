@@ -145,6 +145,47 @@ def _segment_auc(metrics: Optional[Dict[str, Any]], name: str) -> Optional[float
     return _value(metrics, "segments", "valid", name, "auc")
 
 
+def _segment_block(
+    baseline: Optional[Dict[str, Any]],
+    current: Dict[str, Any],
+) -> str:
+    """Report every segment already present in the run, with baseline deltas.
+
+    Segment definitions live in model_training._segment_masks; this only
+    reports what that produced. It never defines a new segment.
+    """
+    segments = (current.get("segments") or {}).get("valid") or {}
+    if not segments:
+        return "- No segment metrics recorded."
+    lines = []
+    for name in sorted(segments):
+        entry = segments[name] or {}
+        n = entry.get("n")
+        status = entry.get("status")
+        if status and status != "ok":
+            lines.append(f"- {name} (n={n}): {status}")
+            continue
+        lines.append(
+            _metric_line(
+                f"{name} valid AUC (n={n})",
+                _segment_auc(baseline, name),
+                _segment_auc(current, name),
+            )
+        )
+    # Two segments have historically had identical populations; surface it.
+    first = segments.get("first_semester") or {}
+    cold = segments.get("cold_start_gpa") or {}
+    if first.get("n") is not None and first.get("n") == cold.get("n"):
+        same_auc = first.get("auc") == cold.get("auc")
+        lines.append(
+            f"- **NOTE:** `first_semester` and `cold_start_gpa` have identical "
+            f"population size (n={first.get('n')})"
+            + (" and identical AUC" if same_auc else " but different AUC")
+            + " — treat them as one segment until the definitions are separated."
+        )
+    return "\n".join(lines)
+
+
 def _auc_gap(metrics: Optional[Dict[str, Any]]) -> Optional[float]:
     stored = _value(
         metrics, "m1_pass_classifier", "valid", "train_valid_auc_gap"
@@ -158,6 +199,37 @@ def _auc_gap(metrics: Optional[Dict[str, Any]]) -> Optional[float]:
     return train_auc - valid_auc
 
 
+def _settings_block(
+    run_settings: Optional[Dict[str, Any]],
+    baseline: Optional[Dict[str, Any]],
+) -> str:
+    """Render run settings and flag any that differ from the baseline run."""
+    if not run_settings:
+        return "- Not recorded for this run."
+    baseline_settings = (baseline or {}).get("run_settings") or {}
+    lines = []
+    for key in sorted(run_settings):
+        value = run_settings[key]
+        old = baseline_settings.get(key)
+        if baseline_settings and old != value:
+            lines.append(f"- {key}: `{old}` -> `{value}`  **DIFFERS FROM BASELINE**")
+        else:
+            lines.append(f"- {key}: `{value}`")
+    if baseline_settings:
+        differing = [
+            key for key in run_settings
+            if key in baseline_settings and baseline_settings[key] != run_settings[key]
+        ]
+        controlled = [k for k in differing if k in {"feature_contract", "feature_count"}]
+        uncontrolled = [k for k in differing if k not in controlled]
+        lines.append("")
+        lines.append(
+            f"- Intended delta: {controlled or 'none'}; "
+            f"unintended differences: {uncontrolled or 'none'}"
+        )
+    return "\n".join(lines)
+
+
 def _report_text(
     context: RunContext,
     results: Dict[str, Any],
@@ -165,6 +237,7 @@ def _report_text(
     baseline: Optional[Dict[str, Any]],
     n_features: int,
     flags: Iterable[str],
+    run_settings: Optional[Dict[str, Any]] = None,
 ) -> str:
     current = {**results, "segments": segment_metrics}
     compared_with = context.compare_to or "none"
@@ -202,10 +275,25 @@ lower is better for Brier and the train-valid AUC gap. TEST is descriptive only.
 {_metric_line('M1 valid Brier', _value(baseline, 'm1_pass_classifier', 'valid', 'brier'), _value(current, 'm1_pass_classifier', 'valid', 'brier'))}
 {_metric_line('M1 train-valid AUC gap', _auc_gap(baseline), _auc_gap(current))}
 
-## Segment result
+## M2 regressor
 
-{_metric_line('First-semester valid AUC', _segment_auc(baseline, 'first_semester'), _segment_auc(current, 'first_semester'))}
-{_metric_line('Cold-start GPA valid AUC', _segment_auc(baseline, 'cold_start_gpa'), _segment_auc(current, 'cold_start_gpa'))}
+{_metric_line('M2 valid MAE', _value(baseline, 'm2_grade_regressor', 'valid', 'mae'), _value(current, 'm2_grade_regressor', 'valid', 'mae'))}
+{_metric_line('M2 valid RMSE', _value(baseline, 'm2_grade_regressor', 'valid', 'rmse'), _value(current, 'm2_grade_regressor', 'valid', 'rmse'))}
+{_metric_line('M2 valid R2', _value(baseline, 'm2_grade_regressor', 'valid', 'r2'), _value(current, 'm2_grade_regressor', 'valid', 'r2'))}
+
+## Fail-class at the locked reporting threshold (VALID)
+
+{_metric_line('M1 valid fail precision', _value(baseline, 'm1_pass_classifier', 'valid', 'fail_precision'), _value(current, 'm1_pass_classifier', 'valid', 'fail_precision'))}
+{_metric_line('M1 valid fail recall', _value(baseline, 'm1_pass_classifier', 'valid', 'fail_recall'), _value(current, 'm1_pass_classifier', 'valid', 'fail_recall'))}
+{_metric_line('M1 valid fail F1', _value(baseline, 'm1_pass_classifier', 'valid', 'fail_f1'), _value(current, 'm1_pass_classifier', 'valid', 'fail_f1'))}
+
+## Segment result (VALID; existing segment definitions only)
+
+{_segment_block(baseline, current)}
+
+## Run settings
+
+{_settings_block(run_settings, baseline)}
 
 ## Important flags
 
@@ -220,16 +308,27 @@ def finalize_persistent_run(
     n_features: int,
     flags: Iterable[str],
     baseline: Optional[Dict[str, Any]],
+    run_settings: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """Write compact run metadata only after all core model artifacts exist."""
+    """Write compact run metadata only after all core model artifacts exist.
+
+    ``run_settings`` records the feature contract, reporting threshold, seed and
+    input paths inside metrics.json, so two runs can never be compared without
+    the settings that produced them.
+    """
     if not context.persistent:
         return
-    payload = {**results, "segments": segment_metrics}
+    payload: Dict[str, Any] = {**results, "segments": segment_metrics}
+    if run_settings:
+        payload["run_settings"] = run_settings
     (context.output_dir / "metrics.json").write_text(
         json.dumps(payload, indent=2), encoding="utf-8"
     )
     (context.output_dir / "REPORT.md").write_text(
-        _report_text(context, results, segment_metrics, baseline, n_features, flags),
+        _report_text(
+            context, results, segment_metrics, baseline, n_features, flags,
+            run_settings,
+        ),
         encoding="utf-8",
     )
     row = {

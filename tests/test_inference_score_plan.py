@@ -24,7 +24,12 @@ from src.concurrent_group_features import (
 )
 from src.course_difficulty import empty_difficulty_state
 from src.inference import StudentScorer
-from src.model_training import MODEL_FEATURES
+from src.model_training import (
+    BASELINE_41_FEATURES,
+    CONCURRENT_44_FEATURES,
+    CONCURRENT_MODEL_FEATURES,
+    MODEL_FEATURES,
+)
 
 
 class _RecordingModel:
@@ -181,6 +186,67 @@ class ScorePlanConcurrentParityTest(unittest.TestCase):
         self.assertEqual(
             list(expected["concurrent_peer_difficulty_mean"].round(4)), [0.5, 0.1, 0.3]
         )
+
+
+class ScorerFeatureContractTest(unittest.TestCase):
+    """A scorer must build the matrix its contract defines, never assume 44."""
+
+    DEGREE = "BSCS.111"
+    CANDIDATES = ["C1.111", "C2.111"]
+
+    def _scorer(self, contract):
+        return StudentScorer(
+            _RecordingModel(),
+            _RecordingModel(),
+            empty_difficulty_state(),
+            feature_contract=contract,
+        )
+
+    def _score(self, scorer):
+        scorer.score(
+            df_history=_history(),
+            candidate_course_ids=self.CANDIDATES,
+            target_part_id="20261",
+            degree_id=self.DEGREE,
+            snapshot=_snapshot(),
+        )
+        return scorer.grade_model.last_X
+
+    def test_baseline_41_contract_builds_a_41_column_matrix(self):
+        seen = self._score(self._scorer("baseline_41"))
+        self.assertEqual(seen.shape[1], 41)
+        self.assertEqual(list(seen.columns), BASELINE_41_FEATURES)
+        for column in CONCURRENT_MODEL_FEATURES:
+            self.assertNotIn(column, seen.columns)
+
+    def test_concurrent_44_contract_builds_a_44_column_matrix(self):
+        seen = self._score(self._scorer("concurrent_44"))
+        self.assertEqual(seen.shape[1], 44)
+        self.assertEqual(list(seen.columns), CONCURRENT_44_FEATURES)
+        for column in CONCURRENT_MODEL_FEATURES:
+            self.assertIn(column, seen.columns)
+
+    def test_default_contract_is_unchanged_for_existing_callers(self):
+        scorer = StudentScorer(
+            _RecordingModel(), _RecordingModel(), empty_difficulty_state()
+        )
+        self.assertEqual(scorer.feature_contract.name, "concurrent_44")
+
+    def test_serving_limitation_is_recorded_on_the_scorer(self):
+        note = StudentScorer.SERVING_LIMITATION
+        self.assertIn("baseline_41", note)
+        self.assertIn("score_plan", note)
+
+    def test_score_plan_respects_a_41_contract(self):
+        scorer = self._scorer("baseline_41")
+        scorer.score_plan(
+            df_history=_history(),
+            plan_course_ids=self.CANDIDATES,
+            target_part_id="20261",
+            degree_id=self.DEGREE,
+            snapshot=_snapshot(),
+        )
+        self.assertEqual(scorer.grade_model.last_X.shape[1], 41)
 
 
 class StructuralScoreTest(unittest.TestCase):

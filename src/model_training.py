@@ -27,10 +27,14 @@ inference/analysis code instead.
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
+from datetime import datetime
 import gc
+import hashlib
 import json
 from pathlib import Path
-from typing import Dict, List, Tuple
+import subprocess
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 import lightgbm as lgb
 import numpy as np
@@ -53,13 +57,34 @@ from src import experiment_tracking
 from src.paths import MODELS_DIR, model_split_path
 
 # ---------------------------------------------------------------------------
-# Feature contract — V1 LOCKED ALLOWLIST (41 features)
+# Feature contracts — explicit named registries
 # ---------------------------------------------------------------------------
-# This is an explicit allowlist. It is NOT derived from fe.FEATURE_COLUMNS,
+# These are explicit allowlists. They are NOT derived from fe.FEATURE_COLUMNS,
 # because that list contains diagnostic / string / leakage columns and is not a
 # model allowlist.
+#
+# Two contracts exist so the concurrent-feature effect can be measured in
+# isolation:
+#
+#   baseline_41   the established list including GPA trend, WITHOUT the three
+#                 concurrent model features
+#   concurrent_44 baseline_41 plus exactly those three
+#
+# ORDER NOTE (deliberate, see the module tests): the three concurrent features
+# sit at zero-based positions 33/34/35 of the accepted 44-feature contract, not
+# at the end. That position is pinned by the dataset builder
+# (scripts/build_concurrent_group_features.py EXPECTED_LEGACY_MODEL_POSITION=35)
+# and by tests. baseline_41 is therefore the 44-list with those three removed,
+# preserving every other feature's relative order. The relationship is a
+# set-difference identity, not a list concatenation.
 
-MODEL_FEATURES: List[str] = [
+CONCURRENT_MODEL_FEATURES: List[str] = [
+    "concurrent_peer_difficulty_mean",
+    "concurrent_peer_difficulty_max",
+    "concurrent_peer_difficulty_missing",
+]
+
+CONCURRENT_44_FEATURES: List[str] = [
     # --- Student GPA history ---
     "prev_gpa_points_clean",                  # zero + flags design (NOT model_prev_gpa)
     "start_agpa_points",                      # cumulative AGPA at semester start
@@ -117,6 +142,38 @@ MODEL_FEATURES: List[str] = [
     "diploma_type_bucket",                    # CATEGORICAL; raw diploma_type_id stays audit-only
 ]
 
+# baseline_41 preserves the order of every non-concurrent feature exactly.
+BASELINE_41_FEATURES: List[str] = [
+    feature
+    for feature in CONCURRENT_44_FEATURES
+    if feature not in set(CONCURRENT_MODEL_FEATURES)
+]
+
+# DEPRECATED alias kept so existing importers keep working unchanged
+# (src/inference.py, scripts/build_*.py, notebooks). New code should resolve a
+# named contract via resolve_feature_contract() instead of reading this global.
+MODEL_FEATURES: List[str] = CONCURRENT_44_FEATURES
+
+# --- binding contract invariants (checked at import) ---
+assert len(BASELINE_41_FEATURES) == 41, len(BASELINE_41_FEATURES)
+assert len(CONCURRENT_44_FEATURES) == 44, len(CONCURRENT_44_FEATURES)
+assert len(set(BASELINE_41_FEATURES)) == 41, "duplicate in BASELINE_41_FEATURES"
+assert len(set(CONCURRENT_44_FEATURES)) == 44, "duplicate in CONCURRENT_44_FEATURES"
+assert set(CONCURRENT_44_FEATURES) - set(BASELINE_41_FEATURES) == set(
+    CONCURRENT_MODEL_FEATURES
+), "concurrent_44 minus baseline_41 must be exactly the three concurrent features"
+assert set(BASELINE_41_FEATURES) - set(CONCURRENT_44_FEATURES) == set(), (
+    "baseline_41 must be a subset of concurrent_44"
+)
+# Order-preserving form of "44 = 41 + the three": dropping the concurrent
+# features from the 44-list reproduces the 41-list exactly, in order.
+assert [
+    f for f in CONCURRENT_44_FEATURES if f not in set(CONCURRENT_MODEL_FEATURES)
+] == BASELINE_41_FEATURES
+for _gpa_feature in ("gpa_trend_delta", "gpa_trend_missing"):
+    assert _gpa_feature in BASELINE_41_FEATURES, _gpa_feature
+    assert _gpa_feature in CONCURRENT_44_FEATURES, _gpa_feature
+
 # Columns deliberately EXCLUDED (kept here as a guard list, asserted absent from X).
 DROPPED_FEATURES: List[str] = [
     "is_interruption_semester",          # LEAKAGE: current-semester pass_credits/gpa_points
@@ -144,31 +201,144 @@ REQUIREMENT_BUCKET_ORD = {
 _LEFTOVER_KEY_PATTERNS = ["l3_key", "l4_key", "_key", "tmp", "temp", "idx"]
 
 TARGET_GRADE = "final_mark"       # M2 regressor target
-EXPECTED_FEATURE_COUNT = 44
+EXPECTED_FEATURE_COUNT = 44       # DEPRECATED alias: concurrent_44's count
 DERIVED_FEATURE_SOURCES = {
     "requirement_size_bucket_ord": "requirement_size_bucket",
 }
 SEGMENT_ONLY_COLUMNS = ["difficulty_fallback_level"]
 
-# Read only columns used by fitting, targets, derivations, or reported segments.
-# The final parquet files contain many audit/string columns that model training
-# never consumes; loading them added hundreds of MiB to every training process.
-TRAINING_DATA_COLUMNS = list(dict.fromkeys(
-    [c for c in MODEL_FEATURES if c not in DERIVED_FEATURE_SOURCES]
-    + list(DERIVED_FEATURE_SOURCES.values())
-    + [TARGET_GRADE]
-    + SEGMENT_ONLY_COLUMNS
-))
+# LOCKED reporting threshold. Precision / recall / F1 / confusion matrix are all
+# reported at this probability cut. It is NOT a training or early-stopping
+# parameter, and it is NOT optimized per run — it is fixed so runs stay
+# comparable. Runs made in the earlier 0.5 / 0.85 era are therefore NOT
+# P/R-comparable with runs made at this threshold.
+REPORTING_THRESHOLD = 0.80
+
+TARGET_M1_DEFINITION = "(final_mark >= 50).astype(int)"
+TARGET_M2_DEFINITION = "final_mark"
+
+
+@dataclass(frozen=True)
+class FeatureContract:
+    """One immutable, explicitly named model-input contract."""
+
+    name: str
+    version: str
+    features: Tuple[str, ...]
+    categorical_features: Tuple[str, ...]
+    derived_feature_sources: Mapping[str, str]
+    reporting_threshold: float
+    requires_concurrent_plan_context: bool
+    description: str
+
+    @property
+    def expected_feature_count(self) -> int:
+        return len(self.features)
+
+    @property
+    def source_features(self) -> List[str]:
+        """Contract features that are read from the parquet as-is."""
+        return [c for c in self.features if c not in self.derived_feature_sources]
+
+    @property
+    def numeric_features(self) -> List[str]:
+        return [c for c in self.features if c not in self.categorical_features]
+
+    @property
+    def training_data_columns(self) -> List[str]:
+        """Only the columns this contract needs: features, derivations, target, segments.
+
+        The final parquet files carry many audit/string columns that training
+        never consumes; loading them added hundreds of MiB per process. The
+        baseline_41 contract simply does not list the concurrent columns, so
+        they stay on disk.
+        """
+        return list(dict.fromkeys(
+            self.source_features
+            + list(self.derived_feature_sources.values())
+            + [TARGET_GRADE]
+            + SEGMENT_ONLY_COLUMNS
+        ))
+
+
+BASELINE_41_CONTRACT = FeatureContract(
+    name="baseline_41",
+    version="v1",
+    features=tuple(BASELINE_41_FEATURES),
+    categorical_features=tuple(CATEGORICAL_FEATURES),
+    derived_feature_sources=DERIVED_FEATURE_SOURCES,
+    reporting_threshold=REPORTING_THRESHOLD,
+    requires_concurrent_plan_context=False,
+    description=(
+        "Established feature list including GPA trend, excluding the three "
+        "concurrent peer-difficulty features. Controlled-experiment baseline."
+    ),
+)
+
+CONCURRENT_44_CONTRACT = FeatureContract(
+    name="concurrent_44",
+    version="v1",
+    features=tuple(CONCURRENT_44_FEATURES),
+    categorical_features=tuple(CATEGORICAL_FEATURES),
+    derived_feature_sources=DERIVED_FEATURE_SOURCES,
+    reporting_threshold=REPORTING_THRESHOLD,
+    requires_concurrent_plan_context=True,
+    description=(
+        "baseline_41 plus concurrent_peer_difficulty_{mean,max,missing}. "
+        "Valid at serve time only once a full plan exists and score_plan has "
+        "recomputed the same-semester peer context."
+    ),
+)
+
+# Known production limitation, recorded with every run so it cannot be lost.
+# NOT wired into recommendation by this experiment.
+SERVING_LIMITATION_NOTE = (
+    "score() pre-plan candidate ranking must use baseline_41; concurrent_44 is "
+    "semantically valid only after a complete plan is formed and score_plan "
+    "recomputes the same-semester concurrent context."
+)
+
+FEATURE_CONTRACTS: Dict[str, FeatureContract] = {
+    BASELINE_41_CONTRACT.name: BASELINE_41_CONTRACT,
+    CONCURRENT_44_CONTRACT.name: CONCURRENT_44_CONTRACT,
+}
+
+DEFAULT_FEATURE_CONTRACT = CONCURRENT_44_CONTRACT.name
+
+
+def resolve_feature_contract(
+    contract: "str | FeatureContract | None" = None,
+) -> FeatureContract:
+    """Resolve a contract by name. Never infers one from available columns."""
+    if isinstance(contract, FeatureContract):
+        return contract
+    if contract is None:
+        return FEATURE_CONTRACTS[DEFAULT_FEATURE_CONTRACT]
+    try:
+        return FEATURE_CONTRACTS[contract]
+    except KeyError:
+        raise ValueError(
+            f"Unknown feature contract {contract!r}. "
+            f"Choose one of: {sorted(FEATURE_CONTRACTS)}"
+        ) from None
+
+
+# DEPRECATED alias: the concurrent_44 column set. Kept for existing importers.
+TRAINING_DATA_COLUMNS = CONCURRENT_44_CONTRACT.training_data_columns
 
 
 # ---------------------------------------------------------------------------
 # Categorical level handling (learn from train ONLY, apply to all splits)
 # ---------------------------------------------------------------------------
 
-def learn_categorical_levels(df_train: pd.DataFrame) -> Dict[str, List[int]]:
+def learn_categorical_levels(
+    df_train: pd.DataFrame,
+    contract: "str | FeatureContract | None" = None,
+) -> Dict[str, List[int]]:
     """Learn the allowed category set for each categorical feature from TRAIN only."""
+    resolved = resolve_feature_contract(contract)
     levels: Dict[str, List[int]] = {}
-    for col in CATEGORICAL_FEATURES:
+    for col in resolved.categorical_features:
         vals = pd.to_numeric(df_train[col], errors="coerce").dropna().astype(int).unique()
         levels[col] = sorted(int(v) for v in vals)
         print(f"  [cat] {col}: learned {len(levels[col])} levels from train -> {levels[col]}")
@@ -213,15 +383,21 @@ def prepare_X_y(
     df: pd.DataFrame,
     target: str,
     categorical_levels: Dict[str, List[int]],
+    contract: "str | FeatureContract | None" = None,
 ) -> Tuple[pd.DataFrame, pd.Series]:
-    """Return (X, y) ready for LightGBM.
+    """Return (X, y) ready for LightGBM, with exactly the contract's columns in order.
 
     target='pass'  -> M1 classifier label (final_mark >= 50) as int
     target='grade' -> M2 regressor label  final_mark (float)
 
     categorical_levels MUST be learned from df_train and passed in for every
     split, so valid/test never define their own category set.
+
+    ``contract`` selects the named feature contract. It defaults to
+    concurrent_44 for backward compatibility with existing importers; the
+    contract is never inferred from which columns happen to be present.
     """
+    resolved = resolve_feature_contract(contract)
     if categorical_levels is None:
         raise ValueError("categorical_levels is required (learn from df_train first).")
 
@@ -241,16 +417,19 @@ def prepare_X_y(
         raw_bucket.map(REQUIREMENT_BUCKET_ORD).fillna(0).astype(int)
     )
 
-    # --- presence check ---
-    source_features = [c for c in MODEL_FEATURES if c not in DERIVED_FEATURE_SOURCES]
+    # --- presence check: a contract fails loudly on ANY missing column ---
+    source_features = resolved.source_features
     missing_cols = [c for c in source_features if c not in df.columns]
     if missing_cols:
-        raise ValueError(f"Missing expected feature columns: {missing_cols}")
+        raise ValueError(
+            f"Missing expected feature columns for contract "
+            f"{resolved.name!r}: {missing_cols}"
+        )
 
-    # Copy only the model matrix, not the full 72-column source dataframe.
+    # Copy only the model matrix, not the full source dataframe.
     X = df[source_features].copy()
     X.insert(
-        MODEL_FEATURES.index("requirement_size_bucket_ord"),
+        resolved.features.index("requirement_size_bucket_ord"),
         "requirement_size_bucket_ord",
         requirement_size_bucket_ord,
     )
@@ -260,8 +439,7 @@ def prepare_X_y(
 
     # --- dtype casting: numeric -> float64; categorical stays 'category' ---
     # Cast one column at a time to avoid a second full numeric-frame temporary.
-    numeric_feats = [c for c in MODEL_FEATURES if c not in CATEGORICAL_FEATURES]
-    for col in numeric_feats:
+    for col in resolved.numeric_features:
         X[col] = X[col].astype("float64")
 
     # --- leakage gate + dropped-feature guard ---
@@ -288,21 +466,30 @@ def prepare_X_y(
 def run_pre_training_diagnostics(
     df_train: pd.DataFrame,
     categorical_levels: Dict[str, List[int]],
+    contract: "str | FeatureContract | None" = None,
 ) -> Dict[str, str]:
     """Print the feature contract checks and return {feature: dtype} after casting."""
+    resolved = resolve_feature_contract(contract)
+    features = list(resolved.features)
     print("\n=== PRE-TRAINING DIAGNOSTICS ===")
 
     # 1) final feature list + count
-    print(f"\n[1] MODEL_FEATURES count = {len(MODEL_FEATURES)} (expected {EXPECTED_FEATURE_COUNT})")
-    for i, c in enumerate(MODEL_FEATURES, 1):
-        print(f"    {i:>2}. {c}")
-    assert len(MODEL_FEATURES) == EXPECTED_FEATURE_COUNT, (
-        f"Feature count {len(MODEL_FEATURES)} != {EXPECTED_FEATURE_COUNT}"
+    print(
+        f"\n[1] contract={resolved.name!r} feature count = {len(features)} "
+        f"(expected {resolved.expected_feature_count})"
     )
-    assert len(set(MODEL_FEATURES)) == len(MODEL_FEATURES), "Duplicate feature in MODEL_FEATURES"
+    for i, c in enumerate(features, 1):
+        marker = "  <-- concurrent" if c in CONCURRENT_MODEL_FEATURES else ""
+        print(f"    {i:>2}. {c}{marker}")
+    assert len(features) == resolved.expected_feature_count, (
+        f"Feature count {len(features)} != {resolved.expected_feature_count}"
+    )
+    assert len(set(features)) == len(features), (
+        f"Duplicate feature in contract {resolved.name!r}"
+    )
 
     # 2) missing features (fail loudly) — uses prepare_X_y so derived cols count
-    X_train, _ = prepare_X_y(df_train, "pass", categorical_levels)
+    X_train, _ = prepare_X_y(df_train, "pass", categorical_levels, resolved)
 
     # 3) dropped-feature guard
     still_present = [c for c in DROPPED_FEATURES if c in X_train.columns]
@@ -310,7 +497,7 @@ def run_pre_training_diagnostics(
     assert not still_present, f"Forbidden features in X: {still_present}"
 
     # 4) loaded non-model columns (target/derivation/segment inputs; informational)
-    used = set(MODEL_FEATURES) | {TARGET_GRADE}
+    used = set(features) | {TARGET_GRADE}
     unused = sorted(c for c in df_train.columns if c not in used)
     print(f"\n[3] Loaded columns NOT used directly by the model ({len(unused)}):")
     print("    " + ", ".join(unused))
@@ -330,9 +517,9 @@ def run_pre_training_diagnostics(
         print("    NOTE: is_high_credit_course flagged constant — grad exam should be in train; investigate.")
 
     # dtypes for the feature contract
-    dtypes = {c: str(X_train[c].dtype) for c in MODEL_FEATURES}
+    dtypes = {c: str(X_train[c].dtype) for c in features}
     print("\n[6] Feature dtypes after casting:")
-    for c in MODEL_FEATURES:
+    for c in features:
         print(f"    {c}: {dtypes[c]}")
 
     del X_train
@@ -364,13 +551,14 @@ _SHARED_PARAMS = {
 }
 
 
-def _make_datasets(X_tr, y_tr, X_va, y_va):
+def _make_datasets(X_tr, y_tr, X_va, y_va, categorical_features=None):
+    categorical = list(categorical_features or CATEGORICAL_FEATURES)
     dtrain = lgb.Dataset(
-        X_tr, label=y_tr, free_raw_data=True, categorical_feature=CATEGORICAL_FEATURES
+        X_tr, label=y_tr, free_raw_data=True, categorical_feature=categorical
     )
     dvalid = lgb.Dataset(
         X_va, label=y_va, reference=dtrain, free_raw_data=True,
-        categorical_feature=CATEGORICAL_FEATURES,
+        categorical_feature=categorical,
     )
     # Construct now so LightGBM can release its references to the pandas frames
     # before boosting begins. The native binned datasets retain everything needed.
@@ -382,10 +570,12 @@ def _make_datasets(X_tr, y_tr, X_va, y_va):
 def train_pass_model(  # M1 classifier
     df_train, df_valid, categorical_levels,
     params=None, num_boost_round=2000, early_stopping_rounds=50,
+    contract: "str | FeatureContract | None" = None,
 ) -> Tuple[lgb.Booster, dict]:
     """M1 — LightGBM binary classifier for pass/fail. NO scale_pos_weight in V1."""
-    X_tr, y_tr = prepare_X_y(df_train, "pass", categorical_levels)
-    X_va, y_va = prepare_X_y(df_valid, "pass", categorical_levels)
+    resolved = resolve_feature_contract(contract)
+    X_tr, y_tr = prepare_X_y(df_train, "pass", categorical_levels, resolved)
+    X_va, y_va = prepare_X_y(df_valid, "pass", categorical_levels, resolved)
 
     # Class balance is printed for information only — NOT used to weight the model.
     pass_rate = float(y_tr.mean())
@@ -396,12 +586,14 @@ def train_pass_model(  # M1 classifier
     if params:
         default_params.update(params)
 
-    dtrain, dvalid = _make_datasets(X_tr, y_tr, X_va, y_va)
+    dtrain, dvalid = _make_datasets(
+        X_tr, y_tr, X_va, y_va, resolved.categorical_features
+    )
     del X_tr, y_tr, X_va, y_va
     gc.collect()
     evals_result: dict = {}
-    # Only validation may select the stopping iteration. Test is evaluated
-    # after fitting and is never passed to LightGBM during training.
+    # Only validation may select the stopping iteration. Test is never passed
+    # to LightGBM during training, and under --evaluate-test it is not even read.
     callbacks = [
         lgb.early_stopping(early_stopping_rounds, verbose=True),
         lgb.log_evaluation(100),
@@ -419,21 +611,25 @@ def train_pass_model(  # M1 classifier
 def train_grade_model(  # M2 regressor
     df_train, df_valid, categorical_levels,
     params=None, num_boost_round=2000, early_stopping_rounds=50,
+    contract: "str | FeatureContract | None" = None,
 ) -> Tuple[lgb.Booster, dict]:
     """M2 — LightGBM regressor for final_mark (0-100), MAE loss."""
-    X_tr, y_tr = prepare_X_y(df_train, "grade", categorical_levels)
-    X_va, y_va = prepare_X_y(df_valid, "grade", categorical_levels)
+    resolved = resolve_feature_contract(contract)
+    X_tr, y_tr = prepare_X_y(df_train, "grade", categorical_levels, resolved)
+    X_va, y_va = prepare_X_y(df_valid, "grade", categorical_levels, resolved)
 
     default_params = {"objective": "regression_l1", "metric": "mae", **_SHARED_PARAMS}
     if params:
         default_params.update(params)
 
-    dtrain, dvalid = _make_datasets(X_tr, y_tr, X_va, y_va)
+    dtrain, dvalid = _make_datasets(
+        X_tr, y_tr, X_va, y_va, resolved.categorical_features
+    )
     del X_tr, y_tr, X_va, y_va
     gc.collect()
     evals_result: dict = {}
-    # Only validation may select the stopping iteration. Test is evaluated
-    # after fitting and is never passed to LightGBM during training.
+    # Only validation may select the stopping iteration. Test is never passed
+    # to LightGBM during training, and under --evaluate-test it is not even read.
     callbacks = [
         lgb.early_stopping(early_stopping_rounds, verbose=True),
         lgb.log_evaluation(100),
@@ -452,17 +648,29 @@ def train_grade_model(  # M2 regressor
 # Evaluation
 # ---------------------------------------------------------------------------
 
-def evaluate_pass(model, df, categorical_levels, label="") -> dict:  # M1
-    """M1 metrics, including fail-class AP used for experiment selection."""
-    X, y = prepare_X_y(df, "pass", categorical_levels)
+def evaluate_pass(
+    model, df, categorical_levels, label="",
+    contract: "str | FeatureContract | None" = None,
+    threshold: float = REPORTING_THRESHOLD,
+) -> dict:  # M1
+    """M1 metrics, including fail-class AP used for experiment selection.
+
+    ``threshold`` is the LOCKED reporting cut (see REPORTING_THRESHOLD). It is
+    never tuned per run; both experiment arms must pass the same value.
+    """
+    resolved = resolve_feature_contract(contract)
+    X, y = prepare_X_y(df, "pass", categorical_levels, resolved)
     y_prob = model.predict(X)
-    y_bin = (y_prob >= 0.85).astype(int)
+    y_bin = (y_prob >= threshold).astype(int)
 
     # labels=[0,1] -> row 0 = actual fail, row 1 = actual pass
     cm = confusion_matrix(y, y_bin, labels=[0, 1])
     tn, fp, fn, tp = int(cm[0, 0]), int(cm[0, 1]), int(cm[1, 0]), int(cm[1, 1])
 
     metrics = {
+        # The threshold every P/R/F1/confusion value below was computed at.
+        # Persisted so runs at different thresholds are never silently compared.
+        "reporting_threshold": float(threshold),
         # Keep selection metrics unrounded in artifacts. Formatting is applied
         # only when printing/reporting.
         "auc": float(roc_auc_score(y, y_prob)),
@@ -486,7 +694,8 @@ def evaluate_pass(model, df, categorical_levels, label="") -> dict:  # M1
               f"R={metrics['recall']:.4f}  F1={metrics['f1']:.4f}  Brier={metrics['brier']:.4f}")
         print(f"[{label}] M1 fail  AP={metrics['fail_avg_precision']:.4f}  "
               f"P={metrics['fail_precision']:.4f}  "
-              f"R={metrics['fail_recall']:.4f}  F1={metrics['fail_f1']:.4f}")
+              f"R={metrics['fail_recall']:.4f}  F1={metrics['fail_f1']:.4f}  "
+              f"(threshold={threshold:g})")
         print(f"[{label}] M1 confusion matrix (rows=actual, cols=predicted):")
         print(f"              Pred-FAIL  Pred-PASS")
         print(f"  Act-FAIL    {tn:>9,}  {fp:>9,}")
@@ -494,9 +703,12 @@ def evaluate_pass(model, df, categorical_levels, label="") -> dict:  # M1
     return metrics
 
 
-def evaluate_grade(model, df, categorical_levels, label="") -> dict:  # M2
+def evaluate_grade(
+    model, df, categorical_levels, label="",
+    contract: "str | FeatureContract | None" = None,
+) -> dict:  # M2
     """M2 metrics: MAE, RMSE, R²."""
-    X, y = prepare_X_y(df, "grade", categorical_levels)
+    X, y = prepare_X_y(df, "grade", categorical_levels, resolve_feature_contract(contract))
     y_pred = model.predict(X)
     mae = mean_absolute_error(y, y_pred)
     rmse = float(np.sqrt(mean_squared_error(y, y_pred)))
@@ -509,16 +721,26 @@ def evaluate_grade(model, df, categorical_levels, label="") -> dict:  # M2
     return metrics
 
 
-def collect_segment_auc(model, df, categorical_levels) -> Dict[str, dict]:
-    """Collect the existing M1 segment AUCs without changing their calculation."""
-    X_full, y_full = prepare_X_y(df, "pass", categorical_levels)
-    y_prob_full = model.predict(X_full)
-    segments = {
+def _segment_masks(df: pd.DataFrame) -> Dict[str, pd.Series]:
+    """The EXISTING segment definitions. Do not add segments here."""
+    return {
         "first_semester": df["is_first_active_semester"] == 1,
         "retake_attempt": df["attempt_number"] > 1,
         "low_difficulty_support": df["difficulty_fallback_level"] >= 3,
         "cold_start_gpa": df["no_previous_progress"] == 1,
     }
+
+
+def collect_segment_auc(
+    model, df, categorical_levels,
+    contract: "str | FeatureContract | None" = None,
+) -> Dict[str, dict]:
+    """Collect the existing M1 segment AUCs without changing their calculation."""
+    X_full, y_full = prepare_X_y(
+        df, "pass", categorical_levels, resolve_feature_contract(contract)
+    )
+    y_prob_full = model.predict(X_full)
+    segments = _segment_masks(df)
     results = {}
     for seg_name, mask in segments.items():
         sub = mask.values
@@ -531,13 +753,22 @@ def collect_segment_auc(model, df, categorical_levels) -> Dict[str, dict]:
             results[seg_name] = {"n": n, "auc": None, "status": "skipped_one_class"}
             continue
         auc = roc_auc_score(y_seg, y_prob_full[sub])
-        results[seg_name] = {"n": n, "auc": round(float(auc), 4), "status": "ok"}
+        results[seg_name] = {
+            "n": n,
+            "auc": round(float(auc), 4),
+            "auc_unrounded": float(auc),
+            "positive_rate": float(y_seg.mean()),
+            "status": "ok",
+        }
     return results
 
 
-def stratified_eval_pass(model, df, categorical_levels) -> Dict[str, dict]:
+def stratified_eval_pass(
+    model, df, categorical_levels,
+    contract: "str | FeatureContract | None" = None,
+) -> Dict[str, dict]:
     """Print the existing M1 AUC segment breakdown and return it for persistence."""
-    results = collect_segment_auc(model, df, categorical_levels)
+    results = collect_segment_auc(model, df, categorical_levels, contract)
     for seg_name, values in results.items():
         if values["status"] == "skipped_one_class":
             print(f"  [{seg_name}]  n={values['n']:,}  AUC=SKIPPED (one class only)")
@@ -549,33 +780,59 @@ def stratified_eval_pass(model, df, categorical_levels) -> Dict[str, dict]:
 _THRESHOLDS = [0.3, 0.4, 0.5, 0.6, 0.7]
 
 
-def print_threshold_table(model, df_valid, df_test, categorical_levels) -> None:
-    """Print fail-class P/R/F1 at each threshold on valid and test.
+def _threshold_grid(reporting_threshold: float) -> List[float]:
+    """The review grid, always including the locked reporting threshold."""
+    return sorted({*_THRESHOLDS, float(reporting_threshold)})
 
-    Selection/decision is on valid only; test is shown for consistency comparison.
-    No threshold is auto-selected — the table is for human review.
+
+def print_threshold_table(
+    model, df_valid, df_test, categorical_levels,
+    contract: "str | FeatureContract | None" = None,
+    threshold: float = REPORTING_THRESHOLD,
+) -> None:
+    """Print fail-class P/R/F1 at each threshold on valid (and test when supplied).
+
+    Selection/decision is on valid only. ``df_test`` may be None, in which case
+    TEST is not read at all. No threshold is auto-selected — the grid is for
+    human review and always contains the locked reporting threshold.
     """
+    resolved = resolve_feature_contract(contract)
+    grid = _threshold_grid(threshold)
     print("\n=== M1 THRESHOLD TABLE (fail-class P/R/F1) ===")
-    print("  Thresholds:", _THRESHOLDS)
-    print("  Decision on VALID only — TEST shown for consistency comparison.")
+    print("  Thresholds:", grid)
+    print(f"  Locked reporting threshold: {threshold:g} (marked *)")
+    if df_test is None:
+        print("  TEST is CLOSED for this run and was not read.")
+    else:
+        print("  Decision on VALID only — TEST shown for consistency comparison.")
 
-    for split_label, df in (("VALID", df_valid), ("TEST ", df_test)):
-        X, y = prepare_X_y(df, "pass", categorical_levels)
+    splits = [("VALID", df_valid)]
+    if df_test is not None:
+        splits.append(("TEST ", df_test))
+    for split_label, df in splits:
+        X, y = prepare_X_y(df, "pass", categorical_levels, resolved)
         y_prob = model.predict(X)
         print(f"\n  [{split_label}]  thr    fail_P    fail_R   fail_F1")
         print(  "  " + "-" * 46)
-        for thr in _THRESHOLDS:
+        for thr in grid:
             y_bin = (y_prob >= thr).astype(int)
             fp_val = precision_score(y, y_bin, pos_label=0, zero_division=0)
             fr_val = recall_score(y, y_bin, pos_label=0, zero_division=0)
             ff_val = f1_score(y, y_bin, pos_label=0, zero_division=0)
-            print(f"  [{split_label}]  {thr:g}   {fp_val:.4f}    {fr_val:.4f}   {ff_val:.4f}")
+            star = " *" if thr == float(threshold) else ""
+            print(
+                f"  [{split_label}]  {thr:g}   {fp_val:.4f}    {fr_val:.4f}   "
+                f"{ff_val:.4f}{star}"
+            )
 
-    print("\n  (No threshold auto-selected — choose after reviewing the table above.)")
+    print("\n  (No threshold auto-selected; * marks the locked reporting threshold.)")
     print("=== END THRESHOLD TABLE ===\n")
 
 
-def stratified_threshold_table(model, df_test, categorical_levels) -> None:
+def stratified_threshold_table(
+    model, df_test, categorical_levels,
+    contract: "str | FeatureContract | None" = None,
+) -> None:
     """Fail-class P/R/F1 threshold table broken down by segments (test set, descriptive only).
 
     Uses the same segments as stratified_eval_pass and the same _THRESHOLDS list.
@@ -584,15 +841,12 @@ def stratified_threshold_table(model, df_test, categorical_levels) -> None:
     print("\n=== M1 SEGMENTED THRESHOLD TABLE (test set, fail-class P/R/F1, descriptive only) ===")
     print("  Thresholds:", _THRESHOLDS)
 
-    X_full, y_full = prepare_X_y(df_test, "pass", categorical_levels)
+    X_full, y_full = prepare_X_y(
+        df_test, "pass", categorical_levels, resolve_feature_contract(contract)
+    )
     y_prob_full = model.predict(X_full)
 
-    segments = {
-        "first_semester": df_test["is_first_active_semester"] == 1,
-        "retake_attempt": df_test["attempt_number"] > 1,
-        "low_difficulty_support": df_test["difficulty_fallback_level"] >= 3,
-        "cold_start_gpa": df_test["no_previous_progress"] == 1,
-    }
+    segments = _segment_masks(df_test)
 
     for seg_name, mask in segments.items():
         sub = mask.values
@@ -633,20 +887,112 @@ def _save_feature_importance(model, path: Path) -> None:
     print(f"  saved {path}")
 
 
-def _save_feature_contract(path: Path, dtypes: Dict[str, str], levels: Dict[str, List[int]]) -> None:
-    contract = {
-        "version": "v1",
-        "n_features": len(MODEL_FEATURES),
-        "features": MODEL_FEATURES,
-        "categorical_features": CATEGORICAL_FEATURES,
+def _git_state() -> Dict[str, Any]:
+    """Best-effort Git commit + working-tree cleanliness for provenance."""
+    def _run(*args: str) -> Optional[str]:
+        try:
+            out = subprocess.run(
+                ["git", *args],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True, text=True, timeout=15, check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        return out.stdout.strip() if out.returncode == 0 else None
+
+    commit = _run("rev-parse", "HEAD")
+    status = _run("status", "--porcelain")
+    return {
+        "commit": commit,
+        "branch": _run("rev-parse", "--abbrev-ref", "HEAD"),
+        "working_tree_clean": (status == "") if status is not None else None,
+        "dirty_paths": (
+            [line[3:] for line in status.splitlines()] if status else []
+        ),
+    }
+
+
+def _file_record(path: "str | Path | None") -> Optional[Dict[str, Any]]:
+    """Path + size + sha256 so a run can be tied to the exact input bytes."""
+    if path is None:
+        return None
+    path = Path(path)
+    if not path.is_file():
+        return {"path": str(path), "exists": False}
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    return {
+        "path": str(path),
+        "exists": True,
+        "bytes": int(path.stat().st_size),
+        "sha256": digest.hexdigest(),
+    }
+
+
+def _dataset_version(train_path: "str | Path") -> Optional[str]:
+    """Infer the versioned build id from the train path, when it is under versions/."""
+    parts = Path(train_path).resolve().parts
+    if "versions" in parts:
+        index = parts.index("versions")
+        if index + 1 < len(parts):
+            return parts[index + 1]
+    return None
+
+
+def build_run_contract(
+    contract: FeatureContract,
+    dtypes: Dict[str, str],
+    levels: Dict[str, List[int]],
+    *,
+    lgbm_params: Dict[str, Any],
+    train_path: "str | Path",
+    valid_path: "str | Path",
+    test_policy: str,
+    created_at: str,
+) -> Dict[str, Any]:
+    """Assemble the complete, self-describing contract persisted with every run."""
+    return {
+        "contract_name": contract.name,
+        "contract_version": contract.version,
+        "contract_description": contract.description,
+        "feature_count": contract.expected_feature_count,
+        "ordered_features": list(contract.features),
+        "categorical_features": list(contract.categorical_features),
+        "categorical_levels_learned_from": "train_only",
         "categorical_levels": levels,
         "unknown_category_code": UNKNOWN_CATEGORY,
-        "dropped_features": DROPPED_FEATURES,
-        "dtypes": dtypes,
-        "target_m1_classifier": "(final_mark >= 50).astype(int)",
-        "target_m2_regressor": "final_mark",
+        "dtypes_after_model_preparation": dtypes,
+        "derived_feature_sources": dict(contract.derived_feature_sources),
+        "dropped_feature_guard": list(DROPPED_FEATURES),
+        "target_m1_classifier": TARGET_M1_DEFINITION,
+        "target_m2_regressor": TARGET_M2_DEFINITION,
+        "reporting_threshold": contract.reporting_threshold,
+        "reporting_threshold_policy": (
+            "locked constant; never optimized per run; applies to precision, "
+            "recall, F1 and the confusion matrix only — not to training or "
+            "early stopping"
+        ),
+        "random_seed": lgbm_params.get("seed"),
+        "lightgbm_params": lgbm_params,
+        "requires_concurrent_plan_context": contract.requires_concurrent_plan_context,
+        "serving_limitation": SERVING_LIMITATION_NOTE,
+        "test_policy": test_policy,
+        "train_path": str(train_path),
+        "valid_path": str(valid_path),
+        "dataset_version": _dataset_version(train_path),
+        "dataset_inputs": {
+            "train": _file_record(train_path),
+            "valid": _file_record(valid_path),
+        },
+        "created_at": created_at,
+        "git": _git_state(),
     }
-    path.write_text(json.dumps(contract, indent=2))
+
+
+def _save_feature_contract(path: Path, payload: Dict[str, Any]) -> None:
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     print(f"  saved {path}")
 
 
@@ -687,15 +1033,23 @@ def _save_training_curves(
 # CLI entry point
 # ---------------------------------------------------------------------------
 
-def _read_existing_split(path: str | Path) -> pd.DataFrame:
-    """Read an existing model-ready split without invoking any data builder."""
+def _read_existing_split(
+    path: str | Path,
+    contract: "str | FeatureContract | None" = None,
+) -> pd.DataFrame:
+    """Read an existing model-ready split without invoking any data builder.
+
+    Only the selected contract's columns are read, so a baseline_41 run leaves
+    every concurrent column on disk.
+    """
+    resolved = resolve_feature_contract(contract)
     path = Path(path)
     if not path.is_file():
         raise FileNotFoundError(
             f"Model-ready split not found: {path}. "
             "Training never rebuilds data; run the data pipeline explicitly first."
         )
-    return pd.read_parquet(path, columns=TRAINING_DATA_COLUMNS)
+    return pd.read_parquet(path, columns=resolved.training_data_columns)
 
 
 def main(argv: List[str] | None = None) -> None:
@@ -712,6 +1066,23 @@ def main(argv: List[str] | None = None) -> None:
     parser.add_argument("--note", default="", help="One-line description used in the run report and leaderboard.")
     parser.add_argument("--compare-to", help="Persistent baseline run ID used for validation-metric deltas.")
     parser.add_argument(
+        "--feature-contract",
+        choices=sorted(FEATURE_CONTRACTS),
+        help=(
+            "Named model-input contract. REQUIRED for persistent runs "
+            "(--run-name); quick runs fall back to "
+            f"{DEFAULT_FEATURE_CONTRACT!r}."
+        ),
+    )
+    parser.add_argument(
+        "--evaluate-test",
+        action="store_true",
+        help=(
+            "Read and score df_test. OFF by default: during contract "
+            "comparison TEST stays closed and is never read."
+        ),
+    )
+    parser.add_argument(
         "--num-threads",
         type=int,
         default=4,
@@ -720,6 +1091,23 @@ def main(argv: List[str] | None = None) -> None:
     args = parser.parse_args(argv)
     if args.num_threads < 1:
         parser.error("--num-threads must be at least 1")
+    if args.run_name and not args.feature_contract:
+        parser.error(
+            "--feature-contract is required for persistent runs (--run-name). "
+            f"Choose one of: {sorted(FEATURE_CONTRACTS)}. A persistent run is "
+            "never silently defaulted to a contract."
+        )
+
+    contract = resolve_feature_contract(
+        args.feature_contract or DEFAULT_FEATURE_CONTRACT
+    )
+    reporting_threshold = contract.reporting_threshold
+    test_policy = (
+        "evaluated_descriptive_only" if args.evaluate_test else "closed_not_read"
+    )
+    print(f"Feature contract : {contract.name} ({contract.expected_feature_count} features)")
+    print(f"Reporting threshold: {reporting_threshold:g} (locked, not optimized)")
+    print(f"TEST policy      : {test_policy}")
 
     run_context = experiment_tracking.resolve_output(
         Path(args.out), args.run_name, args.note, args.compare_to
@@ -730,11 +1118,17 @@ def main(argv: List[str] | None = None) -> None:
 
     print("Loading data …")
     print("  Existing splits only; this module never invokes a data builder.")
-    df_train = _read_existing_split(args.train)
-    df_valid = _read_existing_split(args.valid)
-    df_test = _read_existing_split(args.test)
-    print(f"  train {df_train.shape}  valid {df_valid.shape}  test {df_test.shape}")
-    print(f"  loaded {len(TRAINING_DATA_COLUMNS)} required columns; audit-only columns stayed on disk")
+    df_train = _read_existing_split(args.train, contract)
+    df_valid = _read_existing_split(args.valid, contract)
+    df_test = _read_existing_split(args.test, contract) if args.evaluate_test else None
+    print(
+        f"  train {df_train.shape}  valid {df_valid.shape}  "
+        f"test {df_test.shape if df_test is not None else 'CLOSED (not read)'}"
+    )
+    print(
+        f"  loaded {len(contract.training_data_columns)} required columns for "
+        f"contract {contract.name!r}; every other column stayed on disk"
+    )
 
     # TEMPORARY: remove after rebuilding final splits from 02_merge_diploma.
     # Fit once on train only; valid/test must reuse the same frozen value.
@@ -742,7 +1136,7 @@ def main(argv: List[str] | None = None) -> None:
     for split_name, df_split in (
         ("train", df_train),
         ("valid", df_valid),
-        ("test", df_test),
+        *((("test", df_test),) if df_test is not None else ()),
     ):
         missing_before = int(df_split["diploma_gpa"].isna().sum())
         df_split["diploma_gpa"] = df_split["diploma_gpa"].fillna(diploma_gpa_median)
@@ -755,24 +1149,30 @@ def main(argv: List[str] | None = None) -> None:
 
     # Learn categorical levels from TRAIN only, then run loud diagnostics.
     print("\nLearning categorical levels (train only) …")
-    categorical_levels = learn_categorical_levels(df_train)
-    dtypes = run_pre_training_diagnostics(df_train, categorical_levels)
-    X_flags, y_flags = prepare_X_y(df_train, "pass", categorical_levels)
+    categorical_levels = learn_categorical_levels(df_train, contract)
+    dtypes = run_pre_training_diagnostics(df_train, categorical_levels, contract)
+    X_flags, y_flags = prepare_X_y(df_train, "pass", categorical_levels, contract)
     constant_features = list(X_flags.nunique(dropna=False)[lambda s: s <= 1].index)
     del X_flags, y_flags
     gc.collect()
     important_flags = []
     if constant_features:
         important_flags.append("Train constant features: " + ", ".join(constant_features))
-    if "diploma_gpa" in MODEL_FEATURES:
+    if "diploma_gpa" in contract.features:
         important_flags.append(
             "diploma_gpa has no dedicated missing-value indicator; source-level median fill remains unchanged and unmatched diploma records may be null."
         )
 
-    # Leakage gate on all three splits BEFORE training.
-    for name, d in (("train", df_train), ("valid", df_valid), ("test", df_test)):
-        X_chk, y_chk = prepare_X_y(d, "pass", categorical_levels)
+    # Leakage gate on every split that is open BEFORE training.
+    gate_splits = [("train", df_train), ("valid", df_valid)]
+    if df_test is not None:
+        gate_splits.append(("test", df_test))
+    for name, d in gate_splits:
+        X_chk, y_chk = prepare_X_y(d, "pass", categorical_levels, contract)
         assert_no_leakage_columns(X_chk)
+        assert list(X_chk.columns) == list(contract.features), (
+            f"{name}: X columns do not match contract {contract.name!r}"
+        )
         print(f"Leakage gate passed on {name} ({X_chk.shape[1]} features).")
         del X_chk, y_chk
     gc.collect()
@@ -781,33 +1181,63 @@ def main(argv: List[str] | None = None) -> None:
     print("\n=== Training M1 (pass/fail classifier) ===")
     training_params = {"num_threads": args.num_threads}
     pass_model, m1_evals = train_pass_model(
-        df_train, df_valid, categorical_levels, params=training_params
+        df_train, df_valid, categorical_levels, params=training_params,
+        contract=contract,
     )
-    m1_train = evaluate_pass(pass_model, df_train, categorical_levels, "train")
-    m1_valid = evaluate_pass(pass_model, df_valid, categorical_levels, "valid")
+    eval_kwargs = {"contract": contract, "threshold": reporting_threshold}
+    m1_train = evaluate_pass(pass_model, df_train, categorical_levels, "train", **eval_kwargs)
+    m1_valid = evaluate_pass(pass_model, df_valid, categorical_levels, "valid", **eval_kwargs)
     m1_valid["train_valid_auc_gap"] = float(m1_train["auc"] - m1_valid["auc"])
-    m1_test = evaluate_pass(pass_model, df_test, categorical_levels, "test (descriptive)")
-    m1_valid_segments = collect_segment_auc(pass_model, df_valid, categorical_levels)
-    print("M1 stratified breakdown (test set, descriptive only):")
-    stratified_eval_pass(pass_model, df_test, categorical_levels)
-    print_threshold_table(pass_model, df_valid, df_test, categorical_levels)
-    stratified_threshold_table(pass_model, df_test, categorical_levels)
+    m1_valid["best_iteration"] = int(pass_model.best_iteration or 0)
+    m1_valid_segments = collect_segment_auc(
+        pass_model, df_valid, categorical_levels, contract
+    )
+    print("M1 stratified breakdown (VALID):")
+    stratified_eval_pass(pass_model, df_valid, categorical_levels, contract)
+    m1_test = None
+    if df_test is not None:
+        m1_test = evaluate_pass(
+            pass_model, df_test, categorical_levels, "test (descriptive)", **eval_kwargs
+        )
+        stratified_threshold_table(pass_model, df_test, categorical_levels, contract)
+    print_threshold_table(
+        pass_model, df_valid, df_test, categorical_levels,
+        contract=contract, threshold=reporting_threshold,
+    )
     pass_model.save_model(str(out_dir / "m1_pass_model.lgbm"))
     _save_feature_importance(pass_model, out_dir / "m1_feature_importance.csv")
 
     # --- M2: final_mark regressor ---
     print("\n=== Training M2 (final_mark regressor) ===")
     grade_model, m2_evals = train_grade_model(
-        df_train, df_valid, categorical_levels, params=training_params
+        df_train, df_valid, categorical_levels, params=training_params,
+        contract=contract,
     )
-    m2_train = evaluate_grade(grade_model, df_train, categorical_levels, "train")
-    m2_valid = evaluate_grade(grade_model, df_valid, categorical_levels, "valid")
-    m2_test = evaluate_grade(grade_model, df_test, categorical_levels, "test (descriptive)")
+    m2_train = evaluate_grade(grade_model, df_train, categorical_levels, "train", contract)
+    m2_valid = evaluate_grade(grade_model, df_valid, categorical_levels, "valid", contract)
+    m2_valid["best_iteration"] = int(grade_model.best_iteration or 0)
+    m2_test = (
+        evaluate_grade(
+            grade_model, df_test, categorical_levels, "test (descriptive)", contract
+        )
+        if df_test is not None
+        else None
+    )
     grade_model.save_model(str(out_dir / "m2_grade_model.lgbm"))
     _save_feature_importance(grade_model, out_dir / "m2_feature_importance.csv")
 
     # --- Artifacts ---
-    _save_feature_contract(out_dir / "feature_contract.json", dtypes, categorical_levels)
+    run_contract = build_run_contract(
+        contract,
+        dtypes,
+        categorical_levels,
+        lgbm_params={**_SHARED_PARAMS, **training_params},
+        train_path=args.train,
+        valid_path=args.valid,
+        test_policy=test_policy,
+        created_at=run_context.created_at.isoformat(timespec="seconds"),
+    )
+    _save_feature_contract(out_dir / "feature_contract.json", run_contract)
     _save_training_curves(out_dir / "training_curves.json", m1_evals, m2_evals)
     results = {
         "m1_pass_classifier": {"train": m1_train, "valid": m1_valid, "test": m1_test},
@@ -815,7 +1245,10 @@ def main(argv: List[str] | None = None) -> None:
     }
     selection_summary = {
         "selection_split": "valid",
-        "test_policy": "descriptive_only; never supplied to fitting or early stopping",
+        "feature_contract": contract.name,
+        "feature_count": contract.expected_feature_count,
+        "reporting_threshold": reporting_threshold,
+        "test_policy": test_policy,
         "directions": {
             "fail_avg_precision": "higher_is_better",
             "auc": "higher_is_better",
@@ -828,28 +1261,50 @@ def main(argv: List[str] | None = None) -> None:
             "brier": m1_valid["brier"],
             "train_valid_auc_gap": m1_valid["train_valid_auc_gap"],
         },
-        "test_descriptive": {
-            "fail_avg_precision": m1_test["fail_avg_precision"],
-            "auc": m1_test["auc"],
-            "brier": m1_test["brier"],
-        },
+        "test_descriptive": (
+            {
+                "fail_avg_precision": m1_test["fail_avg_precision"],
+                "auc": m1_test["auc"],
+                "brier": m1_test["brier"],
+            }
+            if m1_test is not None
+            else "closed_not_read"
+        ),
     }
     (out_dir / "selection_summary.json").write_text(
         json.dumps(selection_summary, indent=2), encoding="utf-8"
     )
     segment_metrics = {"valid": m1_valid_segments}
+    # Recorded inside metrics.json so a comparison can never silently mix runs
+    # made at different thresholds or under different contracts.
+    run_settings = {
+        "feature_contract": contract.name,
+        "feature_count": contract.expected_feature_count,
+        "reporting_threshold": reporting_threshold,
+        "test_policy": test_policy,
+        "random_seed": _SHARED_PARAMS["seed"],
+        "num_threads": args.num_threads,
+        "train_path": str(args.train),
+        "valid_path": str(args.valid),
+        "dataset_version": _dataset_version(args.train),
+    }
     if run_context.persistent:
         experiment_tracking.finalize_persistent_run(
             run_context,
             results,
             segment_metrics,
-            len(MODEL_FEATURES),
+            contract.expected_feature_count,
             important_flags,
             baseline_metrics,
+            run_settings=run_settings,
         )
     else:
         (out_dir / "metrics.json").write_text(
-            json.dumps({**results, "segments": segment_metrics}, indent=2), encoding="utf-8"
+            json.dumps(
+                {**results, "segments": segment_metrics, "run_settings": run_settings},
+                indent=2,
+            ),
+            encoding="utf-8",
         )
     print(f"\nMetrics saved to {out_dir / 'metrics.json'}")
     print(json.dumps({**results, "segments": segment_metrics}, indent=2))
