@@ -152,6 +152,31 @@ segments (cold-start vs returning students, level, course difficulty band).
 
 Always compare train, validation, and untouched test performance separately.
 
+## Seeded training CLI (`--seed`)
+
+`model_training.py`'s `--seed` flag (default 42) sets LightGBM's master
+`seed` parameter for both M1 and M2. The training code does not compute
+sub-seeds itself — LightGBM internally derives `data_random_seed`,
+`feature_fraction_seed`, `bagging_seed`, and `drop_seed` from that one
+master value. The resolved values are read back after training from the
+serialized model file (`_effective_seed_settings`, `model_training.py`)
+and recorded under `run_settings.effective_seed_settings` in
+`feature_contract.json` / `metrics.json`.
+
+* Both arms of a paired comparison (e.g. a baseline vs. candidate feature
+  contract) MUST use the same `--seed` value. A run made with one seed is
+  not comparable to a run made under a different seed, and neither is
+  comparable to a run made before this flag existed at all.
+* Runs made before this flag existed (e.g. the original seed-42 pair) have
+  no `effective_seed_settings` recorded in their JSON. The resolved
+  sub-seeds are still embedded in the `.lgbm` model file itself and can be
+  read back with `_effective_seed_settings` even for those older runs.
+* A single seed is not evidence of a stable effect. See
+  `models/runs/NOISE_BAND.md` for the acceptance yardstick derived from a
+  five-seed comparison of `baseline_41` vs `concurrent_44`, and
+  `models/runs/MULTISEED_BASELINE41_VS_CONCURRENT44_REPORT.md` for the
+  full evidence behind it.
+
 ## Known issues to address in the logic job
 
 * Pass-definition violation in `knn_advisor.py` and `recommendation.py`
