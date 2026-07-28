@@ -721,3 +721,44 @@ stop without freeze manifests.
 `scripts/course_identity_diagnostic.py`. The CSV is a candidate-review
 artifact, not an accepted mapping. No parquet, model, source default,
 promotion marker, or production/inference/recommendation wiring changed.
+
+## 2026-07-28 — M1 R2 covered/uncovered five-seed decision
+
+**Pre-registration and scope.** The locked decision rule was committed first
+in `docs/EXPERIMENT_R2_COVERAGE_DECISION_PLAN.md` (`6fa053e`). The result then
+re-scored the five existing seed-paired `baseline_41` M1 controls
+(`num_leaves=127`) and R2 challengers (`num_leaves=31`) on immutable VALID.
+No model was trained or tuned. `concurrent_43`/`concurrent_44` were not scored
+for M1, M2 was not rescored, and TEST remained `closed_not_read`.
+
+**Parity.** Each of seeds 42/52/62/72/82 passed all 22 shared parity checks
+before predictions were loaded: TRAIN/VALID hashes, feature contract/order,
+root and derived seeds, categorical levels, diploma fill, threshold,
+early-stopping protocol, TEST policy, and serialized model parameters. The
+only parameter difference is `num_leaves` 127→31. Every complete-VALID
+re-score reproduced the saved metrics exactly.
+
+**Decision: `KEEP_DEFAULT_127_FOR_M1`.** R2 did not meet the burden of proof.
+On all uncovered rows, AUC improved in only 3/5 seeds and Brier in only 2/5;
+mean AUC delta was +0.000693 but mean Brier worsened by +0.000393. Covered
+rows showed AUC harm in 3/5 and Brier harm in 4/5. Complete-VALID individual
+guardrail breaches occurred for AUC (seeds 52, 72), fail AP (seed 82), and
+Brier (seeds 72, 82), even though the five-seed means remained inside the
+band. Removing seed 42 did not rescue the rule.
+
+**Cause matters.** The 1,255 `thin_history` rows favor R2: AUC improved 5/5
+(mean +0.004707), Brier improved 4/5 (mean −0.000370), and fail AP improved
+4/5 (mean +0.006148). The product-dominant 25,627 `never_in_train` rows do
+not: AUC improved 3/5 (mean +0.000390), Brier only 2/5 (mean harmful
++0.000430), while fail recall and F1 were harmful in 4/5. Thin-history benefit
+therefore does not establish a consistent benefit on the full uncovered
+population.
+
+**M2 remains unchanged.** This read-only result does not change M2. M2 remains
+`concurrent_43` with `num_leaves=127`; R2 is not applied to M2.
+
+Full evidence is in
+`models/runs/R2_COVERED_UNCOVERED_FIVE_SEED_REPORT.md` and its JSON, generated
+by `scripts/r2_coverage_rescore.py`. No default, dataset, model binary,
+promotion marker, inference/recommendation/API/eligibility/plan-generation
+wiring, or production path changed.
