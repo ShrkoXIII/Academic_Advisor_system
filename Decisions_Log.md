@@ -762,3 +762,33 @@ Full evidence is in
 by `scripts/r2_coverage_rescore.py`. No default, dataset, model binary,
 promotion marker, inference/recommendation/API/eligibility/plan-generation
 wiring, or production path changed.
+
+## 2026-07-28 — Degree-grain verification of the 67 course-identity candidates
+
+**Scope.** This was a read-only verification of all 67 distinct new courses
+classified `likely_renumbered_needs_review` in
+`models/runs/COURSE_IDENTITY_CANDIDATES.csv`. It used every matching row from
+the canonical and raw `V_ACD_DEGREE_COURSE` representations and immutable
+TRAIN/VALID enrolment history. IDs remained strings and meaningful dotted
+suffixes were preserved. TEST remained `closed_not_read`; no model was
+trained or scored.
+
+**Exact-degree result.** All 67 pairs are in the same normalized university,
+but **0/67 share any exact normalized catalog `degree_id`**. Thus 67/67 are
+classified `SAME_UNIVERSITY_DIFFERENT_DEGREE`, 0/67 have partial degree
+overlap, and 0/67 qualify as
+`STRICT_SAME_DEGREE_RENUMBERING_CANDIDATE`. These groups represent 13,686,
+0, and 0 VALID rows respectively. The earlier candidate-discovery diagnostic
+pooled enrolment and catalog degree IDs at course level; this verification
+instead compares every actual catalog row at full `degree_id` grain.
+
+**Temporal result.** Sixty-four pairs, representing 12,223 VALID rows, have
+both course IDs enrolled in at least one common semester. The remaining three
+pairs, representing 1,463 VALID rows, have a long gap. No pair shows direct
+or one-semester-gap replacement without overlap.
+
+**Decision.** No course mapping was accepted or approved. The verification
+artifacts are evidence for academic/university review only. No dataset,
+parquet, source logic, model, feature, default, inference/recommendation code,
+or promotion marker changed. Model freeze remains blocked pending
+human/university review.
