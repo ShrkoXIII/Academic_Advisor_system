@@ -512,3 +512,85 @@ columns, but preprocessing assigns both columns from the same
 tests train synthetic toy models under the OS temporary directory; they did
 not retrain either frozen run, read the project TEST split, or write a project
 model/dataset artifact. No remedy is recommended or implemented.
+
+## 2026-07-28 — Course-identity investigation (read-only; candidates only; no decision)
+
+**Scope and non-actions.** Completed the requested read-only investigation into
+whether the 182 never-in-TRAIN VALID course_ids are old courses under a new
+identifier. Reads were limited to the frozen
+`2026-07-26_batched_fixes__registration_roster_concurrent` TRAIN and VALID
+parquets plus the read-only catalog sources
+`data/raw/v_acd_degree_course.parquet` and
+`data/preprocessed/V_ACD_DEGREE_COURSE/clean_v_acd_degree_course.parquet`. The
+project TEST split was never read and no TEST path was constructed. **No
+`canonical_course_id` or equivalence mapping was created, applied, or wired.**
+No dataset was built or written, no model trained or re-tuned, and no `src/`
+file, default, `CURRENT_VERSION.txt`, promotion marker, or inference wiring
+changed. Nothing was pushed.
+
+**Reproduction.** The never-in-TRAIN population recomputed independently to 182
+distinct course_ids and 25,627 VALID rows out of 26,882 uncovered rows —
+identical to `models/runs/DIFFICULTY_COVERAGE_DIAGNOSTIC.json` (`a32f20c`).
+
+**Attribute inventory (done before matching was designed).**
+`V_ACD_DEGREE_COURSE` is the only course-level catalog in the data root and
+covers all 182 new courses and 804 of 811 TRAIN courses. Usable attributes:
+Arabic course name, credits, requirement type, planned year/semester, and the
+degree set. Prerequisites and effective dates do NOT exist; the `active` flag is
+constant `A` for all 4,006 rows and carries no information. The cleaned parquet
+is a strict column subset of the raw view and adds nothing.
+
+**Primary finding — this is not renumbering.** 162 of the 182 ids (89.0%) lie
+strictly above the previous TRAIN maximum (1093) in three dense append-only runs
+(1163–1260, 1267–1409, 1418–1433). No prefix, added digit, shifted department
+block, or arithmetic offset relates any new id to an old id. The remaining 20
+ids (99, 101–117, 447, 489, 492) sit inside the historical range but carry no
+pre-20221 enrolment. What the evidence shows instead is a **curriculum
+revision**: 25 VALID-only degrees, several literally named with a `2023` suffix,
+opened under two faculty codes almost absent from TRAIN (`167.111`: 2 TRAIN
+rows; `177.111`: 0), each with a freshly numbered catalog. University-requirement
+course ids (955, 956, 962, 967, 1015–1021, 1038, 1160–1162) are reused unchanged
+inside the new degrees, which a system-wide id migration would not do.
+
+**Disappearance does not balance appearance.** Only 26 courses (3,897 TRAIN
+rows) vanish outright at the boundary, against 182 new courses carrying 25,627
+VALID rows. The transferred enrolment is visible as volume collapse in 29
+surviving old courses, not as disappearance: old first-year courses of degree
+`3.111` fall from ~1,500–2,100 TRAIN rows to 23–68 VALID rows while same-named
+new-plan counterparts absorb 700–900 each. Censoring is reported explicitly: 52
+new courses debut in 20232/20233 and 123 top candidates have a predecessor whose
+last active semester falls in the censored window; all are flagged, never scored
+as confirmed.
+
+**Classification (rule fixed before results were produced).** Name similarity
+alone was never sufficient; every bucket above `unresolved` required a
+degree-lineage link plus at least two non-name structural attributes.
+`confirmed_equivalent` 5 courses / 1,791 rows; `likely_equivalent_needs_review`
+82 / 16,359; `genuinely_new` 7 / 134; `unresolved` 88 / 7,343. A clearly
+labelled sensitivity (censoring guard applied only to the temporal signal, not
+to whole-window volume collapse) would move 5 courses from `likely` to
+`confirmed` (10 / 4,072). The pre-registered rule remains authoritative; the
+rule was not changed after results were seen.
+
+**Payoff (counterfactual, nothing written).** The Level-1 → Level-2 support
+lookup of `src/course_difficulty.py` was re-implemented and validated against
+the on-disk columns first: 0 `course_history_count` and 0
+`course_difficulty_missing` mismatches over 156,097 VALID rows. Applying only
+`confirmed` mappings would recover 1,727 of the 25,627 never-in-TRAIN rows;
+`confirmed + likely` recovers 18,060, leaving 8,822 of the original 26,882
+uncovered rows (32.8%). This bounds coverage, not accuracy: borrowing a
+predecessor's pass-rate statistics assumes the revision did not change
+difficulty, which this data cannot test.
+
+**Scope verdict: faculty-specific.** Faculties `167.111` (85 courses / 16,303
+rows) and `177.111` (66 / 6,029) carry 87% of the affected rows.
+
+**Artifacts.** `models/runs/COURSE_IDENTITY_INVESTIGATION.md` and its JSON, plus
+`models/runs/course_identity_candidates.csv`, generated by
+`scripts/course_identity_investigation.py`. The CSV is a **review artifact, not
+a mapping table**: it leads with an explicit warning row, mixes buckets, retains
+conflicting-evidence columns, and lists up to three candidates per course. The
+full native suite (`python -m unittest discover -s tests -t .`) passed 117
+tests. No mapping decision is recommended or implemented; confirming equivalence
+requires the university registrar's official equivalence table, and the open
+registrar questions are listed in section 9 of the report.
