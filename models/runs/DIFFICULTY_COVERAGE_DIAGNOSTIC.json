@@ -1,0 +1,1051 @@
+{
+  "diagnostic": "difficulty_coverage_decay",
+  "scope": {
+    "dataset_version": "2026-07-26_batched_fixes__registration_roster_concurrent",
+    "dataset_reads": [
+      "data/model_data/versions/2026-07-26_batched_fixes__registration_roster_concurrent/df_train_final.parquet",
+      "data/model_data/versions/2026-07-26_batched_fixes__registration_roster_concurrent/df_valid_final.parquet"
+    ],
+    "test_policy": "closed_not_read",
+    "test_dataset_read": false,
+    "recorded_test_level1_coverage_pct_context_only": 44.7,
+    "model_retrained": false,
+    "model_retuned": false,
+    "dataset_changed": false,
+    "source_changed": false,
+    "default_changed": false,
+    "current_version_changed": false,
+    "wiring_changed": false,
+    "promotion_performed": false,
+    "push_performed": false
+  },
+  "git_preconditions": {
+    "status_short": "",
+    "log_3_oneline": [
+      "653e7f1 R2 five-seed confirmation: CONFIRMED for baseline_41, NOT CONFIRMED for concurrent_43",
+      "235a1db Pre-register the R2 five-seed confirmation analysis rule",
+      "0914e8f Regularization screening, seed 42: R2 (num_leaves 31) is the only candidate"
+    ]
+  },
+  "full_test_suite": {
+    "command": ".venv\\Scripts\\python.exe -m unittest discover -s tests -t .",
+    "tests_run": 117,
+    "status": "OK",
+    "elapsed_seconds": 36.433,
+    "note": "Existing unit tests exercise the training CLI on synthetic fixtures and write toy models under the OS temporary directory. They did not read the project TEST split, change a project dataset, or retrain either frozen run used by this diagnostic."
+  },
+  "runs": {
+    "m1": {
+      "role": "seed-42 baseline_41 default control; M1 classifier reused",
+      "path": "models/runs/2026-07-26_1551__baseline-41-gpa-trend-control",
+      "absolute_path": "D:\\AI\\Real projects\\Academic_Advisor\\models\\runs\\2026-07-26_1551__baseline-41-gpa-trend-control",
+      "model_path": "models/runs/2026-07-26_1551__baseline-41-gpa-trend-control/m1_pass_model.lgbm",
+      "model_absolute_path": "D:\\AI\\Real projects\\Academic_Advisor\\models\\runs\\2026-07-26_1551__baseline-41-gpa-trend-control\\m1_pass_model.lgbm",
+      "feature_contract": "baseline_41",
+      "seed": 42
+    },
+    "m2": {
+      "role": "seed-42 concurrent_43 run; M2 regressor reused",
+      "path": "models/runs/2026-07-27_1327__seed42-concurrent-43-drop-dead-missing-flag",
+      "absolute_path": "D:\\AI\\Real projects\\Academic_Advisor\\models\\runs\\2026-07-27_1327__seed42-concurrent-43-drop-dead-missing-flag",
+      "model_path": "models/runs/2026-07-27_1327__seed42-concurrent-43-drop-dead-missing-flag/m2_grade_model.lgbm",
+      "model_absolute_path": "D:\\AI\\Real projects\\Academic_Advisor\\models\\runs\\2026-07-27_1327__seed42-concurrent-43-drop-dead-missing-flag\\m2_grade_model.lgbm",
+      "feature_contract": "concurrent_43",
+      "seed": 42
+    }
+  },
+  "definitions": {
+    "difficulty_source": "src/course_difficulty.py",
+    "peer_difficulty_source": "src/concurrent_group_features.py",
+    "course_difficulty_scalar": "1.0 - course_pass_rate_historical",
+    "min_support": 20,
+    "level1_coverage": "difficulty_fallback_level == 1",
+    "model_facing_confident_coverage": "course_difficulty_missing == 0",
+    "model_facing_uncovered": "course_difficulty_missing == 1",
+    "statistics_fit": "TRAIN history only",
+    "fallback_hierarchy": {
+      "1": "degree_course_key",
+      "2": "course_id across degrees",
+      "3": "degree_id + requirement_type_id + rounded course_credits",
+      "4": "faculty_id + requirement_type_id + rounded course_credits",
+      "5": "requirement_type_id + rounded course_credits",
+      "6": "global prior TRAIN history"
+    },
+    "global_train_values": {
+      "course_pass_rate_historical": 0.8413150855227376,
+      "course_difficulty": 0.1586849144772624,
+      "course_avg_mark_historical": 65.58209405836192,
+      "course_retake_rate_historical": 0.1606229118799463
+    },
+    "imputation_indicator_in_both_contracts": "course_difficulty_missing",
+    "additional_model_support_feature": "course_history_count",
+    "audit_only_not_model_features": [
+      "difficulty_fallback_level",
+      "course_is_new",
+      "course_low_support",
+      "difficulty_group_support_count"
+    ],
+    "inherited_peer_difficulty_means": {
+      "train_0.186": "approximate prior TRAIN mean of peer_difficulty_mean",
+      "valid_0.134": "approximate prior VALID mean of peer_difficulty_mean",
+      "valid_minus_train": -0.052,
+      "source": "scripts/build_concurrent_group_features.py:141-145"
+    }
+  },
+  "coverage": {
+    "train": {
+      "rows": 450465,
+      "level1": {
+        "definition": "difficulty_fallback_level == 1",
+        "covered_rows": 425121,
+        "coverage_pct": 94.37381372581666
+      },
+      "confident_model_facing": {
+        "definition": "course_difficulty_missing == 0",
+        "covered_rows": 403649,
+        "uncovered_rows": 46816,
+        "coverage_pct": 89.60718368796688
+      },
+      "inherited_level1_coverage_pct": 93.6,
+      "level1_discrepancy_pp": 0.773813725816666
+    },
+    "valid": {
+      "rows": 156097,
+      "level1": {
+        "definition": "difficulty_fallback_level == 1",
+        "covered_rows": 120858,
+        "coverage_pct": 77.42493449585834
+      },
+      "confident_model_facing": {
+        "definition": "course_difficulty_missing == 0",
+        "covered_rows": 129215,
+        "uncovered_rows": 26882,
+        "coverage_pct": 82.7786568607981
+      },
+      "inherited_level1_coverage_pct": 76.2,
+      "level1_discrepancy_pp": 1.224934495858335
+    }
+  },
+  "uncovered_decomposition": {
+    "uncovered_rows": 26882,
+    "coverage_definition": "course_difficulty_missing == 0",
+    "causes": {
+      "never_in_train": {
+        "count": 25627,
+        "pct_of_uncovered": 95.33144855293504,
+        "pct_of_valid": 16.417355874872676,
+        "description": "course_id does not appear anywhere in TRAIN"
+      },
+      "thin_history": {
+        "count": 1255,
+        "pct_of_uncovered": 4.66855144706495,
+        "pct_of_valid": 0.8039872643292312,
+        "description": "course_id appears in TRAIN but course_history_count < 20"
+      },
+      "other": {
+        "count": 0,
+        "pct_of_uncovered": 0.0,
+        "pct_of_valid": 0.0,
+        "description": "uncovered row not explained by course absence or support below threshold"
+      }
+    },
+    "never_in_train_ceiling_pct_of_uncovered": 95.33144855293504
+  },
+  "never_in_train_first_appearance": [
+    {
+      "first_semester": "20221",
+      "distinct_courses": 59,
+      "pct_of_never_in_train_courses": 32.417582417582416,
+      "all_valid_rows_for_those_courses": 17526,
+      "rows_in_first_semester": 3340
+    },
+    {
+      "first_semester": "20222",
+      "distinct_courses": 23,
+      "pct_of_never_in_train_courses": 12.637362637362637,
+      "all_valid_rows_for_those_courses": 2894,
+      "rows_in_first_semester": 745
+    },
+    {
+      "first_semester": "20223",
+      "distinct_courses": 11,
+      "pct_of_never_in_train_courses": 6.043956043956044,
+      "all_valid_rows_for_those_courses": 520,
+      "rows_in_first_semester": 93
+    },
+    {
+      "first_semester": "20231",
+      "distinct_courses": 37,
+      "pct_of_never_in_train_courses": 20.32967032967033,
+      "all_valid_rows_for_those_courses": 3748,
+      "rows_in_first_semester": 1722
+    },
+    {
+      "first_semester": "20232",
+      "distinct_courses": 36,
+      "pct_of_never_in_train_courses": 19.78021978021978,
+      "all_valid_rows_for_those_courses": 868,
+      "rows_in_first_semester": 736
+    },
+    {
+      "first_semester": "20233",
+      "distinct_courses": 16,
+      "pct_of_never_in_train_courses": 8.791208791208792,
+      "all_valid_rows_for_those_courses": 71,
+      "rows_in_first_semester": 71
+    }
+  ],
+  "coverage_over_time": [
+    {
+      "part_id": "20051",
+      "split": "TRAIN",
+      "rows": 55,
+      "covered_rows": 0,
+      "level1_rows": 0,
+      "coverage_pct": 0.0,
+      "level1_coverage_pct": 0.0
+    },
+    {
+      "part_id": "20052",
+      "split": "TRAIN",
+      "rows": 55,
+      "covered_rows": 0,
+      "level1_rows": 10,
+      "coverage_pct": 0.0,
+      "level1_coverage_pct": 18.181818181818183
+    },
+    {
+      "part_id": "20053",
+      "split": "TRAIN",
+      "rows": 4,
+      "covered_rows": 0,
+      "level1_rows": 4,
+      "coverage_pct": 0.0,
+      "level1_coverage_pct": 100.0
+    },
+    {
+      "part_id": "20061",
+      "split": "TRAIN",
+      "rows": 41,
+      "covered_rows": 0,
+      "level1_rows": 30,
+      "coverage_pct": 0.0,
+      "level1_coverage_pct": 73.17073170731707
+    },
+    {
+      "part_id": "20062",
+      "split": "TRAIN",
+      "rows": 28,
+      "covered_rows": 0,
+      "level1_rows": 16,
+      "coverage_pct": 0.0,
+      "level1_coverage_pct": 57.14285714285714
+    },
+    {
+      "part_id": "20063",
+      "split": "TRAIN",
+      "rows": 5,
+      "covered_rows": 0,
+      "level1_rows": 5,
+      "coverage_pct": 0.0,
+      "level1_coverage_pct": 100.0
+    },
+    {
+      "part_id": "20071",
+      "split": "TRAIN",
+      "rows": 78,
+      "covered_rows": 0,
+      "level1_rows": 66,
+      "coverage_pct": 0.0,
+      "level1_coverage_pct": 84.61538461538461
+    },
+    {
+      "part_id": "20072",
+      "split": "TRAIN",
+      "rows": 65,
+      "covered_rows": 4,
+      "level1_rows": 48,
+      "coverage_pct": 6.153846153846154,
+      "level1_coverage_pct": 73.84615384615385
+    },
+    {
+      "part_id": "20073",
+      "split": "TRAIN",
+      "rows": 6,
+      "covered_rows": 0,
+      "level1_rows": 6,
+      "coverage_pct": 0.0,
+      "level1_coverage_pct": 100.0
+    },
+    {
+      "part_id": "20081",
+      "split": "TRAIN",
+      "rows": 485,
+      "covered_rows": 248,
+      "level1_rows": 138,
+      "coverage_pct": 51.1340206185567,
+      "level1_coverage_pct": 28.45360824742268
+    },
+    {
+      "part_id": "20082",
+      "split": "TRAIN",
+      "rows": 445,
+      "covered_rows": 0,
+      "level1_rows": 146,
+      "coverage_pct": 0.0,
+      "level1_coverage_pct": 32.80898876404494
+    },
+    {
+      "part_id": "20083",
+      "split": "TRAIN",
+      "rows": 48,
+      "covered_rows": 12,
+      "level1_rows": 42,
+      "coverage_pct": 25.0,
+      "level1_coverage_pct": 87.5
+    },
+    {
+      "part_id": "20091",
+      "split": "TRAIN",
+      "rows": 1159,
+      "covered_rows": 25,
+      "level1_rows": 855,
+      "coverage_pct": 2.1570319240724762,
+      "level1_coverage_pct": 73.77049180327869
+    },
+    {
+      "part_id": "20092",
+      "split": "TRAIN",
+      "rows": 1032,
+      "covered_rows": 32,
+      "level1_rows": 792,
+      "coverage_pct": 3.10077519379845,
+      "level1_coverage_pct": 76.74418604651163
+    },
+    {
+      "part_id": "20093",
+      "split": "TRAIN",
+      "rows": 144,
+      "covered_rows": 99,
+      "level1_rows": 141,
+      "coverage_pct": 68.75,
+      "level1_coverage_pct": 97.91666666666666
+    },
+    {
+      "part_id": "20101",
+      "split": "TRAIN",
+      "rows": 1152,
+      "covered_rows": 147,
+      "level1_rows": 885,
+      "coverage_pct": 12.760416666666666,
+      "level1_coverage_pct": 76.82291666666666
+    },
+    {
+      "part_id": "20102",
+      "split": "TRAIN",
+      "rows": 1062,
+      "covered_rows": 189,
+      "level1_rows": 821,
+      "coverage_pct": 17.796610169491526,
+      "level1_coverage_pct": 77.30696798493409
+    },
+    {
+      "part_id": "20103",
+      "split": "TRAIN",
+      "rows": 141,
+      "covered_rows": 100,
+      "level1_rows": 140,
+      "coverage_pct": 70.92198581560284,
+      "level1_coverage_pct": 99.29078014184397
+    },
+    {
+      "part_id": "20111",
+      "split": "TRAIN",
+      "rows": 6301,
+      "covered_rows": 804,
+      "level1_rows": 1419,
+      "coverage_pct": 12.759879384224726,
+      "level1_coverage_pct": 22.52023488335185
+    },
+    {
+      "part_id": "20112",
+      "split": "TRAIN",
+      "rows": 6741,
+      "covered_rows": 855,
+      "level1_rows": 1818,
+      "coverage_pct": 12.683578104138851,
+      "level1_coverage_pct": 26.969292389853138
+    },
+    {
+      "part_id": "20113",
+      "split": "TRAIN",
+      "rows": 642,
+      "covered_rows": 594,
+      "level1_rows": 635,
+      "coverage_pct": 92.5233644859813,
+      "level1_coverage_pct": 98.90965732087228
+    },
+    {
+      "part_id": "20121",
+      "split": "TRAIN",
+      "rows": 5481,
+      "covered_rows": 1558,
+      "level1_rows": 3439,
+      "coverage_pct": 28.42546980478015,
+      "level1_coverage_pct": 62.74402481299033
+    },
+    {
+      "part_id": "20122",
+      "split": "TRAIN",
+      "rows": 4778,
+      "covered_rows": 1602,
+      "level1_rows": 2979,
+      "coverage_pct": 33.528673084972795,
+      "level1_coverage_pct": 62.348262871494356
+    },
+    {
+      "part_id": "20123",
+      "split": "TRAIN",
+      "rows": 647,
+      "covered_rows": 595,
+      "level1_rows": 646,
+      "coverage_pct": 91.9629057187017,
+      "level1_coverage_pct": 99.84544049459042
+    },
+    {
+      "part_id": "20131",
+      "split": "TRAIN",
+      "rows": 8148,
+      "covered_rows": 4546,
+      "level1_rows": 6460,
+      "coverage_pct": 55.79283259695631,
+      "level1_coverage_pct": 79.28325969563083
+    },
+    {
+      "part_id": "20132",
+      "split": "TRAIN",
+      "rows": 7878,
+      "covered_rows": 4621,
+      "level1_rows": 6110,
+      "coverage_pct": 58.65701954810866,
+      "level1_coverage_pct": 77.55775577557755
+    },
+    {
+      "part_id": "20133",
+      "split": "TRAIN",
+      "rows": 2240,
+      "covered_rows": 1585,
+      "level1_rows": 2179,
+      "coverage_pct": 70.75892857142857,
+      "level1_coverage_pct": 97.27678571428572
+    },
+    {
+      "part_id": "20134",
+      "split": "TRAIN",
+      "rows": 1288,
+      "covered_rows": 1227,
+      "level1_rows": 1287,
+      "coverage_pct": 95.2639751552795,
+      "level1_coverage_pct": 99.9223602484472
+    },
+    {
+      "part_id": "20141",
+      "split": "TRAIN",
+      "rows": 11258,
+      "covered_rows": 8479,
+      "level1_rows": 9927,
+      "coverage_pct": 75.31533131995026,
+      "level1_coverage_pct": 88.17729614496358
+    },
+    {
+      "part_id": "20142",
+      "split": "TRAIN",
+      "rows": 11256,
+      "covered_rows": 8401,
+      "level1_rows": 9906,
+      "coverage_pct": 74.63574982231698,
+      "level1_coverage_pct": 88.00639658848614
+    },
+    {
+      "part_id": "20143",
+      "split": "TRAIN",
+      "rows": 3580,
+      "covered_rows": 3232,
+      "level1_rows": 3486,
+      "coverage_pct": 90.27932960893855,
+      "level1_coverage_pct": 97.37430167597766
+    },
+    {
+      "part_id": "20144",
+      "split": "TRAIN",
+      "rows": 2639,
+      "covered_rows": 2586,
+      "level1_rows": 2639,
+      "coverage_pct": 97.99166350890489,
+      "level1_coverage_pct": 100.0
+    },
+    {
+      "part_id": "20151",
+      "split": "TRAIN",
+      "rows": 14183,
+      "covered_rows": 12361,
+      "level1_rows": 12976,
+      "coverage_pct": 87.15363463301135,
+      "level1_coverage_pct": 91.48981174645702
+    },
+    {
+      "part_id": "20152",
+      "split": "TRAIN",
+      "rows": 13542,
+      "covered_rows": 11759,
+      "level1_rows": 12572,
+      "coverage_pct": 86.83355486634176,
+      "level1_coverage_pct": 92.83709939447644
+    },
+    {
+      "part_id": "20153",
+      "split": "TRAIN",
+      "rows": 4113,
+      "covered_rows": 3881,
+      "level1_rows": 4075,
+      "coverage_pct": 94.35934840748845,
+      "level1_coverage_pct": 99.07610017019208
+    },
+    {
+      "part_id": "20154",
+      "split": "TRAIN",
+      "rows": 4391,
+      "covered_rows": 4339,
+      "level1_rows": 4391,
+      "coverage_pct": 98.81575950808472,
+      "level1_coverage_pct": 100.0
+    },
+    {
+      "part_id": "20161",
+      "split": "TRAIN",
+      "rows": 17598,
+      "covered_rows": 17099,
+      "level1_rows": 17449,
+      "coverage_pct": 97.16445050573928,
+      "level1_coverage_pct": 99.15331287646325
+    },
+    {
+      "part_id": "20162",
+      "split": "TRAIN",
+      "rows": 17169,
+      "covered_rows": 16669,
+      "level1_rows": 16989,
+      "coverage_pct": 97.08777447725552,
+      "level1_coverage_pct": 98.95159881181199
+    },
+    {
+      "part_id": "20163",
+      "split": "TRAIN",
+      "rows": 4996,
+      "covered_rows": 4923,
+      "level1_rows": 4996,
+      "coverage_pct": 98.53883106485188,
+      "level1_coverage_pct": 100.0
+    },
+    {
+      "part_id": "20164",
+      "split": "TRAIN",
+      "rows": 5166,
+      "covered_rows": 5114,
+      "level1_rows": 5128,
+      "coverage_pct": 98.99341850561363,
+      "level1_coverage_pct": 99.26442121564072
+    },
+    {
+      "part_id": "20171",
+      "split": "TRAIN",
+      "rows": 21605,
+      "covered_rows": 20998,
+      "level1_rows": 21221,
+      "coverage_pct": 97.19046517009951,
+      "level1_coverage_pct": 98.22263364961815
+    },
+    {
+      "part_id": "20172",
+      "split": "TRAIN",
+      "rows": 20722,
+      "covered_rows": 20360,
+      "level1_rows": 20566,
+      "coverage_pct": 98.25306437602548,
+      "level1_coverage_pct": 99.24717691342535
+    },
+    {
+      "part_id": "20173",
+      "split": "TRAIN",
+      "rows": 5601,
+      "covered_rows": 5537,
+      "level1_rows": 5598,
+      "coverage_pct": 98.85734690233888,
+      "level1_coverage_pct": 99.94643813604714
+    },
+    {
+      "part_id": "20181",
+      "split": "TRAIN",
+      "rows": 20913,
+      "covered_rows": 20648,
+      "level1_rows": 20901,
+      "coverage_pct": 98.7328455984316,
+      "level1_coverage_pct": 99.94261942332521
+    },
+    {
+      "part_id": "20182",
+      "split": "TRAIN",
+      "rows": 21217,
+      "covered_rows": 20957,
+      "level1_rows": 21119,
+      "coverage_pct": 98.77456756374605,
+      "level1_coverage_pct": 99.53810623556582
+    },
+    {
+      "part_id": "20183",
+      "split": "TRAIN",
+      "rows": 6841,
+      "covered_rows": 6752,
+      "level1_rows": 6804,
+      "coverage_pct": 98.69902061102178,
+      "level1_coverage_pct": 99.4591434000877
+    },
+    {
+      "part_id": "20191",
+      "split": "TRAIN",
+      "rows": 24676,
+      "covered_rows": 24342,
+      "level1_rows": 24607,
+      "coverage_pct": 98.6464580969363,
+      "level1_coverage_pct": 99.72037607391798
+    },
+    {
+      "part_id": "20192",
+      "split": "TRAIN",
+      "rows": 23479,
+      "covered_rows": 23263,
+      "level1_rows": 23435,
+      "coverage_pct": 99.08002896205119,
+      "level1_coverage_pct": 99.81259849226969
+    },
+    {
+      "part_id": "20193",
+      "split": "TRAIN",
+      "rows": 7908,
+      "covered_rows": 7867,
+      "level1_rows": 7908,
+      "coverage_pct": 99.48153768335862,
+      "level1_coverage_pct": 100.0
+    },
+    {
+      "part_id": "20201",
+      "split": "TRAIN",
+      "rows": 28426,
+      "covered_rows": 27920,
+      "level1_rows": 28380,
+      "coverage_pct": 98.21993949201435,
+      "level1_coverage_pct": 99.83817631745585
+    },
+    {
+      "part_id": "20202",
+      "split": "TRAIN",
+      "rows": 26679,
+      "covered_rows": 26287,
+      "level1_rows": 26624,
+      "coverage_pct": 98.53067956070318,
+      "level1_coverage_pct": 99.79384534652723
+    },
+    {
+      "part_id": "20203",
+      "split": "TRAIN",
+      "rows": 9093,
+      "covered_rows": 9001,
+      "level1_rows": 9091,
+      "coverage_pct": 98.9882327064775,
+      "level1_coverage_pct": 99.97800505883647
+    },
+    {
+      "part_id": "20211",
+      "split": "TRAIN",
+      "rows": 32311,
+      "covered_rows": 31694,
+      "level1_rows": 32283,
+      "coverage_pct": 98.09043359846493,
+      "level1_coverage_pct": 99.91334220544087
+    },
+    {
+      "part_id": "20212",
+      "split": "TRAIN",
+      "rows": 30843,
+      "covered_rows": 30365,
+      "level1_rows": 30823,
+      "coverage_pct": 98.45021560807963,
+      "level1_coverage_pct": 99.9351554647732
+    },
+    {
+      "part_id": "20213",
+      "split": "TRAIN",
+      "rows": 10111,
+      "covered_rows": 9972,
+      "level1_rows": 10110,
+      "coverage_pct": 98.62525961823756,
+      "level1_coverage_pct": 99.99010978142617
+    },
+    {
+      "part_id": "20221",
+      "split": "VALID",
+      "rows": 33920,
+      "covered_rows": 30307,
+      "level1_rows": 29950,
+      "coverage_pct": 89.34846698113208,
+      "level1_coverage_pct": 88.29599056603774
+    },
+    {
+      "part_id": "20222",
+      "split": "VALID",
+      "rows": 31976,
+      "covered_rows": 28094,
+      "level1_rows": 27661,
+      "coverage_pct": 87.85964473355016,
+      "level1_coverage_pct": 86.50550412809606
+    },
+    {
+      "part_id": "20223",
+      "split": "VALID",
+      "rows": 11045,
+      "covered_rows": 9930,
+      "level1_rows": 9735,
+      "coverage_pct": 89.90493435943866,
+      "level1_coverage_pct": 88.13942960615663
+    },
+    {
+      "part_id": "20231",
+      "split": "VALID",
+      "rows": 35546,
+      "covered_rows": 27679,
+      "level1_rows": 24517,
+      "coverage_pct": 77.86811455578687,
+      "level1_coverage_pct": 68.9725988859506
+    },
+    {
+      "part_id": "20232",
+      "split": "VALID",
+      "rows": 33082,
+      "covered_rows": 24955,
+      "level1_rows": 21731,
+      "coverage_pct": 75.43377063055438,
+      "level1_coverage_pct": 65.68828970437096
+    },
+    {
+      "part_id": "20233",
+      "split": "VALID",
+      "rows": 10528,
+      "covered_rows": 8250,
+      "level1_rows": 7264,
+      "coverage_pct": 78.36246200607903,
+      "level1_coverage_pct": 68.9969604863222
+    }
+  ],
+  "time_interpretation": {
+    "last_train_semester": "20213",
+    "first_valid_semester": "20221",
+    "boundary_coverage_change_pp": -9.276792637105487,
+    "largest_adjacent_valid_coverage_change_pp": -12.036819803651781,
+    "assessment": "The decline is not gradual: after the boundary drop it contains another cliff between VALID semesters 20223 and 20231 (-12.04 percentage points)."
+  },
+  "frozen_valid_scoring": {
+    "coverage_definition": "course_difficulty_missing == 0",
+    "gap_definition": "uncovered minus covered",
+    "threshold": 0.8,
+    "m1": {
+      "run": "models/runs/2026-07-26_1551__baseline-41-gpa-trend-control",
+      "model": "models/runs/2026-07-26_1551__baseline-41-gpa-trend-control/m1_pass_model.lgbm",
+      "groups": {
+        "covered": {
+          "n": 129215,
+          "fail_rate": 0.09543783616453198,
+          "roc_auc": 0.8168860990562435,
+          "fail_average_precision": 0.31962182408413575,
+          "brier": 0.07494509541916182,
+          "threshold": 0.8,
+          "fail_precision": 0.33231949219783125,
+          "fail_recall": 0.4075575737917613,
+          "fail_f1": 0.36611305361305363,
+          "confusion_matrix": {
+            "tn": 5026,
+            "fp": 7306,
+            "fn": 10098,
+            "tp": 106785
+          }
+        },
+        "uncovered": {
+          "n": 26882,
+          "fail_rate": 0.1419165240681497,
+          "roc_auc": 0.7645252609342856,
+          "fail_average_precision": 0.3313186004313586,
+          "brier": 0.10881794097818293,
+          "threshold": 0.8,
+          "fail_precision": 0.3262371615312792,
+          "fail_recall": 0.45792922673656616,
+          "fail_f1": 0.3810250817884406,
+          "confusion_matrix": {
+            "tn": 1747,
+            "fp": 2068,
+            "fn": 3608,
+            "tp": 19459
+          }
+        },
+        "gap_uncovered_minus_covered": {
+          "fail_rate": 0.04647868790361771,
+          "roc_auc": -0.05236083812195791,
+          "fail_average_precision": 0.011696776347222826,
+          "brier": 0.033872845559021106,
+          "fail_precision": -0.0060823306665520604,
+          "fail_recall": 0.05037165294480489,
+          "fail_f1": 0.014912028175386949
+        },
+        "confusion_matrix_count_gap_uncovered_minus_covered": {
+          "tn": -3279,
+          "fp": -5238,
+          "fn": -6490,
+          "tp": -87326
+        }
+      },
+      "overall": {
+        "n": 156097,
+        "fail_rate": 0.10344209049501271,
+        "roc_auc": 0.80918853274908,
+        "fail_average_precision": 0.3219831593412697,
+        "brier": 0.08077845438389275,
+        "threshold": 0.8,
+        "fail_precision": 0.33072903950388205,
+        "fail_recall": 0.4194587229825974,
+        "fail_f1": 0.3698465570905914,
+        "confusion_matrix": {
+          "tn": 6773,
+          "fp": 9374,
+          "fn": 13706,
+          "tp": 126244
+        }
+      }
+    },
+    "m2": {
+      "run": "models/runs/2026-07-27_1327__seed42-concurrent-43-drop-dead-missing-flag",
+      "model": "models/runs/2026-07-27_1327__seed42-concurrent-43-drop-dead-missing-flag/m2_grade_model.lgbm",
+      "groups": {
+        "covered": {
+          "n": 129215,
+          "mean_final_mark": 69.77274310258098,
+          "mae": 9.210392454617258,
+          "rmse": 12.410075393719616,
+          "r2": 0.3703353960046767
+        },
+        "uncovered": {
+          "n": 26882,
+          "mean_final_mark": 68.31950747712224,
+          "mae": 11.347177728793003,
+          "rmse": 14.84409571914699,
+          "r2": 0.2731605496250432
+        },
+        "gap_uncovered_minus_covered": {
+          "mean_final_mark": -1.4532356254587313,
+          "mae": 2.136785274175745,
+          "rmse": 2.4340203254273742,
+          "r2": -0.09717484637963347
+        }
+      },
+      "overall": {
+        "n": 156097,
+        "mean_final_mark": 69.52247640889959,
+        "mae": 9.578375578831,
+        "rmse": 12.862119935222113,
+        "r2": 0.35118186080742175
+      }
+    },
+    "saved_metric_reproduction": {
+      "m1": {
+        "auc_absolute_error": 0.0,
+        "fail_ap_absolute_error": 0.0,
+        "brier_absolute_error": 0.0
+      },
+      "m2": {
+        "mae_absolute_error_vs_saved_4dp": 0.0,
+        "rmse_absolute_error_vs_saved_4dp": 0.0,
+        "r2_absolute_error_vs_saved_4dp": 0.0
+      }
+    },
+    "frozen_models_only": true,
+    "retrained": false,
+    "retuned": false
+  },
+  "set_level_prevalence": {
+    "grouping_columns": [
+      "university_id",
+      "student_id",
+      "degree_id",
+      "part_id"
+    ],
+    "student_semesters": 34293,
+    "with_at_least_one_uncovered": 8076,
+    "share_with_at_least_one_uncovered_pct": 23.54999562592949,
+    "distribution": [
+      {
+        "uncovered_course_count": 0,
+        "student_semesters": 26217,
+        "pct_of_all_student_semesters": 76.45000437407052,
+        "pct_of_affected_student_semesters": 0.0
+      },
+      {
+        "uncovered_course_count": 1,
+        "student_semesters": 1397,
+        "pct_of_all_student_semesters": 4.073717668328813,
+        "pct_of_affected_student_semesters": 17.298167409608716
+      },
+      {
+        "uncovered_course_count": 2,
+        "student_semesters": 1684,
+        "pct_of_all_student_semesters": 4.910623159245326,
+        "pct_of_affected_student_semesters": 20.851906884596335
+      },
+      {
+        "uncovered_course_count": 3,
+        "student_semesters": 1160,
+        "pct_of_all_student_semesters": 3.3826145277461874,
+        "pct_of_affected_student_semesters": 14.363546310054481
+      },
+      {
+        "uncovered_course_count": 4,
+        "student_semesters": 1386,
+        "pct_of_all_student_semesters": 4.041641151255358,
+        "pct_of_affected_student_semesters": 17.161961367013372
+      },
+      {
+        "uncovered_course_count": 5,
+        "student_semesters": 1645,
+        "pct_of_all_student_semesters": 4.796897325984895,
+        "pct_of_affected_student_semesters": 20.368994551758295
+      },
+      {
+        "uncovered_course_count": 6,
+        "student_semesters": 760,
+        "pct_of_all_student_semesters": 2.2161957250750883,
+        "pct_of_affected_student_semesters": 9.41059930658742
+      },
+      {
+        "uncovered_course_count": 7,
+        "student_semesters": 44,
+        "pct_of_all_student_semesters": 0.1283060682938209,
+        "pct_of_affected_student_semesters": 0.5448241703813769
+      }
+    ],
+    "affected_with_majority_uncovered": 5932,
+    "share_of_affected_with_majority_uncovered_pct": 73.45220406141655
+  },
+  "cutoff_extension_counterfactual": [
+    {
+      "semesters_moved": 1,
+      "admitted_semesters": [
+        "20221"
+      ],
+      "current_uncovered_rows_absorbed_into_train": 3613,
+      "current_uncovered_rows_remaining_in_valid": 23269,
+      "newly_covered_rows_among_remaining": 8939,
+      "newly_covered_by_current_cause": {
+        "never_in_train": 8650,
+        "thin_history": 289,
+        "other": 0
+      },
+      "newly_covered_pct_of_original_uncovered": 33.25273417156461,
+      "newly_covered_pct_of_remaining_uncovered": 38.41591817439512,
+      "still_uncovered_rows_among_remaining": 14330,
+      "remaining_valid_rows": 122177
+    },
+    {
+      "semesters_moved": 2,
+      "admitted_semesters": [
+        "20221",
+        "20222"
+      ],
+      "current_uncovered_rows_absorbed_into_train": 7495,
+      "current_uncovered_rows_remaining_in_valid": 19387,
+      "newly_covered_rows_among_remaining": 9715,
+      "newly_covered_by_current_cause": {
+        "never_in_train": 9401,
+        "thin_history": 314,
+        "other": 0
+      },
+      "newly_covered_pct_of_original_uncovered": 36.13942414998884,
+      "newly_covered_pct_of_remaining_uncovered": 50.110899056068504,
+      "still_uncovered_rows_among_remaining": 9672,
+      "remaining_valid_rows": 90201
+    },
+    {
+      "semesters_moved": 3,
+      "admitted_semesters": [
+        "20221",
+        "20222",
+        "20223"
+      ],
+      "current_uncovered_rows_absorbed_into_train": 8610,
+      "current_uncovered_rows_remaining_in_valid": 18272,
+      "newly_covered_rows_among_remaining": 9384,
+      "newly_covered_by_current_cause": {
+        "never_in_train": 9068,
+        "thin_history": 316,
+        "other": 0
+      },
+      "newly_covered_pct_of_original_uncovered": 34.908116955583665,
+      "newly_covered_pct_of_remaining_uncovered": 51.35726795096323,
+      "still_uncovered_rows_among_remaining": 8888,
+      "remaining_valid_rows": 79156
+    }
+  ],
+  "cutoff_extension_verification": {
+    "baseline_flag_mismatches": 0,
+    "baseline_course_history_count_mismatches": 0,
+    "method": "For k=1..3, admit the first k VALID semesters to an in-memory TRAIN history, recompute the exact Level-1 degree-course and Level-2 course support counts that determine course_difficulty_missing, and apply them only to later VALID rows. Admitted rows leave VALID and are not counted as newly covered. The baseline projection exactly reproduces the persisted VALID flag and course_history_count.",
+    "never_in_train_rows": 25627,
+    "never_in_train_pct_of_current_uncovered": 95.33144855293504
+  },
+  "cutoff_cost_statement": "Every existing run, dataset hash, and models/runs/NOISE_BAND.md becomes non-comparable, and VALID shrinks.",
+  "part_b_identical_segments": {
+    "mask_definitions": {
+      "first_semester": "df[\"is_first_active_semester\"] == 1",
+      "cold_start_gpa": "df[\"no_previous_progress\"] == 1",
+      "source": "src/model_training.py:850 and src/model_training.py:853"
+    },
+    "independent_counts": {
+      "first_semester": 14732,
+      "cold_start_gpa": 14732
+    },
+    "mask_mismatch_rows": 0,
+    "columns_mismatch_rows": 0,
+    "upstream_assignments": [
+      "semester_df[\"no_previous_progress\"] = no_previous_progress.astype(int)",
+      "semester_df[\"is_first_active_semester\"] = no_previous_progress.astype(int)"
+    ],
+    "upstream_source": "src/feature_engineering.py:402-403",
+    "diagnosis": "The masks name different columns, but the current preprocessing assigns both columns from the identical no_previous_progress boolean series. Their equality is structural in this prepared data, not an accidental equality of two independently computed populations."
+  },
+  "candidate_remedies": {
+    "status": "unranked_options_only_no_recommendation",
+    "options": [
+      {
+        "option": "extend TRAIN backward",
+        "tradeoff": "may recover thin history without consuming VALID, but requires reliable older data and resets comparability"
+      },
+      {
+        "option": "move cutoff forward",
+        "tradeoff": "quantified here; shrinks VALID and resets all existing run/hash/noise-band comparability"
+      },
+      {
+        "option": "retain fallback and missing indicator",
+        "tradeoff": "preserves comparability but accepts observed prevalence and group performance"
+      },
+      {
+        "option": "add non-outcome catalog priors",
+        "tradeoff": "could address never-in-train courses but adds data contracts and requires separate validation"
+      }
+    ]
+  }
+}
