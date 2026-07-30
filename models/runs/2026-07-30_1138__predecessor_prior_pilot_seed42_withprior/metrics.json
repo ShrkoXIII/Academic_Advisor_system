@@ -1,0 +1,279 @@
+{
+  "m1_pass_classifier": {
+    "status": "PILOT \u2014 PENDING/UNREVIEWED MAPPINGS \u2014 NOT FOR PROMOTION",
+    "arm": "withprior",
+    "seed": 42,
+    "model": "m1_pass_classifier",
+    "model_artifact_reused_from": "2026-07-26_1551__baseline-41-gpa-trend-control",
+    "model_sha256": "aadee0a2bcedc9b65bf8479881895c976f64430b4e1cb1bdd1fee2b768f7b0f3",
+    "model_trained_on": "D:\\AI\\Real projects\\Academic_Advisor\\data\\model_data\\versions\\2026-07-26_batched_fixes__registration_roster_concurrent\\df_train_final.parquet",
+    "evaluated_on": "D:\\AI\\Real projects\\Academic_Advisor\\data\\model_data\\versions\\2026-07-30_predecessor_prior_pilot_PENDING_REVIEW\\df_valid_final.parquet",
+    "evaluated_on_sha256": "68d3a5d06e7d08624233222ecf4789b907ff3421651aaff9badbd05755115d86",
+    "feature_contract": "baseline_41",
+    "feature_count": 41,
+    "lightgbm_params": {
+      "min_child_samples": 50,
+      "num_leaves": 127,
+      "reg_lambda": 1.0
+    },
+    "reporting_threshold": 0.8,
+    "test_policy": "closed_not_read",
+    "segments": {
+      "overall_valid": {
+        "n": 156097,
+        "status": "ok",
+        "positive_rate": 0.8965579095049873,
+        "auc": 0.809008359093115,
+        "fail_avg_precision": 0.32350249972183776,
+        "brier": 0.08067829111371319,
+        "fail_precision": 0.32834761206039664,
+        "fail_recall": 0.4296154084350034,
+        "fail_f1": 0.37221655845897944,
+        "precision": 0.9317626139142031,
+        "recall": 0.8986066452304394,
+        "f1": 0.9148843299869053
+      },
+      "overall_uncovered_never_in_train_182": {
+        "n": 25627,
+        "status": "ok",
+        "positive_rate": 0.8583134974831232,
+        "auc": 0.7638496676669737,
+        "fail_avg_precision": 0.3374389014939835,
+        "brier": 0.10809043776348473,
+        "fail_precision": 0.317115551694179,
+        "fail_recall": 0.5026163591297164,
+        "fail_f1": 0.38887705092691244,
+        "precision": 0.9091183574879227,
+        "recall": 0.8213311511183852,
+        "f1": 0.8629979936944683
+      },
+      "affected": {
+        "n": 16269,
+        "status": "ok",
+        "positive_rate": 0.8473784498125269,
+        "auc": 0.7616904189749545,
+        "fail_avg_precision": 0.35421744784032616,
+        "brier": 0.1144778838923903,
+        "fail_precision": 0.3233475986685687,
+        "fail_recall": 0.5477245267821184,
+        "fail_f1": 0.4066377634923008,
+        "precision": 0.9069054132471193,
+        "recall": 0.7935586827216016,
+        "f1": 0.8464544082943247
+      },
+      "affected_scope_shared": {
+        "n": 6781,
+        "status": "ok",
+        "positive_rate": 0.8404365137885268,
+        "auc": 0.7850229261611223,
+        "fail_avg_precision": 0.38794053844580045,
+        "brier": 0.11569334497854944,
+        "fail_precision": 0.3435643564356436,
+        "fail_recall": 0.6414048059149723,
+        "fail_f1": 0.44745325596389424,
+        "precision": 0.9185045158580131,
+        "recall": 0.7673276013335673,
+        "f1": 0.8361376673040153
+      },
+      "affected_scope_specific": {
+        "n": 9488,
+        "status": "ok",
+        "positive_rate": 0.8523397976391232,
+        "auc": 0.743791619457458,
+        "fail_avg_precision": 0.32806761403939916,
+        "brier": 0.11360920328264691,
+        "fail_precision": 0.30466605672461117,
+        "fail_recall": 0.4753747323340471,
+        "fail_f1": 0.37134095344298856,
+        "precision": 0.899342645850452,
+        "recall": 0.8120440212687029,
+        "f1": 0.8534667619728378
+      },
+      "affected_credit_changed": {
+        "n": 8302,
+        "status": "ok",
+        "positive_rate": 0.827390990122862,
+        "auc": 0.7527675996520264,
+        "fail_avg_precision": 0.3705358093874579,
+        "brier": 0.12749273375804135,
+        "fail_precision": 0.35384615384615387,
+        "fail_recall": 0.5457083042568039,
+        "fail_f1": 0.42931649739225913,
+        "precision": 0.8931385423506237,
+        "recall": 0.7921094773620614,
+        "f1": 0.8395957102075458
+      },
+      "affected_credit_unchanged": {
+        "n": 7967,
+        "status": "ok",
+        "positive_rate": 0.8682063511986946,
+        "auc": 0.7700515637800589,
+        "fail_avg_precision": 0.34122574813199646,
+        "brier": 0.1009157797647846,
+        "fail_precision": 0.2895791583166333,
+        "fail_recall": 0.5504761904761905,
+        "fail_f1": 0.37951411687458964,
+        "precision": 0.9209512644448166,
+        "recall": 0.7949978314298106,
+        "f1": 0.8533519553072626
+      },
+      "covered_unexposed": {
+        "n": 121382,
+        "status": "ok",
+        "positive_rate": 0.9040220131485722,
+        "auc": 0.8207470760991,
+        "fail_avg_precision": 0.32609711538418046,
+        "brier": 0.0749119618621183,
+        "fail_precision": 0.3346354166666667,
+        "fail_recall": 0.41914163090128753,
+        "fail_f1": 0.372151512842009,
+        "precision": 0.9366326435059462,
+        "recall": 0.9115207961214595,
+        "f1": 0.9239061157757641
+      },
+      "untouched_uncovered_unexposed": {
+        "n": 1306,
+        "status": "ok",
+        "positive_rate": 0.9364471669218989,
+        "auc": 0.7823099429607228,
+        "fail_avg_precision": 0.18925772225671622,
+        "brier": 0.055859886154560105,
+        "fail_precision": 0.24,
+        "fail_recall": 0.21686746987951808,
+        "fail_f1": 0.22784810126582278,
+        "precision": 0.9471974004874086,
+        "recall": 0.9533932951757972,
+        "f1": 0.9502852485737572
+      },
+      "completely_unexposed": {
+        "n": 123943,
+        "status": "ok",
+        "positive_rate": 0.9038509637494655,
+        "auc": 0.8200617024014347,
+        "fail_avg_precision": 0.3254328785310918,
+        "brier": 0.07507880090760245,
+        "fail_precision": 0.33436138115990616,
+        "fail_recall": 0.4184778048166485,
+        "fail_f1": 0.37172033392963627,
+        "precision": 0.9364383461129251,
+        "recall": 0.9113777158873833,
+        "f1": 0.92373809114515
+      },
+      "indirect_propagation_only": {
+        "n": 15885,
+        "status": "ok",
+        "positive_rate": 0.8900220333648096,
+        "auc": 0.7550489925011801,
+        "fail_avg_precision": 0.2621252323517736,
+        "brier": 0.08975175914642865,
+        "fail_precision": 0.29411764705882354,
+        "fail_recall": 0.3377218088151116,
+        "fail_f1": 0.3144151345590194,
+        "precision": 0.9166366452914475,
+        "recall": 0.8998443910029708,
+        "f1": 0.9081629010957633
+      }
+    },
+    "train_auc_frozen": 0.8645724829519178,
+    "train_valid_auc_gap_overall": 0.05556412385880283
+  },
+  "m2_grade_regressor": {
+    "status": "PILOT \u2014 PENDING/UNREVIEWED MAPPINGS \u2014 NOT FOR PROMOTION",
+    "arm": "withprior",
+    "seed": 42,
+    "model": "m2_grade_regressor",
+    "model_artifact_reused_from": "2026-07-27_1327__seed42-concurrent-43-drop-dead-missing-flag",
+    "model_sha256": "2e919a35ad9626e69cd3f8c8384bb0ab26e8ecaee9d13bdd66e5300d859dad55",
+    "model_trained_on": "D:\\AI\\Real projects\\Academic_Advisor\\data\\model_data\\versions\\2026-07-26_batched_fixes__registration_roster_concurrent\\df_train_final.parquet",
+    "evaluated_on": "D:\\AI\\Real projects\\Academic_Advisor\\data\\model_data\\versions\\2026-07-30_predecessor_prior_pilot_PENDING_REVIEW\\df_valid_final.parquet",
+    "evaluated_on_sha256": "68d3a5d06e7d08624233222ecf4789b907ff3421651aaff9badbd05755115d86",
+    "feature_contract": "concurrent_43",
+    "feature_count": 43,
+    "lightgbm_params": {
+      "min_child_samples": 50,
+      "num_leaves": 127,
+      "reg_lambda": 1.0
+    },
+    "reporting_threshold": 0.8,
+    "test_policy": "closed_not_read",
+    "segments": {
+      "overall_valid": {
+        "n": 156097,
+        "status": "ok",
+        "mae": 9.59418288625657,
+        "rmse": 12.875204447398373,
+        "r2": 0.34986111632468586
+      },
+      "overall_uncovered_never_in_train_182": {
+        "n": 25627,
+        "status": "ok",
+        "mae": 11.435539495556004,
+        "rmse": 14.892992486946996,
+        "r2": 0.26700829973472273
+      },
+      "affected": {
+        "n": 16269,
+        "status": "ok",
+        "mae": 11.943497090753802,
+        "rmse": 15.429664143450905,
+        "r2": 0.2771312188299839
+      },
+      "affected_scope_shared": {
+        "n": 6781,
+        "status": "ok",
+        "mae": 12.689508092934568,
+        "rmse": 16.368422227290925,
+        "r2": 0.3081419975274391
+      },
+      "affected_scope_specific": {
+        "n": 9488,
+        "status": "ok",
+        "mae": 11.410328814427098,
+        "rmse": 14.72210800967505,
+        "r2": 0.23741758263923618
+      },
+      "affected_credit_changed": {
+        "n": 8302,
+        "status": "ok",
+        "mae": 12.944018804268048,
+        "rmse": 16.53072816550578,
+        "r2": 0.2546353214875062
+      },
+      "affected_credit_unchanged": {
+        "n": 7967,
+        "status": "ok",
+        "mae": 10.900904990139358,
+        "rmse": 14.191701593029856,
+        "r2": 0.3049866533628659
+      },
+      "covered_unexposed": {
+        "n": 121382,
+        "status": "ok",
+        "mae": 9.118351424870319,
+        "rmse": 12.288814840681368,
+        "r2": 0.38371294954311674
+      },
+      "untouched_uncovered_unexposed": {
+        "n": 1306,
+        "status": "ok",
+        "mae": 9.599245922436086,
+        "rmse": 12.93984253555775,
+        "r2": 0.2859422293652969
+      },
+      "completely_unexposed": {
+        "n": 123943,
+        "status": "ok",
+        "mae": 9.148298300563125,
+        "rmse": 12.330766165440348,
+        "r2": 0.38138668641218076
+      },
+      "indirect_propagation_only": {
+        "n": 15885,
+        "status": "ok",
+        "mae": 10.667099500146206,
+        "rmse": 14.099435914068774,
+        "r2": 0.20312488887599756
+      }
+    }
+  }
+}

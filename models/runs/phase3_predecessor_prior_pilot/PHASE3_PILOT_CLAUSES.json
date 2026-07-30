@@ -1,0 +1,735 @@
+{
+  "artifact": "phase3_predecessor_prior_pilot_clauses",
+  "status": "PILOT — PENDING/UNREVIEWED MAPPINGS — NOT FOR PROMOTION",
+  "created_at": "2026-07-30T11:49:33+03:00",
+  "verdict": "MIXED",
+  "verdict_meaning": "PILOT_SIGNAL_POSITIVE means only that the mechanism looks informative enough to justify spending human review on the pending mappings. It validates no link, approves no proposal row, and does not show the effect survives restriction to approved mappings.",
+  "clauses": {
+    "clause_0_sanity": {
+      "definition": "row-level prediction identity on the propagation-unexposed sanity segments, using the same model artifact for both arms; the aggregate NOISE_BAND check is reported in addition, not instead",
+      "tolerance": 1e-12,
+      "rows_exceeding_tolerance_total": 0,
+      "max_abs_prediction_difference_overall": 0.0,
+      "metric_drift": {
+        "covered_unexposed": {
+          "m1_auc": {
+            "per_seed": {
+              "42": 0.0,
+              "52": 0.0,
+              "62": 0.0,
+              "72": 0.0,
+              "82": 0.0
+            },
+            "mean": 0.0,
+            "median": 0.0,
+            "sd": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "m1_brier": {
+            "per_seed": {
+              "42": 0.0,
+              "52": 0.0,
+              "62": 0.0,
+              "72": 0.0,
+              "82": 0.0
+            },
+            "mean": 0.0,
+            "median": 0.0,
+            "sd": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "m2_mae": {
+            "per_seed": {
+              "42": 0.0,
+              "52": 0.0,
+              "62": 0.0,
+              "72": 0.0,
+              "82": 0.0
+            },
+            "mean": 0.0,
+            "median": 0.0,
+            "sd": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "m2_rmse": {
+            "per_seed": {
+              "42": 0.0,
+              "52": 0.0,
+              "62": 0.0,
+              "72": 0.0,
+              "82": 0.0
+            },
+            "mean": 0.0,
+            "median": 0.0,
+            "sd": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "untouched_uncovered_unexposed": {
+          "m1_auc": {
+            "per_seed": {
+              "42": 0.0,
+              "52": 0.0,
+              "62": 0.0,
+              "72": 0.0,
+              "82": 0.0
+            },
+            "mean": 0.0,
+            "median": 0.0,
+            "sd": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "m1_brier": {
+            "per_seed": {
+              "42": 0.0,
+              "52": 0.0,
+              "62": 0.0,
+              "72": 0.0,
+              "82": 0.0
+            },
+            "mean": 0.0,
+            "median": 0.0,
+            "sd": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "m2_mae": {
+            "per_seed": {
+              "42": 0.0,
+              "52": 0.0,
+              "62": 0.0,
+              "72": 0.0,
+              "82": 0.0
+            },
+            "mean": 0.0,
+            "median": 0.0,
+            "sd": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "m2_rmse": {
+            "per_seed": {
+              "42": 0.0,
+              "52": 0.0,
+              "62": 0.0,
+              "72": 0.0,
+              "82": 0.0
+            },
+            "mean": 0.0,
+            "median": 0.0,
+            "sd": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "completely_unexposed": {
+          "m1_auc": {
+            "per_seed": {
+              "42": 0.0,
+              "52": 0.0,
+              "62": 0.0,
+              "72": 0.0,
+              "82": 0.0
+            },
+            "mean": 0.0,
+            "median": 0.0,
+            "sd": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "m1_brier": {
+            "per_seed": {
+              "42": 0.0,
+              "52": 0.0,
+              "62": 0.0,
+              "72": 0.0,
+              "82": 0.0
+            },
+            "mean": 0.0,
+            "median": 0.0,
+            "sd": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "m2_mae": {
+            "per_seed": {
+              "42": 0.0,
+              "52": 0.0,
+              "62": 0.0,
+              "72": 0.0,
+              "82": 0.0
+            },
+            "mean": 0.0,
+            "median": 0.0,
+            "sd": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "m2_rmse": {
+            "per_seed": {
+              "42": 0.0,
+              "52": 0.0,
+              "62": 0.0,
+              "72": 0.0,
+              "82": 0.0
+            },
+            "mean": 0.0,
+            "median": 0.0,
+            "sd": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        }
+      },
+      "verdict": "PASS"
+    },
+    "clause_1_m1_auc_improves": {
+      "rule": "per seed, delta > +0.001042 (NOISE_BAND.md max)",
+      "threshold": 0.001042,
+      "per_seed_pass": {
+        "42": false,
+        "52": false,
+        "62": false,
+        "72": false,
+        "82": false
+      },
+      "seeds_passing": 0,
+      "verdict": "FAIL",
+      "deltas": {
+        "per_seed": {
+          "42": -0.0008138177266809876,
+          "52": -0.006014611822309668,
+          "62": -0.0003280540666521503,
+          "72": -0.003700442276302285,
+          "82": -0.008276781168963354
+        },
+        "mean": -0.0038267414121816888,
+        "median": -0.003700442276302285,
+        "sd": 0.003388366292057078,
+        "min": -0.008276781168963354,
+        "max": -0.0003280540666521503
+      }
+    },
+    "clause_2_m1_brier_not_worse": {
+      "rule": "5-seed mean delta must not worsen; a worsening is tolerated only if it stays inside the published band edge (+0.000119)",
+      "mean_delta": -0.0003726483099718847,
+      "mean_improves_or_flat": true,
+      "mean_within_noise_band": true,
+      "verdict": "PASS",
+      "deltas": {
+        "per_seed": {
+          "42": -0.000961041611974911,
+          "52": 0.000385783547527635,
+          "62": -0.0007205990666426659,
+          "72": -0.00029941727579628485,
+          "82": -0.0002679671429731967
+        },
+        "mean": -0.0003726483099718847,
+        "median": -0.00029941727579628485,
+        "sd": 0.0005144939796709482,
+        "min": -0.000961041611974911,
+        "max": 0.000385783547527635
+      }
+    },
+    "clause_3_m1_fail_recall_no_decline": {
+      "rule": "per seed, fail recall delta >= 0. NOISE_BAND.md publishes no band for this metric, so no numeric bound is invented; the sign is the rule.",
+      "per_seed_pass": {
+        "42": true,
+        "52": false,
+        "62": true,
+        "72": true,
+        "82": true
+      },
+      "seeds_passing": 4,
+      "verdict": "PASS",
+      "deltas": {
+        "per_seed": {
+          "42": 0.06604913411196128,
+          "52": -0.010873942811115533,
+          "62": 0.05396697543294404,
+          "72": 0.02899718082964159,
+          "82": 0.0732984293193717
+        },
+        "mean": 0.042287555376560614,
+        "median": 0.05396697543294404,
+        "sd": 0.034152140213699285,
+        "min": -0.010873942811115533,
+        "max": 0.0732984293193717
+      },
+      "note": "threshold-dependent safety guard at the locked 0.80 reporting cut"
+    },
+    "clause_4_m1_fail_f1_no_decline": {
+      "rule": "per seed, fail F1 delta >= 0. NOISE_BAND.md publishes no band for this metric, so no numeric bound is invented; the sign is the rule.",
+      "per_seed_pass": {
+        "42": true,
+        "52": true,
+        "62": true,
+        "72": false,
+        "82": true
+      },
+      "seeds_passing": 4,
+      "verdict": "PASS",
+      "deltas": {
+        "per_seed": {
+          "42": 0.010676829872039273,
+          "52": 0.004043945509536129,
+          "62": 0.015039448339815575,
+          "72": -0.005716161998095826,
+          "82": 0.011992834960932397
+        },
+        "mean": 0.00720737933684551,
+        "median": 0.010676829872039273,
+        "sd": 0.0082659574706934,
+        "min": -0.005716161998095826,
+        "max": 0.015039448339815575
+      },
+      "note": "threshold-dependent safety guard at the locked 0.80 reporting cut"
+    },
+    "clause_5_m2_mae_improves": {
+      "rule": "per seed, delta < -0.050423 (NOISE_BAND.md min)",
+      "threshold": -0.050423,
+      "per_seed_pass": {
+        "42": false,
+        "52": false,
+        "62": false,
+        "72": false,
+        "82": false
+      },
+      "seeds_passing": 0,
+      "verdict": "FAIL",
+      "deltas": {
+        "per_seed": {
+          "42": 0.15021459936997417,
+          "52": 0.18738810071668865,
+          "62": 0.2557455198838845,
+          "72": 0.16166140142050267,
+          "82": 0.1355595814771089
+        },
+        "mean": 0.17811384057363178,
+        "median": 0.16166140142050267,
+        "sd": 0.047361917493943105,
+        "min": 0.1355595814771089,
+        "max": 0.2557455198838845
+      }
+    },
+    "clause_6_m2_rmse_not_worse": {
+      "rule": "5-seed mean delta must not worsen; a worsening is tolerated only if it stays inside the published band edge (+0.078050)",
+      "mean_delta": 0.14116611695296938,
+      "mean_improves_or_flat": false,
+      "mean_within_noise_band": false,
+      "verdict": "FAIL",
+      "deltas": {
+        "per_seed": {
+          "42": 0.10803793540464746,
+          "52": 0.15648268745176708,
+          "62": 0.25628498238469,
+          "72": 0.0838656876324535,
+          "82": 0.10115929189128892
+        },
+        "mean": 0.14116611695296938,
+        "median": 0.10803793540464746,
+        "sd": 0.06976444684554797,
+        "min": 0.0838656876324535,
+        "max": 0.25628498238469
+      }
+    }
+  },
+  "segment_sizes": {
+    "overall_valid": 156097,
+    "overall_uncovered_never_in_train_182": 25627,
+    "affected": 16269,
+    "affected_scope_shared": 6781,
+    "affected_scope_specific": 9488,
+    "affected_credit_changed": 8302,
+    "affected_credit_unchanged": 7967,
+    "covered_unexposed": 121382,
+    "untouched_uncovered_unexposed": 1306,
+    "completely_unexposed": 123943,
+    "indirect_propagation_only": 15885
+  },
+  "noise_band_source": "models/runs/NOISE_BAND.md",
+  "noise_band_used": {
+    "m1_auc": {
+      "min": -0.000382,
+      "max": 0.001042,
+      "sd": 0.000608,
+      "better": "higher"
+    },
+    "m1_fail_avg_precision": {
+      "min": -0.002045,
+      "max": 0.001544,
+      "sd": 0.001629,
+      "better": "higher"
+    },
+    "m1_brier": {
+      "min": -0.000108,
+      "max": 0.000119,
+      "sd": 9.27e-05,
+      "better": "lower"
+    },
+    "m1_train_valid_auc_gap": {
+      "min": -0.005873,
+      "max": 0.02672,
+      "sd": 0.012487,
+      "better": "lower"
+    },
+    "m2_mae": {
+      "min": -0.050423,
+      "max": 0.04652,
+      "sd": 0.037233,
+      "better": "lower"
+    },
+    "m2_rmse": {
+      "min": -0.067477,
+      "max": 0.07805,
+      "sd": 0.05509,
+      "better": "lower"
+    },
+    "m2_r2": {
+      "min": -0.007865,
+      "max": 0.006807,
+      "sd": 0.005553,
+      "better": "higher"
+    }
+  },
+  "worked_examples": [
+    {
+      "course_id": "1175.111",
+      "valid_rows": 917,
+      "relationship": "successor",
+      "predecessors": [
+        {
+          "old_course_id": "502.111",
+          "weight": 1.0,
+          "train_support": 1524,
+          "link_pass_rate": 0.7841207349081365,
+          "link_avg_mark": 64.75262467191601
+        }
+      ],
+      "predecessors_used_in_blend": [
+        "502.111"
+      ],
+      "source_levels_used": [
+        2
+      ],
+      "degree_prefixes": 10,
+      "before": {
+        "course_pass_rate_historical": [
+          0.838550021
+        ],
+        "course_avg_mark_historical": [
+          65.0622969225
+        ],
+        "difficulty_fallback_level": [
+          5
+        ]
+      },
+      "after": {
+        "course_pass_rate_historical": [
+          0.7848615944
+        ],
+        "course_avg_mark_historical": [
+          64.763369094
+        ],
+        "difficulty_fallback_level": [
+          5
+        ],
+        "course_difficulty_missing": [
+          1
+        ],
+        "course_history_count": [
+          0
+        ],
+        "course_history_count_predecessor": [
+          1524
+        ],
+        "course_cross_plan_prior_weight": [
+          1.0
+        ],
+        "course_difficulty_source_level": [
+          "predecessor_prior"
+        ],
+        "course_identity_confidence": [
+          "in_lineage"
+        ]
+      }
+    },
+    {
+      "course_id": "1422.111",
+      "valid_rows": 686,
+      "relationship": "consolidated_into",
+      "predecessors": [
+        {
+          "old_course_id": "967.111",
+          "weight": 0.9502002258958825,
+          "train_support": 9254,
+          "link_pass_rate": 0.9153879403501188,
+          "link_avg_mark": 70.33077588070024
+        },
+        {
+          "old_course_id": "150.111",
+          "weight": 0.019714549748434132,
+          "train_support": 192,
+          "link_pass_rate": 0.875,
+          "link_avg_mark": 67.84895833333333
+        },
+        {
+          "old_course_id": "398.111",
+          "weight": 0.015299312044357737,
+          "train_support": 149,
+          "link_pass_rate": 0.8590604026845637,
+          "link_avg_mark": 64.48322147651007
+        },
+        {
+          "old_course_id": "173.111",
+          "weight": 0.009138515247972072,
+          "train_support": 89,
+          "link_pass_rate": 0.6966292134831461,
+          "link_avg_mark": 55.640449438202246
+        },
+        {
+          "old_course_id": "584.111",
+          "weight": 0.0056473970633535275,
+          "train_support": 55,
+          "link_pass_rate": 0.9090909090909091,
+          "link_avg_mark": 70.98181818181818
+        }
+      ],
+      "predecessors_used_in_blend": [
+        "150.111",
+        "173.111",
+        "398.111",
+        "584.111",
+        "967.111"
+      ],
+      "source_levels_used": [
+        2
+      ],
+      "degree_prefixes": 15,
+      "before": {
+        "course_pass_rate_historical": [
+          0.7806184122,
+          0.7929365337,
+          0.888624773,
+          0.92124958,
+          0.927292871,
+          0.9734075842
+        ],
+        "course_avg_mark_historical": [
+          60.0189621155,
+          62.550837488,
+          68.8895748075,
+          70.3357186127,
+          70.6627133613,
+          78.8603826355
+        ],
+        "difficulty_fallback_level": [
+          4,
+          5
+        ]
+      },
+      "after": {
+        "course_pass_rate_historical": [
+          0.9115892191
+        ],
+        "course_avg_mark_historical": [
+          70.05839423
+        ],
+        "difficulty_fallback_level": [
+          4,
+          5
+        ],
+        "course_difficulty_missing": [
+          1
+        ],
+        "course_history_count": [
+          0
+        ],
+        "course_history_count_predecessor": [
+          9739
+        ],
+        "course_cross_plan_prior_weight": [
+          0.9502002259
+        ],
+        "course_difficulty_source_level": [
+          "predecessor_prior"
+        ],
+        "course_identity_confidence": [
+          "in_lineage"
+        ]
+      }
+    },
+    {
+      "course_id": "1419.111",
+      "valid_rows": 2,
+      "relationship": "successor",
+      "predecessors": [
+        {
+          "old_course_id": "49.111",
+          "weight": 1.0,
+          "train_support": 48,
+          "link_pass_rate": 0.9375,
+          "link_avg_mark": 78.27083333333333
+        }
+      ],
+      "predecessors_used_in_blend": [
+        "49.111"
+      ],
+      "source_levels_used": [
+        2
+      ],
+      "degree_prefixes": 1,
+      "before": {
+        "course_pass_rate_historical": [
+          0.8267008658
+        ],
+        "course_avg_mark_historical": [
+          64.1759248328
+        ],
+        "difficulty_fallback_level": [
+          5
+        ]
+      },
+      "after": {
+        "course_pass_rate_historical": [
+          0.9092103193
+        ],
+        "course_avg_mark_historical": [
+          74.5388511936
+        ],
+        "difficulty_fallback_level": [
+          5
+        ],
+        "course_difficulty_missing": [
+          1
+        ],
+        "course_history_count": [
+          0
+        ],
+        "course_history_count_predecessor": [
+          48
+        ],
+        "course_cross_plan_prior_weight": [
+          1.0
+        ],
+        "course_difficulty_source_level": [
+          "predecessor_prior"
+        ],
+        "course_identity_confidence": [
+          "in_lineage"
+        ]
+      }
+    },
+    {
+      "course_id": "1093.111",
+      "row_position": 0,
+      "segment": "covered_unexposed (Clause-0 sanity)",
+      "before": {
+        "course_id": "1093.111",
+        "degree_course_key": "2.111__1093.111",
+        "course_pass_rate_historical": 0.9499318537859929,
+        "course_avg_mark_historical": 66.19314192659223,
+        "course_difficulty_missing": 0,
+        "course_history_count": 223,
+        "difficulty_fallback_level": 1
+      },
+      "after": {
+        "course_id": "1093.111",
+        "degree_course_key": "2.111__1093.111",
+        "course_pass_rate_historical": 0.9499318537859929,
+        "course_avg_mark_historical": 66.19314192659223,
+        "course_difficulty_missing": 0,
+        "course_history_count": 223,
+        "difficulty_fallback_level": 1
+      },
+      "audit": {
+        "course_cross_plan_prior_used": false,
+        "course_difficulty_source_level": "1",
+        "course_history_count_predecessor": 0
+      }
+    }
+  ],
+  "prior_accuracy_diagnostic": {
+    "affected": {
+      "n": 16269,
+      "actual_pass_rate": 0.8473784498125269,
+      "actual_mean_mark": 68.72475259696355,
+      "prior_pass_rate_frozen": 0.8485323599898639,
+      "prior_pass_rate_pilot": 0.8163925302087028,
+      "prior_mean_mark_frozen": 66.25310713661601,
+      "prior_mean_mark_pilot": 65.37066167846885,
+      "mae_prior_mark_vs_actual_frozen": 14.249210835058955,
+      "mae_prior_mark_vs_actual_pilot": 14.746390034581744,
+      "mae_prior_pass_vs_actual_frozen": 0.25130785681075896,
+      "mae_prior_pass_vs_actual_pilot": 0.2712667249676286
+    },
+    "affected_credit_changed": {
+      "n": 8302,
+      "actual_pass_rate": 0.827390990122862,
+      "actual_mean_mark": 68.14213442543965,
+      "prior_pass_rate_frozen": 0.8535780851471618,
+      "prior_pass_rate_pilot": 0.8120462586233711,
+      "prior_mean_mark_frozen": 66.65270070769229,
+      "prior_mean_mark_pilot": 65.44988232980972,
+      "mae_prior_mark_vs_actual_frozen": 14.794783335161826,
+      "mae_prior_mark_vs_actual_pilot": 15.739231614391482,
+      "mae_prior_pass_vs_actual_frozen": 0.2592213375758503,
+      "mae_prior_pass_vs_actual_pilot": 0.2913715181506391
+    },
+    "affected_credit_unchanged": {
+      "n": 7967,
+      "actual_pass_rate": 0.8682063511986946,
+      "actual_mean_mark": 69.33186895945776,
+      "prior_pass_rate_frozen": 0.8432744699113041,
+      "prior_pass_rate_pilot": 0.8209215557768493,
+      "prior_mean_mark_frozen": 65.83671127530367,
+      "prior_mean_mark_pilot": 65.28810992154256,
+      "mae_prior_mark_vs_actual_frozen": 13.680697857042885,
+      "mae_prior_mark_vs_actual_pilot": 13.711801005388768,
+      "mae_prior_pass_vs_actual_frozen": 0.243061626446533,
+      "mae_prior_pass_vs_actual_pilot": 0.25031655639660394
+    },
+    "affected_scope_shared": {
+      "n": 6781,
+      "actual_pass_rate": 0.8404365137885268,
+      "actual_mean_mark": 70.47205426928181,
+      "prior_pass_rate_frozen": 0.8633103292756918,
+      "prior_pass_rate_pilot": 0.8077481012348033,
+      "prior_mean_mark_frozen": 67.92745366702857,
+      "prior_mean_mark_pilot": 65.03231312641962,
+      "mae_prior_mark_vs_actual_frozen": 14.855843281836304,
+      "mae_prior_mark_vs_actual_pilot": 16.277010543386137,
+      "mae_prior_pass_vs_actual_frozen": 0.23833433835511872,
+      "mae_prior_pass_vs_actual_pilot": 0.2810852995000079
+    },
+    "affected_scope_specific": {
+      "n": 9488,
+      "actual_pass_rate": 0.8523397976391232,
+      "actual_mean_mark": 67.47596964586846,
+      "prior_pass_rate_frozen": 0.8379706599764574,
+      "prior_pass_rate_pilot": 0.82257063654007,
+      "prior_mean_mark_frozen": 65.05646465951573,
+      "prior_mean_mark_pilot": 65.61247676399225,
+      "mae_prior_mark_vs_actual_frozen": 13.81565533109635,
+      "mae_prior_mark_vs_actual_pilot": 13.652467430218065,
+      "mae_prior_pass_vs_actual_frozen": 0.26057992981325645,
+      "mae_prior_pass_vs_actual_pilot": 0.2642494659136589
+    }
+  },
+  "manifest_row_sets": {
+    "valid_rows_total": 156097,
+    "directly_eligible_rows": 16269,
+    "directly_eligible_courses": 80,
+    "propagation_exposed_only_rows": 15885,
+    "completely_unexposed_rows": 123943,
+    "never_in_train_182_course_rows": 25627,
+    "covered_rows": 129215,
+    "covered_unexposed_rows": 121382,
+    "untouched_uncovered_unexposed_rows": 1306
+  }
+}

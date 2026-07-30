@@ -183,8 +183,10 @@ def build_segments(link: pd.DataFrame, segments: pd.DataFrame) -> dict[str, np.n
     untouched = segments["untouched_uncovered"].to_numpy(dtype=bool)
     never_in_train = segments["never_in_train_182"].to_numpy(dtype=bool)
 
-    row_scope = course.map(scope).to_numpy()
+    row_scope = course.map(scope).astype(object).fillna("").to_numpy()
     row_credit_changed = course.map(credit_changed).fillna(False).to_numpy(dtype=bool)
+    if int((direct & (row_scope == "")).sum()):
+        stop("a directly eligible row has no new_course_scope in the link table")
 
     return {
         # 1. headline, diluted
@@ -252,7 +254,10 @@ def verify_source_run(run_dir: Path, seed: int, contract_name: str, model_file: 
         "contract": recorded["contract_name"],
         "seed": seed,
         "lightgbm_params": {k: params[k] for k in sorted(LOCKED_PARAMS)},
-        "diploma_gpa_fill_value": recorded["diploma_gpa_handling"]["fill_value"],
+        # The earliest run predates this provenance field; when it is absent the
+        # fill is still verified indirectly, because a different fill could not
+        # reproduce the run's own recorded frozen-VALID metrics.
+        "diploma_gpa_fill_value": (recorded.get("diploma_gpa_handling") or {}).get("fill_value"),
         "git_working_tree_clean": recorded["git"]["working_tree_clean"],
         "git_commit": recorded["git"]["commit"],
         "recorded_train_sha256_matches_disk": True,
