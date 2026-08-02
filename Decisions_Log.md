@@ -792,3 +792,181 @@ artifacts are evidence for academic/university review only. No dataset,
 parquet, source logic, model, feature, default, inference/recommendation code,
 or promotion marker changed. Model freeze remains blocked pending
 human/university review.
+
+---
+
+## 2026-08-02 — Governance declarations for `2026-08_temporal_rebuild_v1`
+
+Four declarations, frozen before any Phase 1 artifact exists and before any
+measurement is run. They are recorded here by the project owner. No agent
+authored, edited, or appended them; Phase 1 reads this entry and may not
+write to this file.
+
+---
+
+### Declaration 1 — deliberate supersession of the TEST partition, single-split design
+
+`docs/pipeline_rules.md` currently fixes the evaluation split as:
+
+```text
+TRAIN  = through 20213
+VALID  = 2022 - 2023
+TEST   = 2024 + 2025 S1
+```
+
+Under `2026-08_temporal_rebuild_v1` the design is a **single split family**,
+not two (there is no separate "Development" vs "FINAL_EVALUATION" pair):
+
+```text
+TRAIN = through 20233
+VALID = 2024 (20241 + 20242)
+TEST  = 2025 (20251 + 20252)
+```
+
+Academic year 2024 therefore moves from TEST to VALID, and 2025 becomes the
+sole TEST partition. This consumes the existing TEST partition in full. It is
+a deliberate, one-way decision, not an accident.
+
+**`20252` is not available yet.** The owner has decided to build the complete
+split now rather than wait, on the following explicit terms:
+
+1. `TRAIN` and `VALID` are final for this rebuild version and will not be
+   rebuilt when `20252` arrives.
+2. `TEST` is built now from currently available data (`20251` only) and is
+   **PROVISIONAL**. It must be tagged `test_provisional_20251_only = true` in
+   every output manifest and report that touches it.
+3. When `20252` becomes available, **only** the TEST artifact is rebuilt, by
+   rerunning the same split/feature scripts with an unchanged TRAIN/VALID
+   boundary. TRAIN and VALID are not regenerated and their hashes must be
+   unchanged before and after that rerun.
+4. No model selection, threshold-setting, or reporting decision may be
+   finalized against the provisional TEST. Any number produced against it
+   before `20252` lands must be labeled `provisional, 20251-only, subject to
+   revision`.
+5. This is a **logged partial exposure**, tracked the same way the earlier
+   identity-column TEST exposure (2026-07-28) was tracked: minimal, declared,
+   and not treated as a precedent for reading TEST freely.
+
+Consequences, accepted and recorded:
+
+1. The previous TEST holdout ceases to exist as a holdout.
+2. Between this rebuild and the future `20252` data pull, the project has **no
+   untouched holdout of any kind** — VALID is a selection split and TEST is
+   provisional.
+3. No metric computed on VALID may be described, reported, or logged as a
+   held-out test result.
+4. No metric computed on the provisional TEST may be described as final.
+5. `CLAUDE.md §5` (`test_policy = closed_not_read`) and the split definition in
+   `docs/pipeline_rules.md` are superseded **only** for
+   `2026-08_temporal_rebuild_v1`. Both remain in force for every other
+   partition, for every existing run, and for the frozen dataset version
+   `2026-07-26_batched_fixes__registration_roster_concurrent`.
+6. The frozen dataset version is not modified and its
+   `df_test_final.parquet` is not read by this rebuild.
+
+**This declaration also closes the open item** left by the 2026-07-28 entry
+"Course-identity reconciliation with extended history through 2025 S2", which
+recorded a residual TEST-window exposure (identity columns only, no outcome
+columns) and left acceptance to the human. That exposure is accepted and is
+superseded by this declaration. It is not re-litigated.
+
+---
+
+### Declaration 2 — Academic Lineage Materiality Gate (frozen threshold)
+
+```text
+## Decision: Academic Lineage Materiality Gate
+
+Decision date: 2026-08-02
+Decision status: Frozen before Phase 1 measurement
+Applies to: 2026-08_temporal_rebuild_v1
+
+affected_rows =
+Development VALID rows whose course-difficulty lookup is missing specifically
+because the required identity was never observed in Development TRAIN.
+
+eligible_evaluation_rows =
+all eligible Development VALID rows included in the gate diagnostic.
+
+affected_share = affected_rows / eligible_evaluation_rows
+
+materiality_threshold = max(1000, ceil(0.01 * eligible_evaluation_rows))
+
+Proceed with Phase 2 only when affected_rows >= materiality_threshold.
+Otherwise phase_2_decision = DEFERRED_NO_MATERIAL_NEED.
+
+Known limitation, accepted in advance:
+affected_rows is an UPPER BOUND on what lineage can repair. A genuinely new
+course has no predecessor and cannot be fixed by any mapping. Under the current
+split the diagnostic upper bound was 13,686 of 25,627 never-in-TRAIN rows, so
+roughly half of the affected population was never repairable. A PROCEED result
+therefore authorises candidate generation and human review ONLY. It does not
+authorise application of mappings and does not predict a metric gain.
+```
+
+Context, not part of the decision rule: the freeze gate
+`MODEL_FREEZE_BLOCKED_BY_COURSE_IDENTITY` recorded on 2026-07-28 exists because
+courses with no TRAIN history required registrar review. If this gate returns
+`DEFERRED_NO_MATERIAL_NEED`, the condition that raised that freeze gate has
+been removed by the split rather than resolved by review, and the freeze gate
+must be revisited in a separate logged decision. It is not automatically
+cleared by this entry.
+
+---
+
+### Declaration 3 — two active model contracts
+
+Per the 2026-07-27 correction entry, both contracts below are decided, not
+pending:
+
+```text
+M1 (pass/fail classifier) : baseline_41
+M2 (grade regressor)      : concurrent_43
+concurrent_44             : ARCHIVED - not selectable for any new run
+```
+
+`concurrent_peer_difficulty_missing` is a dead feature, excluded from
+`concurrent_43` by decision. It must not reappear in any rebuilt dataset.
+
+The two contracts differ. The rebuild therefore produces **one** candidate
+dataset per split containing the union of both contracts, plus a per-column
+manifest stating which contract(s) consume each column. The rebuild does not
+choose between the contracts, does not merge them, and does not add a column
+belonging to neither.
+
+`DEFAULT_FEATURE_CONTRACT` in `src/model_training.py` remains stale at
+`concurrent_44`. Repointing it is wiring and stays deferred; it is out of scope
+for this rebuild.
+
+---
+
+### Declaration 4 — carried forward, unverified on this split
+
+Every model-selection decision currently in force was established on the old
+VALID partition (2022-2023), which does not exist under this design. Each is
+carried forward as an input to contract reproduction, not as evidence about the
+new split. Status for all of the following:
+
+```text
+carried_forward_unverified_on_this_split
+```
+
+| Decision | Origin entry |
+|---|---|
+| M1 contract `baseline_41` | 2026-07-27 multi-seed baseline_41 vs concurrent_44 |
+| M2 contract `concurrent_43` | 2026-07-27 concurrent_43 definition + correction |
+| `KEEP_DEFAULT_127_FOR_M1` (R2 rejected) | 2026-07-28 R2 covered/uncovered five-seed |
+| `models/runs/NOISE_BAND.md` acceptance band | 2026-07-27 multi-seed paired deltas |
+| Reporting threshold 0.80 | provisional, pre-existing |
+
+None of these may be cited as verified evidence on the rebuilt split until it
+is re-established there. `NOISE_BAND.md` in particular is invalid as a
+yardstick for the new split: the band is a function of VALID size and
+composition, both of which change. A new band must be measured before any delta
+on the new split is interpreted.
+
+---
+
+**Nothing else is decided by this entry.** No dataset was built, no model
+trained, no contract promoted, no wiring changed. Phase 1 of
+`2026-08_temporal_rebuild_v1` may proceed once this entry is committed.
