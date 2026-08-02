@@ -72,7 +72,7 @@ EXTENDED_COLUMNS = ["course_id", "part_id", "degree_id", "student_id"]
 
 PRIOR_MD = ROOT / "models" / "runs" / "COURSE_IDENTITY_INVESTIGATION.md"
 PRIOR_JSON = ROOT / "models" / "runs" / "COURSE_IDENTITY_INVESTIGATION.json"
-PRIOR_CSV = ROOT / "models" / "runs" / "course_identity_candidates.csv"
+PRIOR_CSV = ROOT / "models" / "runs" / "COURSE_IDENTITY_CANDIDATES.csv"
 
 OUT_MD = ROOT / "models" / "runs" / "COURSE_IDENTITY_RECONCILIATION_2025.md"
 OUT_JSON = ROOT / "models" / "runs" / "COURSE_IDENTITY_RECONCILIATION_2025.json"
@@ -799,6 +799,18 @@ def main() -> int:
         lines = handle.read().splitlines()
     reader = csv.DictReader(lines[1:])
     csv_rows = list(reader)
+    # Guard against reading the wrong file at PRIOR_CSV: a plain row-count check
+    # would not catch it here, since course_identity_diagnostic.py's output
+    # (COURSE_IDENTITY_CANDIDATES.csv, diagnostic schema) happens to also have
+    # 182 rows. review_bucket/candidate_1_course_id only exist in the
+    # investigation-schema CSV this script actually needs.
+    required_columns = {"new_course_id", "review_bucket", "candidate_1_course_id"}
+    missing_columns = required_columns - set(reader.fieldnames or [])
+    if missing_columns:
+        raise SystemExit(
+            f"STOP: {PRIOR_CSV} is missing expected column(s) {sorted(missing_columns)}. "
+            f"Got columns: {reader.fieldnames}. Wrong file read at PRIOR_CSV?"
+        )
     bucket_mismatches = 0
     candidate_mismatches = 0
     for row in csv_rows:
