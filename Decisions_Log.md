@@ -792,3 +792,93 @@ artifacts are evidence for academic/university review only. No dataset,
 parquet, source logic, model, feature, default, inference/recommendation code,
 or promotion marker changed. Model freeze remains blocked pending
 human/university review.
+---
+## 2026-08-02 — Amendment to the governance declarations for `2026-08_temporal_rebuild_v1`
+
+This entry amends, and does not replace, the entry
+"Governance declarations for `2026-08_temporal_rebuild_v1`" committed as
+`df03477cc6fca018d507857b589dcc3d78d1dd70` at 2026-08-02T11:42:51+03:00.
+The log is append-only, so the earlier entry stands as written and this entry
+corrects the two items below. Everything in that entry not corrected here
+remains in force exactly as committed.
+
+---
+
+### Amendment 1 — corrected provenance statement
+
+The committed entry states, at its opening:
+
+> They are recorded here by the project owner. No agent authored, edited, or
+> appended them.
+
+That sentence is **not accurate** and is corrected here.
+
+What actually happened: the wording of the four declarations was drafted by an
+AI assistant in an interactive planning conversation, at the project owner's
+request. The owner reviewed the draft, decided its content, and committed it.
+The claim that no agent was involved in the wording is therefore false as
+written.
+
+What is unchanged, and is the guarantee that actually matters:
+
+1. The **content** of all four declarations was decided by the project owner.
+   Drafting assistance is the established working pattern for this project:
+   analytical judgment is settled in conversation, then handed to the
+   implementation agent as a scoped task.
+2. The **implementation agent** that executes the rebuild
+   (`2026-08_temporal_rebuild_v1`, Phases 0-4) had no part in producing this
+   wording, has no authority to author, draft, propose, or reword any entry in
+   this log, and may only read and quote it verbatim. This restriction is
+   permanent for the duration of the rebuild.
+3. The **materiality threshold was frozen before any measurement existed**. It
+   was committed in `df03477c` at 2026-08-02T11:42:51+03:00, and no Phase 1
+   artifact, baseline manifest, or Gate 1.5 result existed at that time. This
+   ordering is verifiable from Git history and is the property the gate depends
+   on. It is unaffected by who drafted the sentences.
+
+No governance conclusion changes as a result of this correction. It is recorded
+because a governance log that asserts something untrue about its own origin is
+worse than one that states the origin plainly.
+
+---
+
+### Amendment 2 — retired terminology inside the lineage-gate definition
+
+The lineage materiality gate definition in the committed entry uses the labels
+`Development VALID` and `Development TRAIN`. Those labels are retired: this
+rebuild has one split family, not a Development/FINAL pair.
+
+For the avoidance of doubt, in that gate definition and everywhere else in the
+committed entry:
+
+```text
+"Development TRAIN"  means  TRAIN  = all eligible semesters through 20233
+"Development VALID"  means  VALID  = academic year 2024 (20241 + 20242)
+```
+
+and the third partition, unchanged from the committed entry, is:
+
+```text
+TEST = academic year 2025 (20251 + 20252), built now from 20251 only and
+       labeled test_provisional_20251_only = true
+```
+
+The lineage materiality gate is evaluated **once**, on VALID (academic year
+2024). There is no separate later gate for TEST. `20251` is never a training
+row under this rebuild version.
+
+The gate's frozen threshold, its definitions of `affected_rows` and
+`eligible_evaluation_rows`, its upper-bound limitation, and its
+`PROCEED` / `DEFERRED_NO_MATERIAL_NEED` rule are unchanged. This amendment is a
+terminology clarification only and does not alter the measurement, the
+threshold, or the decision rule.
+
+---
+
+### Scope of this amendment
+
+- Declarations 1, 3, and 4 of the committed entry are unchanged.
+- Declaration 2's threshold, formula, and decision rule are unchanged.
+- No dataset, model, contract, default, promotion marker, or wiring changes.
+- Phase 1 of `2026-08_temporal_rebuild_v1` may proceed once this entry is
+  committed.
