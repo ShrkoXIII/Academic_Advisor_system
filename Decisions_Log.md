@@ -1510,3 +1510,77 @@ entry.
 
 **Nothing else is decided.** No dataset promoted, no model trained, no contract
 changed, no wiring touched.
+
+---
+
+## 2026-08-03 — Amendment 3 to the `2026-08_temporal_rebuild_v1` declarations
+
+Corrects two figures recorded in Amendment 2 (`f16d680`). Everything else in
+that entry stands.
+
+**Provenance.** Drafted by an AI assistant in an interactive planning
+conversation at the owner's request, then reviewed, decided, and committed by
+the owner. The implementation agent had no part in it.
+
+### Correction — the gate figures in Amendment 2 are superseded
+
+Amendment 2 recorded `affected_rows = 1,034` with a margin of 34 rows above the
+threshold. Those values came from the **first** Phase 1 run, taken before two
+subsequent corrections: the inclusion of `20243` in VALID, and the fix to the
+degree-to-faculty map that had blocked the production difficulty fit.
+
+That earlier measurement was also taken on a reduced identity-only path,
+because `fit_difficulty_state` could not run at the time.
+
+The binding values, measured on the corrected VALID by the full production fit
+and apply path, are:
+
+```text
+eligible_evaluation_rows   75,380      (was 67,307)
+affected_rows               1,203      (was 1,034)
+affected_share           0.015959
+materiality_threshold       1,000      (unchanged; floor governs, 1% term = 754)
+margin above threshold        203      (was 34)
+phase_2_decision         PROCEED
+gate_status              COMPLETE
+decision_is_binding      true
+production_fit_blocker   none
+```
+
+Verified against `01_5_lineage_gate/lineage_materiality_gate.json` and
+`01_split/split_summary.json` on disk.
+
+Every other figure in Amendment 2 reconciles exactly with the Phase 1 artifacts:
+the 8,073 rows of `20243`, the 11,282 excluded `20252` rows, the 38,623 eligible
+`20252` registrations, the 0.326 ratio, the 0.865–0.955 range, the three split
+boundaries, and the old-split figure of 25,627.
+
+Split reconciliation confirmed: 606,562 + 75,380 + 34,628 + 11,282 = 727,852.
+
+### Unchanged — Phase 2 remains unauthorised
+
+The larger margin does not alter the decision. It was never based on the margin.
+It rests on the 2026-07-30 pilot evidence that the mechanism damages the rows it
+touches. That reasoning stands as recorded in Amendment 2, Correction 4:
+
+```text
+phase_2_decision = NOT_AUTHORISED_BY_OWNER_DESPITE_PROCEED
+```
+
+### New decision — the diploma bucket map is refitted on the new TRAIN
+
+`data/model_data/diploma_type_bucket_map.json` records a `fit_source` of
+`df_train_difficulty.parquet` from the superseded split. Reusing it would carry
+a TRAIN-fitted encoding from a population this rebuild no longer uses.
+
+The map is to be **refitted on the new TRAIN** (606,562 rows, through `20233`)
+and persisted version-locally under
+`data/model_data/versions/2026-08_temporal_rebuild_v1/`. The live map is not
+modified. The fitting rule itself — top-five by TRAIN frequency, with
+`rare_bucket_label` and `unseen_bucket_label` unchanged — is not altered.
+
+---
+
+**Nothing else is decided.** No dataset promoted, no model trained, no contract
+changed, no wiring touched.
+
