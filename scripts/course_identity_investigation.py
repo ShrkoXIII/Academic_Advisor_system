@@ -55,7 +55,7 @@ CATALOG_CLEAN = (
 
 OUT_MD = ROOT / "models" / "runs" / "COURSE_IDENTITY_INVESTIGATION.md"
 OUT_JSON = ROOT / "models" / "runs" / "COURSE_IDENTITY_INVESTIGATION.json"
-OUT_CSV = ROOT / "models" / "runs" / "course_identity_candidates.csv"
+OUT_CSV = ROOT / "models" / "runs" / "COURSE_IDENTITY_INVESTIGATION_CANDIDATES.csv"
 
 MIN_SUPPORT = DifficultyConfig().min_support
 
@@ -1088,7 +1088,7 @@ def render_markdown(payload: dict[str, Any]) -> str:
     add("**Status: READ-ONLY EVIDENCE TASK. Candidates only.**")
     add("")
     add("> **No mapping has been created, applied, or wired.** No `canonical_course_id` "
-        "column exists anywhere as a result of this work. `course_identity_candidates.csv` "
+        "column exists anywhere as a result of this work. `COURSE_IDENTITY_INVESTIGATION_CANDIDATES.csv` "
         "is a *review artifact* for a human reader, not an equivalence table, and must "
         "not be consumed as a drop-in mapping file: it deliberately mixes buckets, "
         "carries conflicting-evidence columns, and lists more than one candidate per row.")
@@ -1336,7 +1336,7 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "is largely a judgement about censoring scope, not about evidence strength - "
         "which is precisely the kind of call the registrar's equivalence table would settle.")
     add("")
-    add("Full per-course detail is in `course_identity_candidates.csv` (sorted by VALID "
+    add("Full per-course detail is in `COURSE_IDENTITY_INVESTIGATION_CANDIDATES.csv` (sorted by VALID "
         "row count descending). The 40 highest-volume courses:")
     add("")
     add("| # | New course | Name | VALID rows | Debut | Bucket | Candidate predecessor | Matched | Conflicted |")
