@@ -1,62 +1,60 @@
-"""Phase 1 read-only measurement of the name-key layer for course identity.
+"""
+read only and know which course in valid match a similar name in train 
+## Script Decision Summary
 
-Answers Q1-Q7 of the Phase 1 name-key task from repository artifacts only.
+* **When do we use the Best Match?**
 
-Guarantees
-----------
-* Reads only: the frozen TRAIN/VALID parquets of dataset version
-  ``2026-07-26_batched_fixes__registration_roster_concurrent``, the read-only
-  cleaned catalog (``clean_v_acd_degree_course.parquet``), and
-  ``COURSE_IDENTITY_67_HUMAN_REVIEW.csv``.
-* Never constructs, globs, stats or reads any TEST path. ``df_test_final`` is
-  never referenced.
-* ``final_mark`` and every other VALID outcome column are never loaded from
-  VALID. Asserted at runtime immediately after the VALID read.
-* No model is loaded, trained, fit, or scored. ``src.course_difficulty`` is
-  NOT imported -- every statistic here (support counts, raw pass rates, raw
-  average marks) is recomputed directly from TRAIN rows as simple counts and
-  means, independent of the shrinkage/fallback machinery that produced the
-  on-disk difficulty columns. This mirrors, but does not reuse, the existing
-  Level-2 definition (course_id-only grouping).
-* Writes exactly one CSV (``models/runs/phase1_name_key_per_course.csv``);
-  the markdown report is written separately by hand from this script's JSON
-  payload (printed to stdout) plus the CSV.
+  * If multiple training courses match the same key, choose the one with the **highest `support_l2`**. If tied, choose the **smallest `course_id`**.
 
-Interpretive choices made where the spec is under-determined (documented here
-and again in the report):
+* **When do we use the Narrow Key?**
 
-1. Name source. Neither df_train_final.parquet nor df_valid_final.parquet
-   contains a course_name_sl column (verified against the on-disk schema).
-   The "TRAIN row name" fallback described in the task therefore never
-   fires -- every name is catalog-sourced or absent. Courses absent from the
-   catalog get no name and cannot enter the name-key layer; they are
-   reported separately, not silently dropped.
-2. Credits. clean_v_acd_degree_course.parquet has exactly one
-   course_credits value per course_id (verified: 0 of 1,503 catalog courses
-   have >1 distinct value), and every TRAIN course_id's row-level
-   course_credits matches its catalog value exactly (0 mismatches over 811
-   TRAIN courses). Credits is therefore unambiguous; the catalog value is
-   used everywhere.
-3. requirement_type_id. This is NOT course-invariant: 35 of 1,503 catalog
-   courses and 58 of 811 TRAIN courses carry more than one requirement_type_id
-   across the degrees they belong to (a course can be elective in one degree
-   and required in another). The spec's per-course narrow key needs a single
-   requirement_type_id per course_id, so the MODAL requirement_type_id
-   (most frequent among that course's rows in the relevant split; ties break
-   on the smaller requirement_type_id) is used as the canonical value. This
-   is a documented interpretation, not a change to the key formula.
-4. "Level 2, TRAIN-only" pass rate / avg mark (Q2 point 4, Q4). Computed as a
-   raw, unsmoothed per-course_id mean over TRAIN rows with a non-null
-   final_mark -- NOT the shrinkage-smoothed table src.course_difficulty
-   would produce. This keeps the whole measurement independent of the
-   difficulty module, consistent with the instruction (for train_support_l2)
-   not to load the difficulty state.
-5. Degree family (Q5). family_of(degree_name_sl) = strip a trailing "2023"
-   token (with or without a preceding space), then keep only the text before
-   the first "/" (dropping the specialisation suffix), then strip whitespace.
-   Verified against the catalog: every "family/specialisation" degree name
-   uses "/" as the separator and every year-suffixed name uses the literal
-   token "2023" as the final token.
+  * When **normalized name + credits + requirement type** all match.
+
+* **When do we use the Wide Key?**
+
+  * If the Narrow Key fails, search using the **normalized name only**.
+
+* **When is the result `None`?**
+
+  * If no match is found using either the Narrow or Wide Key.
+
+* **When is a training course accepted as a candidate?**
+
+  * Only if its **`support_l2` ≥ 20** (or **≥ 50** in the high-support experiment).
+
+* **When are service courses excluded?**
+
+  * When `exclude_service=True` and the key is classified as a high-risk service course, only candidates from the **same degree family** are considered.
+
+* **When is a course considered a Service Course?**
+
+  * When the same key appears in **5 or more degree families**.
+
+* **How is risk classified?**
+
+  * Difference > **0.15** → **HIGH_RISK**
+  * Difference **0.05–0.15** → **MEDIUM_RISK**
+  * Difference < **0.05** → **OK**
+
+* **When is a course considered new?**
+
+  * When:
+
+    * `course_difficulty_missing == 1`
+    * `course_history_count == 0`
+
+* **When do we proceed to Phase 2?**
+
+  * When all decision metrics pass and there are **no `NO_GO` conditions**.
+
+* **When do we stop?**
+
+  * If **any** decision metric returns **`NO_GO`**.
+
+* **When is the result `BORDERLINE`?**
+
+  * If there is **no `NO_GO`**, but **at least one** metric is **`BORDERLINE`**.
+
 """
 
 from __future__ import annotations
