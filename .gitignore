@@ -68,3 +68,4 @@ temp/
 Thumbs.db
 ## obsidian_vault/ - If you are using Obsidian for note-taking and it creates a vault in your project directory, you might want to ignore it to prevent sensitive notes from being uploaded. Adjust this based on your project's structure and needs.
 obsidian_vault/
+note_books/model_eng/read.ipynb
