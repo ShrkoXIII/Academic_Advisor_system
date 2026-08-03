@@ -12,6 +12,7 @@ from src.course_difficulty import (
     DIFFICULTY_OUTPUT_COLUMNS,
     DifficultyConfig,
     _composite_key,
+    _degree_faculty_map,
     apply_difficulty_state,
     build_temporal_query_difficulty,
     build_temporal_train,
@@ -447,6 +448,50 @@ class TemporalCourseDifficultyTests(unittest.TestCase):
             online[DIFFICULTY_OUTPUT_COLUMNS],
             check_names=False,
         )
+
+
+class DegreeFacultyModalResolutionTests(unittest.TestCase):
+    """A degree carrying two faculties must resolve, not raise.
+
+    Four degrees carry two `faculty_id` values in the same semesters from 2022
+    onward. A training window that includes those rows previously made
+    `fit_difficulty_state` raise, which blocked every difficulty output.
+    """
+
+    def _frame(self, faculties):
+        return pd.DataFrame(
+            [
+                _row("20211", "d1", f"c{i}", faculty, 1, 3.0, 70.0)
+                for i, faculty in enumerate(faculties)
+            ]
+        )
+
+    def test_modal_faculty_wins(self):
+        frame = self._frame(["f1", "f1", "f1", "f2"])
+        self.assertEqual(_degree_faculty_map(frame), {"d1": "f1"})
+
+    def test_tie_breaks_on_smaller_faculty_id(self):
+        # Numeric-aware: "7.111" must beat "177.111", which a string sort
+        # would rank the other way round.
+        frame = self._frame(["177.111", "7.111"])
+        self.assertEqual(_degree_faculty_map(frame), {"d1": "7.111"})
+
+    def test_unambiguous_degree_is_unchanged(self):
+        frame = self._frame(["f9", "f9", "f9"])
+        self.assertEqual(_degree_faculty_map(frame), {"d1": "f9"})
+
+    def test_fit_does_not_raise_on_a_two_faculty_degree(self):
+        frame = self._frame(["f1", "f1", "f2"])
+        state = fit_difficulty_state(frame)
+        self.assertEqual(state.degree_to_faculty["d1"], "f1")
+
+    def test_two_faculty_degree_produces_every_difficulty_column(self):
+        train = self._frame(["f1", "f1", "f2"])
+        state = fit_difficulty_state(train)
+        applied = apply_difficulty_state(train, state, include_source=False)
+        for column in DIFFICULTY_OUTPUT_COLUMNS:
+            self.assertIn(column, applied.columns)
+            self.assertFalse(applied[column].isna().any())
 
 
 if __name__ == "__main__":

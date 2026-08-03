@@ -268,20 +268,57 @@ def _sufficient_stats(frame: pd.DataFrame, key: pd.Series) -> pd.DataFrame:
     )
 
 
+def _faculty_tiebreak_key(faculty_id: str) -> tuple[int, float, str]:
+    """Order faculty ids by numeric value where possible, else by string.
+
+    Ids look like ``7.111`` / ``177.111``, so a plain string sort would rank
+    ``177.111`` below ``7.111``. The numeric key makes "smallest faculty_id"
+    mean what it reads as, and the string fallback keeps the order total.
+    """
+    try:
+        return (0, float(faculty_id), faculty_id)
+    except (TypeError, ValueError):
+        return (1, 0.0, faculty_id)
+
+
 def _degree_faculty_map(df: pd.DataFrame) -> Dict[str, str]:
-    pairs = (
-        df.loc[df["degree_id"].notna() & df["faculty_id"].notna(), ["degree_id", "faculty_id"]]
-        .astype("string")
-        .drop_duplicates()
-    )
-    counts = pairs.groupby("degree_id")["faculty_id"].nunique()
-    ambiguous = counts[counts > 1]
-    if not ambiguous.empty:
-        raise ValueError(
-            "Cannot define Level-3 -> Level-4 parent: degree_id maps to multiple "
-            f"faculty_id values ({ambiguous.index.tolist()[:5]})"
-        )
-    return dict(zip(pairs["degree_id"].astype(str), pairs["faculty_id"].astype(str)))
+    """Map each degree to exactly one faculty for the Level-3 -> Level-4 parent.
+
+    A degree may carry two ``faculty_id`` values *in the same semesters*: four
+    degrees do so from 2022 onward, which the pre-2022 training window never
+    exposed. Inspection showed the two labels overlap in time rather than
+    succeeding one another, so this is concurrent duplicate labelling and not a
+    migration -- a "latest wins" rule would have no basis.
+
+    Level-3 needs a single parent per degree, so the most frequent faculty in
+    the fitting frame wins, ties breaking on the smallest ``faculty_id``. This
+    mirrors the modal convention already used for ``requirement_type_id`` in
+    ``scripts/phase1_name_key_layer.py``. Only the parent lookup is affected:
+    shrinkage, the fallback chain, and every output column are unchanged.
+    """
+    pairs = df.loc[
+        df["degree_id"].notna() & df["faculty_id"].notna(),
+        ["degree_id", "faculty_id"],
+    ].astype("string")
+    if pairs.empty:
+        return {}
+
+    counts = pairs.groupby(["degree_id", "faculty_id"], sort=False).size()
+    best: Dict[str, tuple[int, tuple[int, float, str]]] = {}
+    chosen: Dict[str, str] = {}
+    for (degree, faculty), count in counts.items():
+        degree, faculty = str(degree), str(faculty)
+        rank = (int(count), _faculty_tiebreak_key(faculty))
+        current = best.get(degree)
+        # Higher count wins; on a tie the smaller faculty_id wins.
+        if (
+            current is None
+            or rank[0] > current[0]
+            or (rank[0] == current[0] and rank[1] < current[1])
+        ):
+            best[degree] = rank
+            chosen[degree] = faculty
+    return chosen
 
 
 def _global_raw(df: pd.DataFrame) -> Dict[str, float | int]:
