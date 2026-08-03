@@ -1061,3 +1061,328 @@ threshold, or the decision rule.
 - No dataset, model, contract, default, promotion marker, or wiring changes.
 - Phase 1 of `2026-08_temporal_rebuild_v1` may proceed once this entry is
   committed.
+
+---
+
+## 2026-08-02 — Retroactive record of the 2026-07-30 Phase 3 predecessor-prior PILOT
+
+**This entry is written on 2026-08-02 about work performed on 2026-07-30.** The
+work was committed to Git at the time but was never recorded here; the report
+carried a ready-to-copy entry that was not transferred. The gap is stated
+plainly rather than hidden by back-dating: the log position is chronological by
+when the entry was written, not by when the work ran.
+
+**Provenance of this entry.** Drafted by an AI assistant in an interactive
+planning conversation at the project owner's request, then reviewed, decided,
+and committed by the owner. The implementation agent executing
+`2026-08_temporal_rebuild_v1` had no part in it. All quotations below were
+re-verified against `models/runs/phase3_predecessor_prior_pilot/PHASE3_PILOT_REPORT.md`
+on disk, with report line numbers given so each is independently checkable.
+
+---
+
+### What ran
+
+```text
+37f7135  2026-07-30 11:37:46  Add Phase 3 predecessor-prior PILOT build and
+                              paired-evaluation scripts
+76636c3  2026-07-30 11:50:29  Phase 3 predecessor-prior PILOT: paired 5-seed
+                              result, verdict MIXED
+```
+
+Scope: a pilot applying a predecessor prior to PENDING/UNREVIEWED proposal
+rows. Every row of `course_link_proposed.csv` was and remains
+`approval_status = pending`; zero rows have been human-reviewed.
+
+Population: 80 eligible courses / 16,269 directly eligible VALID rows, plus
+15,885 propagation-exposed rows.
+
+Dataset: evaluated on `2026-07-30_predecessor_prior_pilot_PENDING_REVIEW`
+(modified VALID). TRAIN verified byte-identical by SHA-256 to the frozen
+`2026-07-26_batched_fixes__registration_roster_concurrent`.
+
+Design: paired — one locked model artifact per seed evaluated on both VALID
+frames. M1 = `baseline_41`, M2 = `concurrent_43`, `num_leaves=127`, seeds
+42/52/62/72/82, threshold 0.80. No model was retrained or retuned.
+
+TEST: `test_policy = closed_not_read` for both models; the report states TEST
+was never read, globbed, or stat-ed.
+
+---
+
+### Verdict — `MIXED`
+
+Definition, verbatim (report line 431):
+
+> `MIXED` is the category the pre-registered arithmetic produces: Clause 0 holds
+> and 3 of 6 clauses pass, which is a split rather than a majority failure. The
+> substance is more one-sided than the label: both improvement clauses failed in
+> the wrong direction across all five seeds, and M2's degradation is several
+> times the published noise band, while the passing clauses are non-regression
+> guards.
+
+Scope limit attached to the verdict, verbatim (line 429):
+
+> **This verdict does not authorize promotion.** It does not approve any proposal
+> row, does not validate any individual link, does not permit freezing M1 or M2,
+> does not permit opening TEST, and does not permit wiring anything into
+> production.
+
+Clause 0 (gating), verbatim (line 284):
+
+> **Clause 0 verdict: PASS.** The run is valid and Clauses 1–6 may be read.
+
+Supporting figure, verbatim (line 282):
+
+> Across all 5 seeds × both models × all three sanity segments the maximum
+> absolute prediction difference is **exactly 0.0** and **0 rows** exceed
+> tolerance — the predictions are bit-identical, not merely within tolerance.
+
+Per-clause outcome, verbatim table (report lines 292-299):
+
+| Clause | Metric | Rule | Per-seed deltas (42/52/62/72/82) | Mean | Verdict |
+|---|---|---|---|---:|---|
+| 1 | M1 AUC | improves in ≥4/5 seeds beyond the band | -0.00081 / -0.00601 / -0.00033 / -0.00370 / -0.00828 | -0.00383 | **FAIL** |
+| 2 | M1 Brier | 5-seed mean does not worsen | -0.00096 / +0.00039 / -0.00072 / -0.00030 / -0.00027 | -0.00037 | **PASS** |
+| 3 | M1 fail recall @0.80 | does not decline in ≥4/5 seeds | +0.0660 / -0.0109 / +0.0540 / +0.0290 / +0.0733 | +0.0423 | **PASS** |
+| 4 | M1 fail F1 @0.80 | does not decline in ≥4/5 seeds | +0.0107 / +0.0040 / +0.0150 / -0.0057 / +0.0120 | +0.0072 | **PASS** |
+| 5 | M2 MAE | improves in ≥4/5 seeds beyond the band | +0.1502 / +0.1874 / +0.2557 / +0.1617 / +0.1356 | +0.1781 | **FAIL** |
+| 6 | M2 RMSE | 5-seed mean does not worsen | +0.1080 / +0.1565 / +0.2563 / +0.0839 / +0.1012 | +0.1412 | **FAIL** |
+
+Verbatim (line 301): **3 of 6 pass, 3 fail.**
+
+Bound provenance, verbatim (line 290):
+
+> Bounds come from `models/runs/NOISE_BAND.md`; none was invented here.
+> `NOISE_BAND.md` publishes no band for fail recall or fail F1, so for those the
+> only non-invented rule is the sign of the paired delta.
+
+Direction and seed counts, verbatim (lines 303-306):
+
+> The three clauses that pass (2, 3, 4) are **non-regression guards** — they only
+> say the mechanism did not make calibration or fail-catching worse. The two
+> clauses that actually test whether the mechanism *helps* (1 and 5) both fail,
+> and they fail **with the sign inverted**, not merely by landing inside the band:
+>
+> - **M1 AUC fell in 5/5 seeds** on the affected segment (mean -0.00383), with
+>   4/5 seeds outside the published band on the worsening side.
+> - **M2 MAE rose in 5/5 seeds** on the affected segment (mean +0.1781), which is
+>   roughly **4×** the band's worst observed noise excursion (+0.046520). M2 RMSE
+>   rose in 5/5 as well.
+
+Affected segment (16,269 rows), threshold-independent (report lines 131-133, 182-184):
+
+| Model | Metric | Mean delta | Seeds improved | Beyond band? |
+|---|---|---:|---:|---|
+| M1 | `auc` | -0.003827 | 0/5 | 4/5 |
+| M1 | `fail_avg_precision` | +0.000925 | 2/5 | 5/5 |
+| M1 | `brier` | -0.000373 | 4/5 | 5/5 |
+| M2 | `mae` | +0.1781 | 0/5 | 5/5 |
+| M2 | `rmse` | +0.1412 | 0/5 | 5/5 |
+| M2 | `r2` | -0.0132 | 0/5 | 5/5 |
+
+Threshold-dependent guards at 0.80 (report lines 226-230):
+
+| Metric | Mean delta | Seeds not declining |
+|---|---:|---:|
+| `fail_precision` | -0.0094 | 1/5 |
+| `fail_recall` | +0.0423 | 4/5 |
+| `fail_f1` | +0.0072 | 4/5 |
+| `recall` | -0.0221 | 1/5 |
+| `f1` | -0.0097 | 1/5 |
+
+A per-seed pass tally for Clauses 2 and 6 is **not reported**; both are
+mean-based rules.
+
+---
+
+### The decision-relevant finding — the mechanism is worse than the existing fallback
+
+This is model-free: it compares each prior directly against the realized
+outcome on the affected rows, with no model involved.
+
+On the 16,269 affected rows, actual pass rate is **0.8474**. The existing
+Level-4/Level-5 fallback prior put it at **0.8485** — nearly exact. The
+predecessor prior moves it to **0.8164**, away from the truth.
+
+Row-level prior accuracy degrades in the same direction. MAE of the pass-rate
+prior against actual rises in **all five** sub-segments; MAE of the mark prior
+rises in **four of five**.
+
+Verbatim (line 433):
+
+> The direct answer to the question this pilot was built to ask — *is the
+> predecessor-prior mechanism worth the human review effort?* — is: **not as
+> specified, applied to all weighted links.** On this VALID frame the existing
+> fallback prior is already the better estimate, and importing predecessor
+> difficulty makes both models worse on the rows it touches.
+
+The report's hypothesis for why, verbatim from its own framing: the old-plan
+predecessor courses were systematically **harder** than their new-plan
+successors turned out to be, so the mechanism faithfully imports stale
+difficulty. Harm concentrates in the credit-changed subset (prior-mark MAE
+14.795 → 15.739) versus credit-unchanged (13.681 → 13.712, essentially flat).
+
+Where the report says to look if the idea is salvaged, verbatim (line 435):
+
+> the credit-unchanged / `specific`-scope subset is roughly neutral rather than
+> harmful, and the harm concentrates in the credit-changed and `shared`-scope
+> links. A reviewer who wants to salvage the idea should look there first — but
+> note that **M2 MAE worsened in 5/5 seeds even on the credit-unchanged
+> subset**, so no sub-segment identified here is positive on the M2 side.
+
+One genuinely informative sub-result, verbatim (line 308):
+
+> Clause 2's pass is real and worth noting: **Brier improved while AUC fell.**
+> The substituted prior moved absolute risk levels in a helpful direction on
+> these rows while degrading the *ranking* among them.
+
+---
+
+### Recorded defect — the acceptance rule was not pre-registered in a verifiable way
+
+The result above is therefore **exploratory, not confirmatory**.
+
+Clauses 1-6, with their numeric bounds, appear in the repository for the first
+time in `scripts/phase3_predecessor_prior_pilot_report.py`, added in `76636c3`
+— **the same commit that contains the results**. The earlier commit `37f7135`
+contains `clause_0` only. No commit predating the runs records clauses 1-6.
+
+The report states the clauses were pre-registered by the task prompt rather
+than by a committed artifact. The task prompt lives outside the repository, so
+that ordering cannot be verified from Git history.
+
+The same weakness shows a second time in the artifact itself:
+`PHASE3_PILOT_CLAUSES.json` records `"verdict": "MIXED"` while its
+`verdict_meaning` field describes a *different* label — verbatim: *"
+PILOT_SIGNAL_POSITIVE means only that the mechanism looks informative enough to
+justify spending human review on the pending mappings..."*. The verdict
+vocabulary was evidently not fixed before the results were seen, and `MIXED`
+has no machine-readable definition anywhere; the only definition that exists is
+prose in the report.
+
+This is the property the project requires elsewhere and gets right elsewhere:
+the regularization pass committed `docs/EXPERIMENT_REGULARIZATION_PLAN.md`
+before any run existed, precisely so the ordering is verifiable from Git rather
+than asserted in prose. The pilot does not meet that standard.
+
+Consequences, recorded:
+
+1. The verdict is retained as evidence at reduced weight. It is a finding, not
+   a confirmed result.
+2. It must not be cited as a pre-registered experimental outcome.
+3. Any decision that would turn on it requires a re-run under a separately
+   committed acceptance rule.
+4. The numeric bounds themselves come from `models/runs/NOISE_BAND.md` and were
+   not invented. The defect is the ordering of the clause and verdict
+   definitions, not their source.
+5. The direction of the failure is unaffected by this defect. Clauses 1 and 5
+   failed with the sign inverted in 5/5 seeds, and the model-free diagnostic
+   requires no acceptance rule at all. A weak pre-registration can inflate a
+   positive result; it cannot manufacture a consistent negative one.
+
+Methodological caveats the report attaches, verbatim (lines 439-441), and which
+carry forward:
+
+> - `NOISE_BAND.md` was measured on the **full VALID frame** from
+>   *contract-change* deltas across seeds. It is applied here to a 16,269-row
+>   **segment** under a *feature-value* change with a *fixed* model. Segment
+>   metrics are noisier than full-frame metrics, so the band is, if anything, too
+>   permissive here — which makes the failures of Clauses 1 and 5 harder to
+>   dismiss, not easier.
+> - The paired design removes seed-to-seed *training* variation entirely. The
+>   five "seeds" here vary only the fixed instrument, not the intervention, so
+>   5/5 consistency is strong evidence about the intervention's direction but is
+>   **not** an independent replication in the sense the multi-seed contract
+>   experiments used.
+> - "Overall uncovered" is reported as the 25,627 rows of the 182 link-table
+>   courses, per the task. The frozen VALID actually holds 26,882 rows with
+>   `course_difficulty_missing == 1`; the extra 1,255 are low-support courses
+>   that are not never-in-TRAIN and appear in no link table.
+
+---
+
+### Bearing on `2026-08_temporal_rebuild_v1`
+
+Recorded as context for the Academic Lineage Materiality Gate frozen on
+2026-08-02 in `df03477c`. It does **not** change that gate's threshold,
+formula, or decision rule, which stand exactly as committed.
+
+What it changes is how a `PROCEED` result must be read.
+
+The gate counts rows whose difficulty identity was never observed in TRAIN. A
+count above threshold establishes that such rows exist. It does not establish
+that lineage repairs them. This pilot is the only direct evidence on that
+second question, and on the old split — against 16,269 of the 25,627 affected
+rows, i.e. most of the affected population as it then stood — the answer was
+that the mechanism **actively degraded** both models on exactly the rows it
+touched, because the existing fallback prior was already closer to the truth.
+
+Under the rebuilt split, TRAIN extends through 20233, so courses that debuted
+in 2022-2023 move inside TRAIN and the never-in-TRAIN population is expected to
+shrink substantially. A smaller affected population does not make a harmful
+mechanism helpful.
+
+Therefore, recorded as the reading rule for Gate 1.5:
+
+- `DEFERRED_NO_MATERIAL_NEED` — Phase 2 is skipped by the frozen rule, and this
+  entry is the record of why the mechanism was not worth pursuing anyway.
+- `PROCEED` — authorises candidate generation and human review only, per the
+  frozen declaration. Before spending that review, this pilot must be read
+  alongside the count. The pilot was built specifically to answer whether the
+  mechanism justifies human review effort and answered *not as specified*.
+  Proceeding on a row count alone, against direct evidence of harm, would
+  invert the project's evidence-first rule.
+
+Any future attempt must follow the report's own restriction, verbatim
+(lines 448-449, 452):
+
+> 2. `scripts/phase3_predecessor_prior_pilot_build.py` is re-run against that
+>    restricted set, producing a different eligible-set size and a different
+>    dataset version. Weight renormalization for a consolidation that loses a
+>    predecessor is an **open design question**, deliberately unanswered here:
+>    this pilot stops rather than redistributing a dropped predecessor's weight.
+> 3. The paired evaluation is re-run on the restricted frame. The clause results
+>    in this report **do not carry over** — they describe the unreviewed
+>    population, which is a different population.
+
+---
+
+### Open action — the pilot dataset version must be deleted
+
+The report instructs, verbatim (line 452):
+
+> This pilot deliberately built its dataset version under a `_PENDING_REVIEW`
+> name so it cannot be mistaken for a promotable artifact. It should be deleted,
+> not promoted.
+
+`data/model_data/versions/2026-07-30_predecessor_prior_pilot_PENDING_REVIEW/`
+still exists on disk. It contains a byte copy of TRAIN, which the report itself
+flags as a declared conflict with `CLAUDE.md` §5 (*"never copy datasets into new
+folders"*).
+
+The evidence does not depend on keeping it: the per-seed `metrics.json` files,
+the clause JSON, and the report are all committed under `models/runs/`, and the
+build is reproducible from `phase3_predecessor_prior_pilot_build.py`.
+
+This deletion is **not performed by this entry**. It is recorded as an
+outstanding owner action, to be resolved before or alongside the Phase 1
+baseline hash manifest of `2026-08_temporal_rebuild_v1` — otherwise a
+`_PENDING_REVIEW` dataset version will appear in that manifest as an
+unexplained artifact.
+
+---
+
+### Open item
+
+`models/runs/phase3_predecessor_prior_pilot/PHASE3_PILOT_REPORT.md` remains the
+authoritative account. This entry incorporates it rather than replacing it. If
+the two disagree on any number, the report governs and a superseding entry is
+required here.
+
+---
+
+**Nothing is decided by this entry.** No dataset, model, contract, default,
+promotion marker, or wiring changes. No proposal row is approved. The pilot's
+dataset version remains unpromoted and is not an input to
+`2026-08_temporal_rebuild_v1`.
