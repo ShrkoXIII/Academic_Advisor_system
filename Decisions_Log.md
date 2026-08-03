@@ -1386,3 +1386,127 @@ required here.
 promotion marker, or wiring changes. No proposal row is approved. The pilot's
 dataset version remains unpromoted and is not an input to
 `2026-08_temporal_rebuild_v1`.
+
+---
+
+## 2026-08-03 — Amendment 2 to the `2026-08_temporal_rebuild_v1` declarations
+
+Amends the entry committed as `df03477cc6fca018d507857b589dcc3d78d1dd70` and its
+first amendment. Everything not corrected here stands as committed.
+
+**Provenance.** Drafted by an AI assistant in an interactive planning
+conversation at the owner's request, then reviewed, decided, and committed by the
+owner. The implementation agent had no part in it.
+
+### Correction 1 — VALID includes 20243
+
+Declaration 1 and the first amendment enumerate VALID as `20241 + 20242`. That
+enumeration is **incomplete and is corrected here**: academic year 2024 has a
+third semester, `20243`, carrying 8,073 rows.
+
+The enumeration was written on the assumption of two semesters per year and was
+not verified against the data. The owner's intent was, and remains, the whole of
+academic year 2024. The prior pipeline's own mask was `part_year == 2024`, which
+included `20243`.
+
+Corrected definition, authoritative for this rebuild version:
+
+```text
+TRAIN = all eligible rows through 20233
+VALID = all eligible rows of academic year 2024 (20241 + 20242 + 20243)
+TEST  = all eligible rows of academic year 2025, provisional from 20251 only
+```
+
+Phase 1's exclusion reason `year_2024_semester_3_outside_declared_valid_enumeration`
+is void. Those 8,073 rows belong in VALID and the split must be rebuilt to
+include them.
+
+The materiality gate's threshold, formula, and decision rule are unchanged. The
+gate is recomputed on the corrected VALID because its denominator changes.
+
+### Correction 2 — `20252` is excluded, TEST remains provisional
+
+`20252` was found present with 11,282 rows and non-null marks, contrary to the
+expectation recorded in Declaration 1 that it was unavailable. It is
+nevertheless **incomplete**: 11,282 completed rows against 38,623 eligible
+registrations (~29%), and a semester-2/semester-1 ratio of 0.326 against a
+2019–2024 range of 0.865–0.955.
+
+It is therefore excluded. TEST is built from `20251` only and carries
+`test_provisional_20251_only = true`, exactly as Declaration 1 requires. The
+rule that only TEST is rebuilt when `20252` completes is unchanged.
+
+### Correction 3 — `CLAUDE.md` §2 data root is stale
+
+`CLAUDE.md` §2 documents `ACADEMIC_ADVISOR_DATA_DIR` as
+`D:\AI\data_clean_academic_advisor\data`. That path is a stale 2026-07-08 copy
+with no `versions/` and no `CURRENT_VERSION.txt`. The live root is the in-repo
+`./data`, which the unset environment variable already resolves to.
+
+The environment variable is to remain **unset**. `CLAUDE.md` §2 is the error and
+is superseded for this rebuild version. Correcting `CLAUDE.md` itself is a
+separate change.
+
+### Correction 4 — Phase 2 is not authorised, notwithstanding the gate
+
+Gate 1.5 returned `PROCEED` on the old split (25,627 affected rows) and again on
+the new split (1,034 affected rows against a threshold of 1,000 — a margin of 34
+rows). The frozen rule is not altered and the result stands as measured.
+
+Phase 2 is nevertheless **not authorised**, by owner decision recorded here.
+
+The reason is the evidence, not the count. The 2026-07-30 predecessor-prior
+pilot tested this exact mechanism against 16,269 of the then-25,627 affected
+rows and found it **harmful**: M1 AUC fell in 5/5 seeds, M2 MAE rose in 5/5 at
+roughly 4× the published noise band, and a model-free diagnostic showed the
+existing Level-4/5 fallback prior was already nearly exact (0.8485 against an
+actual 0.8474) while the predecessor prior moved to 0.8164, away from the
+outcome.
+
+The boundary change has now removed ~96% of the affected population. Spending
+human review on a mechanism shown to damage the rows it touches, for 1,034 rows
+clearing the floor by 34, is not warranted.
+
+```text
+phase_2_decision = NOT_AUTHORISED_BY_OWNER_DESPITE_PROCEED
+```
+
+Recorded consequences:
+
+1. No lineage candidates are generated, no set transitions are reviewed, no
+   canonical identifiers are created.
+2. Phase 3 proceeds from the Phase 1 split using original `degree_id` and
+   `course_id`, with `lineage_applied = false` and
+   `lineage_reason = NOT_AUTHORISED_BY_OWNER_DESPITE_PROCEED`.
+3. The freeze gate `MODEL_FREEZE_BLOCKED_BY_COURSE_IDENTITY` (2026-07-28) was
+   raised by courses absent from TRAIN. That condition is now largely removed by
+   the split rather than resolved by registrar review. Whether the gate is
+   cleared is a separate decision and is **not** decided here.
+4. This decision may be revisited only on new evidence, through a separately
+   committed acceptance rule.
+
+### Correction 5 — a blocking defect must be fixed before the split is rebuilt
+
+`fit_difficulty_state(TRAIN)` fails on the new TRAIN:
+
+```text
+Cannot define Level-3 -> Level-4 parent: degree_id maps to multiple faculty_id
+values (['39.111','40.111','7.111','8.111'])
+```
+
+Four degrees map to two faculties each. The reassignments occur in 2022+ rows,
+which the old TRAIN excluded and the new TRAIN includes. This is a consequence
+of the boundary change, not a data error.
+
+Without a fix, `difficulty_fallback_level`, `course_low_support`,
+`course_history_count`, and `difficulty_group_support_count` cannot be computed
+on this split. `affected_rows` above is unaffected, having been derived without
+the faculty map.
+
+The fix is a prerequisite to rebuilding the split and is not performed by this
+entry.
+
+---
+
+**Nothing else is decided.** No dataset promoted, no model trained, no contract
+changed, no wiring touched.
