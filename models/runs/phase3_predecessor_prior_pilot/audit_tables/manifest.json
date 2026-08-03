@@ -1,0 +1,300 @@
+{
+  "artifact": "predecessor_prior_pilot_dataset",
+  "status": "PILOT — PENDING/UNREVIEWED MAPPINGS — NOT FOR PROMOTION",
+  "version": "2026-07-30_predecessor_prior_pilot_PENDING_REVIEW",
+  "created_at": "2026-07-30T11:34:00+03:00",
+  "governance": {
+    "proposal_rows_reviewed": 0,
+    "approval_status_values_in_link_table": [
+      "pending"
+    ],
+    "promotion": "not performed",
+    "test_policy": "closed_not_read",
+    "decisions_log_edited": false
+  },
+  "source_frozen_version": {
+    "name": "2026-07-26_batched_fixes__registration_roster_concurrent",
+    "train": {
+      "path": "D:\\AI\\Real projects\\Academic_Advisor\\data\\model_data\\versions\\2026-07-26_batched_fixes__registration_roster_concurrent\\df_train_final.parquet",
+      "sha256": "8aaff32aeac5b37506b24584d56913b52ab284f1b551f107a2e3c55969d5641f",
+      "rows": 450465
+    },
+    "valid": {
+      "path": "D:\\AI\\Real projects\\Academic_Advisor\\data\\model_data\\versions\\2026-07-26_batched_fixes__registration_roster_concurrent\\df_valid_final.parquet",
+      "sha256": "228719fa492da84bd4696e24c88c574d2ce68a3143dac8bb6bc925fc1e432b75",
+      "rows": 156097
+    },
+    "registration_roster_valid": {
+      "path": "D:\\AI\\Real projects\\Academic_Advisor\\data\\model_data\\versions\\2026-07-26_batched_fixes__registration_roster_concurrent\\registration_roster_valid.parquet",
+      "sha256": "af379185656300bf4d4a39e6bab317e24a6b45386675d9e06c8f8053b8e05392",
+      "rows": 167958
+    }
+  },
+  "proposal_tables": {
+    "course_link_proposed.csv": {
+      "path": "D:\\AI\\Real projects\\Academic_Advisor\\models\\runs\\phase2_link_corrections\\course_link_proposed.csv",
+      "sha256": "5d919cb44d310732261d5788b1739aa3fbde84357edcda096a06a730ccf021ec",
+      "rows": 240
+    },
+    "course_split_candidates.csv": {
+      "path": "D:\\AI\\Real projects\\Academic_Advisor\\models\\runs\\phase2_link_corrections\\course_split_candidates.csv",
+      "sha256": "ae658e8bbf76c359d901f239867b6034ed6a8a150b206ae1c0dbb9019c0d80ed",
+      "rows": 4
+    }
+  },
+  "mechanism": {
+    "eligible_relationship_types": [
+      "successor",
+      "consolidated_into"
+    ],
+    "excluded_relationship_types": [
+      "split_from",
+      "merged_from",
+      "candidate_below_support",
+      "name_only_review_candidate",
+      "none"
+    ],
+    "estimate_precedence": "Level-1 (substituted degree_course_key) when that key has TRAIN support in fit_difficulty_state(TRAIN); otherwise the predecessor's Level-2 (course-across-degrees) TRAIN estimate",
+    "blend": "weight_hint-weighted mean across contributing predecessors",
+    "shrinkage_identity": "(n_new*local + k*prior)/(n_new+k) collapses to the prior term exactly because n_new = 0 for every eligible course",
+    "columns_substituted": [
+      "course_pass_rate_historical",
+      "course_avg_mark_historical"
+    ],
+    "columns_deliberately_unchanged": [
+      "course_retake_rate_historical",
+      "course_history_count",
+      "difficulty_group_support_count",
+      "difficulty_fallback_level",
+      "course_is_new",
+      "course_low_support",
+      "course_difficulty_missing"
+    ],
+    "level_1_contributions": 1,
+    "level_2_contributions": 771
+  },
+  "eligible_set": {
+    "courses": 80,
+    "valid_rows": 16269,
+    "degree_course_pairs": 456,
+    "predecessor_contributions": 772,
+    "roster_rows_substituted": 17350,
+    "successor_courses": 66,
+    "consolidated_courses": 14,
+    "shared_scope_courses": 21,
+    "specific_scope_courses": 59,
+    "credit_changed_courses": 20
+  },
+  "row_sets": {
+    "valid_rows_total": 156097,
+    "directly_eligible_rows": 16269,
+    "directly_eligible_courses": 80,
+    "propagation_exposed_only_rows": 15885,
+    "completely_unexposed_rows": 123943,
+    "never_in_train_182_course_rows": 25627,
+    "covered_rows": 129215,
+    "covered_unexposed_rows": 121382,
+    "untouched_uncovered_unexposed_rows": 1306
+  },
+  "diff_vs_frozen_valid": {
+    "changed_rows_per_direct_difficulty_column": {
+      "course_pass_rate_historical": 16147,
+      "course_avg_mark_historical": 16147
+    },
+    "changed_rows_per_concurrent_derived_column": {
+      "concurrent_peer_difficulty_mean": 30452,
+      "concurrent_peer_difficulty_max": 17977,
+      "concurrent_peer_difficulty_missing": 0,
+      "concurrent_peer_set_empty": 0,
+      "concurrent_peer_difficulty_values_missing": 0,
+      "concurrent_peer_observed_count": 0,
+      "concurrent_peer_weak_ratio": 0,
+      "concurrent_peer_same_req_type_ratio": 0
+    },
+    "changed_rows_per_other_column": {},
+    "audit_columns_added": [
+      "course_history_count_predecessor",
+      "course_cross_plan_prior_used",
+      "course_cross_plan_prior_weight",
+      "course_cross_plan_relationship_type",
+      "course_identity_confidence",
+      "course_difficulty_source_level"
+    ],
+    "audit_column_populated_rows": {
+      "course_cross_plan_prior_used_true": 16269,
+      "course_difficulty_source_level_predecessor_prior": 16269
+    },
+    "locked_columns_verified_unchanged_outside_permitted_sets": true,
+    "locked_columns_checked": [
+      "attempt_number",
+      "concurrent_peer_difficulty_max",
+      "concurrent_peer_difficulty_mean",
+      "consecutive_interruption_count",
+      "course_avg_mark_historical",
+      "course_credits",
+      "course_difficulty_missing",
+      "course_history_count",
+      "course_pass_rate_historical",
+      "course_retake_rate_historical",
+      "course_share_of_requirement",
+      "degree_requirement_credits_count",
+      "degree_requirement_credits_count_missing",
+      "diploma_gpa",
+      "diploma_type_bucket",
+      "fail_credit_ratio_capped",
+      "gpa_trend_delta",
+      "gpa_trend_missing",
+      "is_extreme_fail_history",
+      "is_first_active_semester",
+      "is_first_row_in_timeline",
+      "is_high_credit_course",
+      "last_valid_gpa_before_current_semester",
+      "no_previous_progress",
+      "part_semester",
+      "prev_gpa_invalid_zero_case",
+      "prev_gpa_points_clean",
+      "prev_gpa_points_missing",
+      "prev_gpa_points_zero",
+      "prev_semester_was_interruption",
+      "prior_interruption_count",
+      "reg_total_semesters",
+      "requirement_type_id",
+      "requirement_type_missing",
+      "semester_reg_courses",
+      "semester_reg_credits",
+      "start_agpa_points",
+      "start_level_ord",
+      "start_semester",
+      "start_total_in_courses",
+      "start_total_in_credits",
+      "total_fail_credits_capped"
+    ]
+  },
+  "verification": {
+    "train_byte_identical_to_frozen": true,
+    "train_sha256": "8aaff32aeac5b37506b24584d56913b52ab284f1b551f107a2e3c55969d5641f",
+    "difficulty_refit_reproduces_frozen_valid": true,
+    "unmodified_concurrent_builder_reproduces_frozen_valid": true,
+    "check_1_no_change_outside_eligible_set": {
+      "course_pass_rate_historical": {
+        "eligible_rows": 16269,
+        "numerically_changed_rows": 16147,
+        "no_op_rows_substituted_value_equals_frozen_value": 122,
+        "rows_changed_outside_eligible_set": 0,
+        "no_op_courses": [
+          "1201.111"
+        ]
+      },
+      "course_avg_mark_historical": {
+        "eligible_rows": 16269,
+        "numerically_changed_rows": 16147,
+        "no_op_rows_substituted_value_equals_frozen_value": 122,
+        "rows_changed_outside_eligible_set": 0,
+        "no_op_courses": [
+          "1201.111"
+        ]
+      }
+    },
+    "check_2_no_unexposed_leak": true,
+    "check_3_feature_lists_identical": true,
+    "audit_columns_absent_from_m1_and_m2_contracts": true
+  },
+  "feature_contracts": {
+    "m1": {
+      "name": "baseline_41",
+      "feature_count": 41,
+      "features": [
+        "prev_gpa_points_clean",
+        "start_agpa_points",
+        "last_valid_gpa_before_current_semester",
+        "gpa_trend_delta",
+        "gpa_trend_missing",
+        "start_total_in_credits",
+        "start_total_in_courses",
+        "total_fail_credits_capped",
+        "fail_credit_ratio_capped",
+        "is_extreme_fail_history",
+        "reg_total_semesters",
+        "start_level_ord",
+        "start_semester",
+        "prior_interruption_count",
+        "consecutive_interruption_count",
+        "prev_semester_was_interruption",
+        "no_previous_progress",
+        "is_first_active_semester",
+        "is_first_row_in_timeline",
+        "prev_gpa_points_missing",
+        "prev_gpa_points_zero",
+        "prev_gpa_invalid_zero_case",
+        "semester_reg_credits",
+        "semester_reg_courses",
+        "part_semester",
+        "course_credits",
+        "attempt_number",
+        "is_high_credit_course",
+        "course_pass_rate_historical",
+        "course_avg_mark_historical",
+        "course_retake_rate_historical",
+        "course_history_count",
+        "course_difficulty_missing",
+        "requirement_type_id",
+        "requirement_type_missing",
+        "degree_requirement_credits_count",
+        "degree_requirement_credits_count_missing",
+        "course_share_of_requirement",
+        "requirement_size_bucket_ord",
+        "diploma_gpa",
+        "diploma_type_bucket"
+      ]
+    },
+    "m2": {
+      "name": "concurrent_43",
+      "feature_count": 43,
+      "features": [
+        "prev_gpa_points_clean",
+        "start_agpa_points",
+        "last_valid_gpa_before_current_semester",
+        "gpa_trend_delta",
+        "gpa_trend_missing",
+        "start_total_in_credits",
+        "start_total_in_courses",
+        "total_fail_credits_capped",
+        "fail_credit_ratio_capped",
+        "is_extreme_fail_history",
+        "reg_total_semesters",
+        "start_level_ord",
+        "start_semester",
+        "prior_interruption_count",
+        "consecutive_interruption_count",
+        "prev_semester_was_interruption",
+        "no_previous_progress",
+        "is_first_active_semester",
+        "is_first_row_in_timeline",
+        "prev_gpa_points_missing",
+        "prev_gpa_points_zero",
+        "prev_gpa_invalid_zero_case",
+        "semester_reg_credits",
+        "semester_reg_courses",
+        "part_semester",
+        "course_credits",
+        "attempt_number",
+        "is_high_credit_course",
+        "course_pass_rate_historical",
+        "course_avg_mark_historical",
+        "course_retake_rate_historical",
+        "course_history_count",
+        "course_difficulty_missing",
+        "concurrent_peer_difficulty_mean",
+        "concurrent_peer_difficulty_max",
+        "requirement_type_id",
+        "requirement_type_missing",
+        "degree_requirement_credits_count",
+        "degree_requirement_credits_count_missing",
+        "course_share_of_requirement",
+        "requirement_size_bucket_ord",
+        "diploma_gpa",
+        "diploma_type_bucket"
+      ]
+    }
+  }
+}
