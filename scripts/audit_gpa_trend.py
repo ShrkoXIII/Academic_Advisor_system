@@ -219,11 +219,35 @@ def _equal_with_nan(left: pd.Series, right: pd.Series) -> pd.Series:
     return (left_num.isna() & right_num.isna()) | left_num.eq(right_num)
 
 
+def _split_key_paths(
+    split_dir: str | Path | None,
+    split_paths: "dict[str, str | Path] | None",
+) -> "dict[str, Path] | None":
+    """Resolve ``{split: parquet}`` for the audit's key lookups.
+
+    ``split_paths`` wins when given, which is how callers point the audit at
+    artifacts that are not named ``df_{split}_final.parquet`` - the rebuild
+    version's files, for instance. Otherwise the historical directory-plus-
+    generation lookup is used unchanged.
+    """
+    if split_paths is not None:
+        missing = [split for split in SPLITS if split not in split_paths]
+        if missing:
+            raise ValueError(f"split_paths is missing {missing}")
+        return {split: Path(split_paths[split]) for split in SPLITS}
+    if split_dir is None:
+        return None
+    return {
+        split: model_split_path(split, "final", Path(split_dir)) for split in SPLITS
+    }
+
+
 def _reconstruction_gap(
     audit: pd.DataFrame,
     primary: pd.DataFrame,
     *,
     course_split_dir: str | Path | None = None,
+    course_split_paths: "dict[str, str | Path] | None" = None,
 ) -> dict[str, Any]:
     full_semester = _sort_semester_frame(audit)
     primary_semester = _sort_semester_frame(primary)
@@ -256,7 +280,8 @@ def _reconstruction_gap(
 
     mismatch_keys = primary_semester.loc[mismatch, SEMESTER_KEY]
     course_mismatch_by_split: dict[str, int] = {}
-    if course_split_dir is None:
+    resolved_split_paths = _split_key_paths(course_split_dir, course_split_paths)
+    if resolved_split_paths is None:
         course_mismatch_count = int(
             primary[SEMESTER_KEY]
             .merge(
@@ -270,10 +295,9 @@ def _reconstruction_gap(
             .sum()
         )
     else:
-        split_dir = Path(course_split_dir)
         for split in SPLITS:
             keys = pd.read_parquet(
-                model_split_path(split, "final", split_dir), columns=SEMESTER_KEY
+                resolved_split_paths[split], columns=SEMESTER_KEY
             )
             split_count = int(
                 keys.merge(
@@ -526,14 +550,17 @@ def map_trend_to_course_keys(
 
 def _course_coverage_from_split_files(
     primary_semester: pd.DataFrame,
-    split_dir: str | Path,
+    split_dir: str | Path | None,
     wrong_shift_keys: pd.DataFrame | None = None,
+    split_paths: "dict[str, str | Path] | None" = None,
 ) -> tuple[pd.DataFrame, pd.Series]:
-    split_dir = Path(split_dir)
+    resolved = _split_key_paths(split_dir, split_paths)
+    if resolved is None:
+        raise ValueError("course coverage needs either split_dir or split_paths")
     rows = []
     train_delta = pd.Series(dtype="float64")
     for name in SPLITS:
-        path = model_split_path(name, "final", split_dir)
+        path = resolved[name]
         keys = pd.read_parquet(path, columns=SEMESTER_KEY)
         features = map_trend_to_course_keys(keys, primary_semester)
         has_t2 = features["gpa_trend_delta"].notna()
@@ -574,8 +601,14 @@ def create_semester_audit_report(
     source_path: str | Path,
     source_course_rows: int,
     split_dir: str | Path = MODEL_DATA_DIR,
+    split_paths: "dict[str, str | Path] | None" = None,
 ) -> dict[str, Any]:
-    """Persist the complete audit from memory-bounded semester calculations."""
+    """Persist the complete audit from memory-bounded semester calculations.
+
+    ``split_paths`` names the per-split parquet files directly; it overrides
+    ``split_dir`` and is how callers point the audit at artifacts that do not
+    follow the ``df_{split}_final.parquet`` naming.
+    """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=False)
     wrong_shift_keys, wrong_shift_diagnostics = _rejected_shift2_diagnostics(
@@ -585,6 +618,7 @@ def create_semester_audit_report(
         primary_semester,
         split_dir,
         wrong_shift_keys=wrong_shift_keys,
+        split_paths=split_paths,
     )
     semester_coverage = _coverage_table(primary_semester, semester_grain=True)
     reconstructed_t1 = _strictly_prior_last_valid(full_semester)
@@ -620,6 +654,7 @@ def create_semester_audit_report(
         full_semester,
         primary_semester,
         course_split_dir=split_dir,
+        course_split_paths=split_paths,
     )
     report = {
         "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),

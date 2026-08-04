@@ -3,11 +3,33 @@
 This script never trains a model and never overwrites the current model-data
 files.  It reads the base splits, replaces only course-difficulty columns, and
 persists a frozen full-train lookup state for validation/test and inference.
+
+Path modes
+----------
+
+* **Legacy (default).**  ``--input-dir`` and ``--output-root``/``--build-id``
+  behave exactly as before: filenames come from
+  :func:`src.paths.model_split_path`, and the build directory is published by
+  renaming its staging directory.
+* **Explicit.**  Every input and output parquet can be named in full on the
+  command line.  The six output paths must share one parent directory, which is
+  the build directory; that keeps the staging-then-rename publish atomic.
+* **Rebuild.**  ``--rebuild-root`` fills those explicit paths in from
+  :mod:`src.rebuild_paths` for ``2026-08_temporal_rebuild_v1``.
+
+The ``final`` generation is optional.  Phase 1 of the rebuild produced ``base``
+only; the ``final`` templates do not exist until the diploma bucketing step has
+run.  When no ``final`` templates are supplied, this script writes the
+``difficulty`` generation alone and checks ``diploma_gpa`` isolation against the
+``difficulty`` output instead.  ``final`` templates are all-or-nothing across the
+three splits, and under ``--rebuild-root`` they are used only when passed
+explicitly.
 """
 
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 from datetime import datetime
 import gc
 import json
@@ -41,11 +63,25 @@ from src.paths import (  # noqa: E402
     MODEL_RUNS_DIR,
     model_split_path,
 )
-from src.model_training import EXPECTED_FEATURE_COUNT, MODEL_FEATURES  # noqa: E402
+from src.rebuild_paths import rebuild_split_path  # noqa: E402
+from src.model_training import resolve_feature_contract  # noqa: E402
 
 
 SPLITS = ("train", "valid", "test")
 REFERENCE_RUN = "2026-07-16_1025__new-difficulty-logic"
+
+# The contract this build's outputs are meant to feed. concurrent_44 is archived
+# (CLAUDE.md section 4) and is deliberately not accepted here.
+B2_ALLOWED_CONTRACTS = ("baseline_41", "concurrent_43")
+
+# Difficulty columns B2 computes that must stay out of any model contract.
+DIFFICULTY_AUDIT_ONLY_COLUMNS = (
+    "course_is_new",
+    "course_low_support",
+    "difficulty_fallback_level",
+)
+
+GPA_TREND_FEATURES = ("gpa_trend_delta", "gpa_trend_missing")
 
 DIFFICULTY_INPUT_COLUMNS = [
     "part_id",
@@ -124,15 +160,205 @@ def _stream_write_enriched(
     }
 
 
-def verify_versioned_outputs(input_dir: Path, output_dir: Path) -> Dict[str, Any]:
+@dataclass(frozen=True)
+class IOPlan:
+    """Fully resolved input/output parquet paths for one B2 build.
+
+    ``inputs``/``outputs`` are keyed ``{generation: {split: path}}``. The
+    ``final`` generation is absent from both when no ``final`` templates were
+    supplied. Every output shares ``output_dir`` as its parent so the build can
+    still be published by renaming a single staging directory.
+    """
+
+    mode: str
+    output_dir: Path
+    inputs: Dict[str, Dict[str, Path]]
+    outputs: Dict[str, Dict[str, Path]]
+
+    @property
+    def has_final(self) -> bool:
+        return "final" in self.outputs
+
+    def source_for(self, split: str, generation: str) -> Path | None:
+        """The template a given output generation was streamed from."""
+        source_generation = "base" if generation == "difficulty" else "final"
+        return self.inputs.get(source_generation, {}).get(split)
+
+    @staticmethod
+    def staged(output_path: Path, staging_dir: Path) -> Path:
+        """Where an output is written before the staging directory is published."""
+        return staging_dir / output_path.name
+
+    def required_inputs(self) -> list[Path]:
+        return [
+            path
+            for generation in self.inputs
+            for path in self.inputs[generation].values()
+        ]
+
+
+def _plan_io(args: argparse.Namespace, output_dir: Path) -> IOPlan:
+    """Resolve every input/output path: explicit flag, then rebuild root, then legacy."""
+
+    rebuild_root = getattr(args, "rebuild_root", None)
+    input_dir = Path(args.input_dir)
+
+    def explicit(prefix: str, split: str) -> Path | None:
+        value = getattr(args, f"{split}_{prefix}", None)
+        return Path(value) if value else None
+
+    inputs: Dict[str, Dict[str, Path]] = {"base": {}}
+    outputs: Dict[str, Dict[str, Path]] = {"difficulty": {}}
+
+    for split in SPLITS:
+        base = explicit("base", split)
+        if base is None:
+            base = (
+                rebuild_split_path(rebuild_root, split, "base", must_exist=True)
+                if rebuild_root
+                else model_split_path(split, "base", input_dir)
+            )
+        inputs["base"][split] = Path(base)
+
+        difficulty_out = explicit("difficulty_out", split)
+        if difficulty_out is None:
+            difficulty_out = (
+                rebuild_split_path(rebuild_root, split, "difficulty").name
+                if rebuild_root
+                else model_split_path(split, "difficulty", input_dir).name
+            )
+            difficulty_out = output_dir / difficulty_out
+        outputs["difficulty"][split] = Path(difficulty_out)
+
+    # The final generation is all-or-nothing. Under --rebuild-root it is used
+    # only when named explicitly: Phase 1 produced base only, so silently
+    # resolving a final template that does not exist would be a lie.
+    explicit_final = {split: explicit("final", split) for split in SPLITS}
+    if any(explicit_final.values()) and not all(explicit_final.values()):
+        missing = sorted(split for split, path in explicit_final.items() if not path)
+        raise ValueError(
+            "final templates are all-or-nothing across splits; missing: "
+            f"{missing}"
+        )
+    if all(explicit_final.values()):
+        final_inputs = {split: Path(path) for split, path in explicit_final.items()}
+    elif rebuild_root:
+        final_inputs = {}
+    else:
+        final_inputs = {
+            split: model_split_path(split, "final", input_dir) for split in SPLITS
+        }
+
+    if final_inputs:
+        inputs["final"] = final_inputs
+        outputs["final"] = {}
+        for split in SPLITS:
+            final_out = explicit("final_out", split)
+            if final_out is None:
+                final_out = (
+                    rebuild_split_path(rebuild_root, split, "final").name
+                    if rebuild_root
+                    else model_split_path(split, "final", input_dir).name
+                )
+                final_out = output_dir / final_out
+            outputs["final"][split] = Path(final_out)
+
+    stray = sorted(
+        str(path)
+        for generation in outputs
+        for path in outputs[generation].values()
+        if path.parent != output_dir
+    )
+    if stray:
+        raise ValueError(
+            "every B2 output must sit directly in the build directory "
+            f"{output_dir}; these do not: {stray}"
+        )
+    basenames = [
+        path.name for generation in outputs for path in outputs[generation].values()
+    ]
+    if len(set(basenames)) != len(basenames):
+        raise ValueError(f"B2 output basenames collide: {sorted(basenames)}")
+
+    if rebuild_root:
+        mode = "rebuild_root"
+    elif any(
+        getattr(args, f"{split}_{prefix}", None)
+        for split in SPLITS
+        for prefix in ("base", "final", "difficulty_out", "final_out")
+    ) or getattr(args, "output_dir", None):
+        mode = "explicit_paths"
+    else:
+        mode = "legacy_generation_names"
+
+    return IOPlan(
+        mode=mode,
+        output_dir=output_dir,
+        inputs=inputs,
+        outputs=outputs,
+    )
+
+
+def _feature_contract_gate(
+    contract_name: str,
+    reference_features: list[str],
+) -> tuple[bool, Dict[str, Any]]:
+    """Verify the contract that is actually named, not a hard-coded count.
+
+    The predecessor of this gate asserted ``EXPECTED_FEATURE_COUNT ==
+    len(MODEL_FEATURES) == 41``. Those deprecated globals now alias
+    ``concurrent_44``, so the clause is unsatisfiable and B2 could not run at
+    all. The checks below preserve every claim the old gate actually made -
+    nothing was dropped relative to the reference run, the GPA-trend pair is the
+    addition, and B2's audit-only difficulty columns never enter a contract -
+    while reading them off the named contract.
+    """
+    contract = resolve_feature_contract(contract_name)
+    features = list(contract.features)
+    declared_count = int(contract.name.rsplit("_", 1)[-1])
+    reference = set(reference_features)
+
+    checks = {
+        "contract_is_accepted_for_b2": contract.name in B2_ALLOWED_CONTRACTS,
+        "feature_count_matches_contract_name": (
+            len(features) == contract.expected_feature_count == declared_count
+        ),
+        "no_duplicate_features": len(set(features)) == len(features),
+        "reference_run_features_all_retained": not reference.difference(features),
+        "gpa_trend_pair_is_present": set(GPA_TREND_FEATURES).issubset(features),
+        "gpa_trend_pair_is_added_over_reference": set(GPA_TREND_FEATURES).issubset(
+            set(features).difference(reference)
+        ),
+        "difficulty_audit_columns_stay_out_of_the_contract": not set(
+            DIFFICULTY_AUDIT_ONLY_COLUMNS
+        ).intersection(features),
+    }
+    detail = {
+        "contract": contract.name,
+        "contract_version": contract.version,
+        "feature_count": len(features),
+        "declared_count_from_name": declared_count,
+        "reference_feature_count": len(reference_features),
+        "added_over_reference": sorted(set(features).difference(reference)),
+        "removed_versus_reference": sorted(reference.difference(features)),
+        "checks": checks,
+    }
+    return all(checks.values()), detail
+
+
+def verify_versioned_outputs(
+    io_plan: "IOPlan",
+    staging_dir: Path,
+) -> Dict[str, Any]:
     """Independently compare every non-difficulty Arrow column after write."""
 
     checks: Dict[str, Any] = {}
     for split in SPLITS:
         for generation in ("difficulty", "final"):
-            source_name = "base" if generation == "difficulty" else "final"
-            source_path = model_split_path(split, source_name, input_dir)
-            output_path = model_split_path(split, generation, output_dir)
+            source_path = io_plan.source_for(split, generation)
+            if source_path is None:
+                continue
+            output_path = io_plan.staged(io_plan.outputs[generation][split], staging_dir)
             source_file = pq.ParquetFile(source_path)
             output_file = pq.ParquetFile(output_path)
             if source_file.metadata.num_rows != output_file.metadata.num_rows:
@@ -285,15 +511,23 @@ def _report_markdown(report: Dict[str, Any]) -> str:
 
 
 def build(args: argparse.Namespace) -> Path:
-    input_dir = Path(args.input_dir)
     output_root = Path(args.output_root)
     build_id = args.build_id or datetime.now().astimezone().strftime(
         "%Y-%m-%d_%H%M%S__b2_temporal_course_stats"
     )
-    output_dir = output_root / build_id
+    if getattr(args, "output_dir", None):
+        output_dir = Path(args.output_dir)
+    elif getattr(args, "rebuild_root", None):
+        output_dir = rebuild_split_path(
+            args.rebuild_root, "train", "difficulty"
+        ).parent
+    else:
+        output_dir = output_root / build_id
+    io_plan = _plan_io(args, output_dir)
+
     if output_dir.exists():
         raise FileExistsError(f"Refusing to overwrite existing B2 output: {output_dir}")
-    staging_dir = output_root / f".{build_id}.incomplete"
+    staging_dir = output_dir.parent / f".{output_dir.name}.incomplete"
     if staging_dir.exists():
         raise FileExistsError(f"Refusing to overwrite incomplete B2 output: {staging_dir}")
     staging_dir.mkdir(parents=True)
@@ -314,12 +548,18 @@ def build(args: argparse.Namespace) -> Path:
 
     # Train is the largest split. Process and persist it before loading valid
     # or test so peak memory is bounded to one base/final pair.
-    train_base_path = model_split_path("train", "base", input_dir)
-    train_final_path = model_split_path("train", "final", input_dir)
-    staged_train_difficulty_path = model_split_path(
-        "train", "difficulty", staging_dir
+    train_base_path = io_plan.inputs["base"]["train"]
+    staged_train_difficulty_path = IOPlan.staged(
+        io_plan.outputs["difficulty"]["train"], staging_dir
     )
-    staged_train_final_path = model_split_path("train", "final", staging_dir)
+    train_final_path = (
+        io_plan.inputs["final"]["train"] if io_plan.has_final else None
+    )
+    staged_train_final_path = (
+        IOPlan.staged(io_plan.outputs["final"]["train"], staging_dir)
+        if io_plan.has_final
+        else None
+    )
     train_base = pd.read_parquet(train_base_path, columns=DIFFICULTY_INPUT_COLUMNS)
     train_enriched = build_temporal_train(train_base, config, include_source=False)
     full_train_state = fit_difficulty_state(train_base, config)
@@ -348,16 +588,24 @@ def build(args: argparse.Namespace) -> Path:
         staged_train_difficulty_path,
         train_enriched,
     )
-    _stream_write_enriched(
-        train_final_path,
-        staged_train_final_path,
-        train_enriched,
+    if io_plan.has_final:
+        _stream_write_enriched(
+            train_final_path,
+            staged_train_final_path,
+            train_enriched,
+        )
+    # Without a final template the isolation check falls back to the difficulty
+    # pair; diploma_gpa is carried unchanged through both, so the claim is the
+    # same one, measured on the generation that exists.
+    diploma_source_path = train_final_path if io_plan.has_final else train_base_path
+    diploma_output_path = (
+        staged_train_final_path if io_plan.has_final else staged_train_difficulty_path
     )
     train_diploma_before = pd.read_parquet(
-        train_final_path, columns=["diploma_gpa"]
+        diploma_source_path, columns=["diploma_gpa"]
     )["diploma_gpa"]
     train_diploma_after = pd.read_parquet(
-        staged_train_final_path, columns=["diploma_gpa"]
+        diploma_output_path, columns=["diploma_gpa"]
     )["diploma_gpa"]
     diploma_gate &= train_diploma_before.equals(train_diploma_after)
     diploma_null_counts["train"] = int(train_diploma_after.isna().sum())
@@ -382,10 +630,16 @@ def build(args: argparse.Namespace) -> Path:
     gc.collect()
 
     for split in ("valid", "test"):
-        base_path = model_split_path(split, "base", input_dir)
-        final_path = model_split_path(split, "final", input_dir)
-        staged_difficulty_path = model_split_path(split, "difficulty", staging_dir)
-        staged_final_path = model_split_path(split, "final", staging_dir)
+        base_path = io_plan.inputs["base"][split]
+        staged_difficulty_path = IOPlan.staged(
+            io_plan.outputs["difficulty"][split], staging_dir
+        )
+        final_path = io_plan.inputs["final"][split] if io_plan.has_final else None
+        staged_final_path = (
+            IOPlan.staged(io_plan.outputs["final"][split], staging_dir)
+            if io_plan.has_final
+            else None
+        )
         base = pd.read_parquet(base_path, columns=DIFFICULTY_INPUT_COLUMNS)
         split_enriched = apply_difficulty_state(base, full_train_state, include_source=False)
         row_index_gate &= len(base) == len(split_enriched) and base.index.equals(split_enriched.index)
@@ -402,16 +656,18 @@ def build(args: argparse.Namespace) -> Path:
             staged_difficulty_path,
             split_enriched,
         )
-        _stream_write_enriched(
-            final_path,
-            staged_final_path,
-            split_enriched,
-        )
+        if io_plan.has_final:
+            _stream_write_enriched(
+                final_path,
+                staged_final_path,
+                split_enriched,
+            )
         diploma_before = pd.read_parquet(
-            final_path, columns=["diploma_gpa"]
+            final_path if io_plan.has_final else base_path, columns=["diploma_gpa"]
         )["diploma_gpa"]
         diploma_after = pd.read_parquet(
-            staged_final_path, columns=["diploma_gpa"]
+            staged_final_path if io_plan.has_final else staged_difficulty_path,
+            columns=["diploma_gpa"],
         )["diploma_gpa"]
         diploma_gate &= diploma_before.equals(diploma_after)
         diploma_null_counts[split] = int(diploma_after.isna().sum())
@@ -420,7 +676,7 @@ def build(args: argparse.Namespace) -> Path:
         del base, split_enriched, diploma_before, diploma_after
         gc.collect()
 
-    readback_checks = verify_versioned_outputs(input_dir, staging_dir)
+    readback_checks = verify_versioned_outputs(io_plan, staging_dir)
     lineage_gate = all(
         values["status"] == "pass" for values in readback_checks.values()
     )
@@ -428,16 +684,11 @@ def build(args: argparse.Namespace) -> Path:
     reference_contract_path = MODEL_RUNS_DIR / args.reference_run / "feature_contract.json"
     reference_contract = json.loads(reference_contract_path.read_text(encoding="utf-8"))
     reference_features = reference_contract["features"]
-    expected_feature_change_is_gpa_trend_only = (
-        reference_contract["n_features"] == len(reference_features) == 39
-        and EXPECTED_FEATURE_COUNT == len(MODEL_FEATURES) == 41
-        and set(MODEL_FEATURES).difference(reference_features)
-        == {"gpa_trend_delta", "gpa_trend_missing"}
-        and set(reference_features).difference(MODEL_FEATURES) == set()
-        and "course_is_new" not in reference_features
-        and "course_low_support" not in reference_features
-        and "difficulty_fallback_level" not in reference_features
+    contract_gate, contract_gate_detail = _feature_contract_gate(
+        args.feature_contract,
+        reference_features,
     )
+    contract_gate &= reference_contract["n_features"] == len(reference_features)
 
     data_gates = {
         "row count, index, and order preserved": row_index_gate,
@@ -446,7 +697,10 @@ def build(args: argparse.Namespace) -> Path:
         "train exercises more than one fallback level": multi_level_gate,
         "valid/test statistics contain no nulls": valid_test_null_gate,
         "course_is_new definition equals no Level-1/2 history": new_definition_gate,
-        "MODEL_FEATURES changes 39 -> 41 only for GPA trend": expected_feature_change_is_gpa_trend_only,
+        (
+            f"named feature contract {args.feature_contract} is intact and "
+            "supersets the reference run by the GPA-trend pair"
+        ): contract_gate,
         "diploma_gpa values are byte-for-value unchanged": diploma_gate,
     }
     failed = [name for name, passed in data_gates.items() if not passed]
@@ -475,6 +729,19 @@ def build(args: argparse.Namespace) -> Path:
         },
         "row_counts": row_counts,
         "data_gates": data_gates,
+        "feature_contract_gate": contract_gate_detail,
+        "io_plan": {
+            "mode": io_plan.mode,
+            "final_generation_built": io_plan.has_final,
+            "inputs": {
+                generation: {split: str(path) for split, path in paths.items()}
+                for generation, paths in io_plan.inputs.items()
+            },
+            "outputs": {
+                generation: {split: str(path) for split, path in paths.items()}
+                for generation, paths in io_plan.outputs.items()
+            },
+        },
         "readback_checks": readback_checks,
         "distributions": distributions,
         "train_fallback_by_part_year": train_fallback_by_year,
@@ -513,13 +780,66 @@ def build(args: argparse.Namespace) -> Path:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-dir", default=str(MODEL_DATA_DIR))
     parser.add_argument("--output-root", default=str(MODEL_DATA_VERSIONS_DIR))
     parser.add_argument("--build-id")
     parser.add_argument("--min-support", type=int, default=20)
     parser.add_argument("--shrinkage-k", type=float, default=20.0)
     parser.add_argument("--reference-run", default=REFERENCE_RUN)
+    parser.add_argument(
+        "--feature-contract",
+        required=True,
+        choices=list(B2_ALLOWED_CONTRACTS),
+        help=(
+            "Contract the outputs are built for. Checked by name; never "
+            "defaulted, so a build always records which contract it claims."
+        ),
+    )
+    parser.add_argument(
+        "--rebuild-root",
+        type=Path,
+        help=(
+            "Version root of 2026-08_temporal_rebuild_v1. Fills in the base "
+            "inputs and the difficulty/final outputs from src.rebuild_paths. "
+            "Final templates are never auto-resolved in this mode."
+        ),
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        help=(
+            "Full path of the build directory. Overrides --output-root/"
+            "--build-id. Every output parquet must sit directly inside it."
+        ),
+    )
+    for split in SPLITS:
+        parser.add_argument(
+            f"--{split}-base",
+            type=Path,
+            help=f"Full path of the {split} base template (input).",
+        )
+    for split in SPLITS:
+        parser.add_argument(
+            f"--{split}-final",
+            type=Path,
+            help=(
+                f"Full path of the {split} final template (input). All three "
+                "or none; omit them to build the difficulty generation alone."
+            ),
+        )
+    for split in SPLITS:
+        parser.add_argument(
+            f"--{split}-difficulty-out",
+            type=Path,
+            help=f"Full path of the {split} difficulty output.",
+        )
+    for split in SPLITS:
+        parser.add_argument(
+            f"--{split}-final-out",
+            type=Path,
+            help=f"Full path of the {split} final output.",
+        )
     return parser.parse_args(argv)
 
 
@@ -527,6 +847,35 @@ def main(argv: list[str] | None = None) -> None:
     output_dir = build(parse_args(argv))
     print(f"B2 data build completed: {output_dir}")
     print("Data gates passed. Model training was not run because diploma_gpa isolation failed.")
+
+
+def default_namespace(**overrides: Any) -> argparse.Namespace:
+    """A namespace carrying every path knob at its inactive default.
+
+    In-process callers (the GPA-trend wrapper) construct B2 arguments directly.
+    Going through here means a new path flag cannot be silently missed by them.
+    """
+    values: Dict[str, Any] = {
+        "input_dir": str(MODEL_DATA_DIR),
+        "output_root": str(MODEL_DATA_VERSIONS_DIR),
+        "build_id": None,
+        "min_support": 20,
+        "shrinkage_k": 20.0,
+        "reference_run": REFERENCE_RUN,
+        "feature_contract": None,
+        "rebuild_root": None,
+        "output_dir": None,
+    }
+    for split in SPLITS:
+        values[f"{split}_base"] = None
+        values[f"{split}_final"] = None
+        values[f"{split}_difficulty_out"] = None
+        values[f"{split}_final_out"] = None
+    unknown = sorted(set(overrides).difference(values))
+    if unknown:
+        raise TypeError(f"Unknown B2 argument(s): {unknown}")
+    values.update(overrides)
+    return argparse.Namespace(**values)
 
 
 if __name__ == "__main__":

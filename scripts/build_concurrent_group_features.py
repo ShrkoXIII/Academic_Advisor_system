@@ -8,6 +8,18 @@ versioned generation for human review.
 
 The job never trains a model, promotes a version, modifies a live split,
 creates a Git commit, or pushes a branch.
+
+Path modes match the other feature wrappers: ``--template-dir`` plus generation
+names by default, full explicit paths per split, or ``--rebuild-root`` to fill
+those in from :mod:`src.rebuild_paths`.  Peer membership always comes from the
+registration-time CRG roster in ``data/raw/v_crg_student_course_raw.parquet``,
+before any withdrawal or outcome filtering; ``--rebuild-root`` does not change
+that source.
+
+``--comparison-dir`` is optional.  It names an earlier concurrent build to
+diff against and produces the impact and distribution-shift diagnostics; the
+build runs normally without it, and the feature values are identical either way
+because the comparison is read after they are computed.
 """
 
 from __future__ import annotations
@@ -59,6 +71,7 @@ from src.paths import (  # noqa: E402
     assert_data_root,
     model_split_path,
 )
+from src.rebuild_paths import rebuild_split_path  # noqa: E402
 from src.registration_roster import (  # noqa: E402
     KNOWN_OUTCOME_COLUMNS,
     PEER_MEMBERSHIP_KEY,
@@ -1236,6 +1249,19 @@ def _report_markdown(report: dict[str, Any]) -> str:
         "",
     ]
     overall = report["overall_impact"]
+    if overall is None:
+        lines.extend(
+            [
+                "No comparison build was supplied (`--comparison-dir` omitted), "
+                "so the impact, peer-difficulty distribution, and "
+                "train-versus-validation/test shift sections are absent. They "
+                "are differences against an earlier build and are diagnostic "
+                "only; the concurrent feature values do not depend on them.",
+                "",
+            ]
+        )
+        return "\n".join(lines + _report_markdown_tail(report)) + "\n"
+
     overall_match = overall["semester_registration_count_match"]
     lines.extend(
         [
@@ -1342,10 +1368,17 @@ def _report_markdown(report: dict[str, Any]) -> str:
             f"`{shift['material_threshold_absolute_mean_gap']}`).",
             f"- {shift['recommendation']}",
             "",
-            "## Roster-count residuals",
-            "",
         ]
     )
+    return "\n".join(lines + _report_markdown_tail(report)) + "\n"
+
+
+def _report_markdown_tail(report: dict[str, Any]) -> list[str]:
+    """Report sections that never depend on a comparison build."""
+    lines = [
+        "## Roster-count residuals",
+        "",
+    ]
     for split in SPLITS:
         roster = report["splits"][split]["roster"]
         match = roster["semester_count_match"]
@@ -1428,7 +1461,58 @@ def _report_markdown(report: dict[str, Any]) -> str:
             "reports. No live file was changed.",
         ]
     )
-    return "\n".join(lines) + "\n"
+    return lines
+
+
+def _resolve_templates(args: argparse.Namespace) -> dict[str, Path]:
+    """Resolve the difficulty/final templates: explicit flag, rebuild, legacy."""
+    rebuild_root = getattr(args, "rebuild_root", None)
+    template_dir = Path(args.template_dir)
+    templates: dict[str, Path] = {}
+    for split in SPLITS:
+        for generation in ("difficulty", "final"):
+            explicit = getattr(args, f"{split}_{generation}", None)
+            if explicit:
+                path = Path(explicit)
+            elif rebuild_root:
+                # stage="features": the pre-concurrent final, never the one this
+                # build is about to write.
+                path = rebuild_split_path(
+                    rebuild_root,
+                    split,
+                    generation,
+                    stage="features",
+                    must_exist=True,
+                )
+            else:
+                path = model_split_path(split, generation, template_dir)
+            templates[f"{split}_{generation}"] = path
+    return templates
+
+
+def _resolve_outputs(
+    args: argparse.Namespace,
+    staging: Path,
+) -> dict[str, Path]:
+    """Resolve staged output basenames for the concurrent/final generations."""
+    rebuild_root = getattr(args, "rebuild_root", None)
+    outputs: dict[str, Path] = {}
+    for split in SPLITS:
+        for generation in ("concurrent", "final"):
+            explicit = getattr(args, f"{split}_{generation}_out", None)
+            if explicit:
+                basename = Path(explicit).name
+            elif rebuild_root:
+                basename = rebuild_split_path(
+                    rebuild_root, split, generation, stage="concurrent"
+                ).name
+            else:
+                basename = model_split_path(split, generation, staging).name
+            outputs[f"{split}_{generation}"] = staging / basename
+    names = [path.name for path in outputs.values()]
+    if len(set(names)) != len(names):
+        raise ValueError(f"concurrent output basenames collide: {sorted(names)}")
+    return outputs
 
 
 def build(args: argparse.Namespace) -> Path:
@@ -1437,7 +1521,10 @@ def build(args: argparse.Namespace) -> Path:
     raw_crg_path = Path(args.raw_crg)
     acd_metadata_path = Path(args.acd_metadata)
     current_version_file = Path(args.current_version_file)
-    comparison_dir = Path(args.comparison_dir)
+    comparison_dir = (
+        Path(args.comparison_dir) if getattr(args, "comparison_dir", None) else None
+    )
+    rebuild_root = getattr(args, "rebuild_root", None)
 
     promoted_build_id = _read_current_version(current_version_file)
     difficulty_state_dir = (
@@ -1446,17 +1533,15 @@ def build(args: argparse.Namespace) -> Path:
         else output_root / promoted_build_id / "difficulty_state"
     )
 
-    template_paths = {
-        f"{split}_{generation}": model_split_path(
-            split, generation, template_dir
-        )
-        for split in SPLITS
-        for generation in ("difficulty", "final")
-    }
-    prior_paths = {
-        split: model_split_path(split, "concurrent", comparison_dir)
-        for split in SPLITS
-    }
+    template_paths = _resolve_templates(args)
+    prior_paths = (
+        {
+            split: model_split_path(split, "concurrent", comparison_dir)
+            for split in SPLITS
+        }
+        if comparison_dir is not None
+        else {}
+    )
     assert_data_root(
         *template_paths.values(),
         *prior_paths.values(),
@@ -1469,8 +1554,15 @@ def build(args: argparse.Namespace) -> Path:
     build_id = args.build_id or datetime.now().astimezone().strftime(
         "%Y-%m-%d_%H%M%S__registration_roster_concurrent"
     )
-    output_dir = output_root / build_id
-    staging = output_root / f".{build_id}.incomplete"
+    if getattr(args, "output_dir", None):
+        output_dir = Path(args.output_dir)
+    elif rebuild_root:
+        output_dir = rebuild_split_path(
+            rebuild_root, "train", "concurrent", stage="concurrent"
+        ).parent
+    else:
+        output_dir = output_root / build_id
+    staging = output_dir.parent / f".{output_dir.name}.incomplete"
     if output_dir.exists():
         raise FileExistsError(
             f"Refusing to overwrite versioned dataset: {output_dir}"
@@ -1499,8 +1591,9 @@ def build(args: argparse.Namespace) -> Path:
     state = load_difficulty_state(difficulty_state_dir)
     clean_acd = pd.read_parquet(acd_metadata_path)
 
-    output_root.mkdir(parents=True, exist_ok=True)
+    staging.parent.mkdir(parents=True, exist_ok=True)
     staging.mkdir(parents=True)
+    output_paths = _resolve_outputs(args, staging)
     split_reports: dict[str, Any] = {}
     readback_checks: dict[str, Any] = {}
     staged_outputs: dict[str, Path] = {}
@@ -1604,17 +1697,21 @@ def build(args: argparse.Namespace) -> Path:
                     f"{concurrent['concurrent_peer_difficulty_missing'].dtype}"
                 )
 
-            prior = pd.read_parquet(
-                prior_paths[split],
-                columns=PRIOR_COMPARISON_COLUMNS,
-            )
-            _assert_positional_alignment(
-                target,
-                prior,
-                ALIGNMENT_COLUMNS,
-                f"{split}: live template/prior comparison build",
-            )
-            impact = _impact_diagnostics(target, concurrent, prior)
+            if prior_paths:
+                prior = pd.read_parquet(
+                    prior_paths[split],
+                    columns=PRIOR_COMPARISON_COLUMNS,
+                )
+                _assert_positional_alignment(
+                    target,
+                    prior,
+                    ALIGNMENT_COLUMNS,
+                    f"{split}: live template/prior comparison build",
+                )
+                impact = _impact_diagnostics(target, concurrent, prior)
+            else:
+                prior = None
+                impact = None
 
             # The model-facing roster carries no current-semester outcome and
             # no target proxy; row-level diagnostics move to a separate audit
@@ -1623,8 +1720,8 @@ def build(args: argparse.Namespace) -> Path:
             assert_unique_peer_membership(published_roster)
             roster_audit = roster_row_audit(enriched_roster)
 
-            concurrent_out = model_split_path(split, "concurrent", staging)
-            final_out = model_split_path(split, "final", staging)
+            concurrent_out = output_paths[f"{split}_concurrent"]
+            final_out = output_paths[f"{split}_final"]
             roster_out = staging / f"registration_roster_{split}.parquet"
             roster_audit_out = (
                 staging / f"registration_roster_row_audit_{split}.parquet"
@@ -1677,9 +1774,11 @@ def build(args: argparse.Namespace) -> Path:
                     f"{legacy_arrow_type}, expected int64"
                 )
 
+            # Labelling by stem keeps the legacy keys (df_train_concurrent, ...)
+            # byte-identical while still naming rebuild outputs truthfully.
             for label, path in (
-                (f"df_{split}_concurrent", concurrent_out),
-                (f"df_{split}_final", final_out),
+                (concurrent_out.stem, concurrent_out),
+                (final_out.stem, final_out),
                 (f"registration_roster_{split}", roster_out),
                 (f"registration_roster_row_audit_{split}", roster_audit_out),
                 (f"registration_count_comparison_{split}", count_audit_out),
@@ -1744,8 +1843,13 @@ def build(args: argparse.Namespace) -> Path:
             )
             gc.collect()
 
-        distribution_shift = _distribution_shift(split_reports)
-        overall_impact = _overall_impact(split_reports)
+        # Both aggregates are differences against the comparison build; without
+        # one there is nothing to difference, and neither feeds the features.
+        has_comparison = bool(prior_paths)
+        distribution_shift = (
+            _distribution_shift(split_reports) if has_comparison else None
+        )
+        overall_impact = _overall_impact(split_reports) if has_comparison else None
 
         live_after = {
             name: _path_record(path) for name, path in live_paths.items()
@@ -1814,15 +1918,24 @@ def build(args: argparse.Namespace) -> Path:
                         "version": state.config.version,
                     },
                 },
-                "prior_comparison_build": {
-                    "build_id": PRIOR_BUILD_ID,
-                    "path": str(comparison_dir),
-                    "role": (
-                        "mathematically verified post-filter peer-source "
-                        "engineering comparison"
-                    ),
+                "prior_comparison_build": (
+                    {
+                        "build_id": PRIOR_BUILD_ID,
+                        "path": str(comparison_dir),
+                        "role": (
+                            "mathematically verified post-filter peer-source "
+                            "engineering comparison"
+                        ),
+                    }
+                    if has_comparison
+                    else None
+                ),
+                "approximate_prior_reference_values": (
+                    APPROXIMATE_PRIOR_VALUES if has_comparison else None
+                ),
+                "templates": {
+                    name: str(path) for name, path in template_paths.items()
                 },
-                "approximate_prior_reference_values": APPROXIMATE_PRIOR_VALUES,
             },
             "feature_contract": feature_contract,
             "overall_impact": overall_impact,
@@ -1949,12 +2062,55 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--comparison-dir",
         type=Path,
-        default=PRIOR_BUILD_DIR,
         help=(
-            "Accepted post-filter comparison build "
-            "2026-07-23_160509__concurrent_group_feature."
+            "Optional earlier concurrent build to diff against, e.g. the "
+            "accepted post-filter build "
+            "2026-07-23_160509__concurrent_group_feature. Omit it to skip the "
+            "impact and distribution-shift diagnostics; the feature values are "
+            "unaffected either way."
         ),
     )
+    parser.add_argument(
+        "--rebuild-root",
+        type=Path,
+        help=(
+            "Version root of 2026-08_temporal_rebuild_v1. Templates resolve to "
+            "the pre-concurrent 03_features/ artifacts and outputs to "
+            "04_concurrent/, so no builder reads and writes one path."
+        ),
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        help=(
+            "Full path of the build directory. Overrides --output-root/"
+            "--build-id."
+        ),
+    )
+    for split in SPLITS:
+        parser.add_argument(
+            f"--{split}-difficulty",
+            type=Path,
+            help=f"Full path of the {split} difficulty template (input).",
+        )
+    for split in SPLITS:
+        parser.add_argument(
+            f"--{split}-final",
+            type=Path,
+            help=f"Full path of the {split} final template (input).",
+        )
+    for split in SPLITS:
+        parser.add_argument(
+            f"--{split}-concurrent-out",
+            type=Path,
+            help=f"Full path of the {split} concurrent output.",
+        )
+    for split in SPLITS:
+        parser.add_argument(
+            f"--{split}-final-out",
+            type=Path,
+            help=f"Full path of the {split} final output.",
+        )
     return parser.parse_args(argv)
 
 

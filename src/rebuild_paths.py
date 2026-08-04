@@ -28,21 +28,32 @@ Phase 1 established ``{prefix}_base_candidate.parquet`` where ``prefix`` is
 ``train``, ``valid``, or ``test_provisional``.  The later generations extend that
 same pattern instead of inventing a second one::
 
-    01_split/     train_base_candidate.parquet
-                  valid_base_candidate.parquet
-                  test_provisional_base_candidate.parquet
+    01_split/       train_base_candidate.parquet
+                    valid_base_candidate.parquet
+                    test_provisional_base_candidate.parquet
 
-    03_features/  train_difficulty_candidate.parquet
-                  train_concurrent_candidate.parquet
-                  train_final_candidate.parquet
-                  valid_difficulty_candidate.parquet
-                  ...
-                  test_provisional_final_candidate.parquet
+    03_features/    train_difficulty_candidate.parquet
+                    train_final_candidate.parquet
+                    valid_difficulty_candidate.parquet
+                    ...
+                    test_provisional_final_candidate.parquet
+
+    04_concurrent/  train_concurrent_candidate.parquet
+                    train_final_candidate.parquet
+                    ...
+                    test_provisional_final_candidate.parquet
 
 The ``test_provisional`` prefix is not decoration: TEST is built from ``20251``
 only and carries ``test_provisional_20251_only = true`` (Decisions_Log.md,
 2026-08-03 Amendment 2, Correction 2).  The ``_candidate`` suffix records that
 nothing in this version is promoted.
+
+``final`` appears in two stages because the concurrent builder consumes a
+``final`` generation and emits a wider one under the same generation name - the
+same overlap the live pipeline resolves by writing each build into its own
+directory.  Separating the stages keeps a builder from reading and writing one
+path, so ``stage`` selects between them: ``features`` is the pre-concurrent
+``final``, ``concurrent`` the post-concurrent one.
 """
 
 from __future__ import annotations
@@ -53,9 +64,26 @@ from pathlib import Path
 REBUILD_VERSION = "2026-08_temporal_rebuild_v1"
 
 # Subdirectories inside the version root. Phase 1 owns 01_split; the feature
-# generations that Phase 3 will write live under 03_features.
+# generations that Phase 3 will write live under 03_features and 04_concurrent.
 SPLIT_SUBDIR = "01_split"
 FEATURES_SUBDIR = "03_features"
+CONCURRENT_SUBDIR = "04_concurrent"
+
+STAGE_SUBDIRS: dict[str, str] = {
+    "split": SPLIT_SUBDIR,
+    "features": FEATURES_SUBDIR,
+    "concurrent": CONCURRENT_SUBDIR,
+}
+
+# The stage each generation belongs to unless the caller names another one.
+DEFAULT_STAGE: dict[str, str] = {
+    "base": "split",
+    "difficulty": "features",
+    "final": "features",
+    "concurrent": "concurrent",
+}
+
+REBUILD_STAGES: tuple[str, ...] = ("split", "features", "concurrent")
 
 REBUILD_SPLITS: tuple[str, ...] = ("train", "valid", "test")
 REBUILD_GENERATIONS: tuple[str, ...] = ("base", "difficulty", "concurrent", "final")
@@ -116,19 +144,27 @@ def rebuild_split_path(
     split: str,
     generation: str,
     *,
+    stage: str | None = None,
     must_exist: bool = False,
 ) -> Path:
     """Return the path of one rebuild split/generation artifact under ``root``.
 
-    ``base`` resolves under ``01_split/`` (written by Phase 1); every later
-    generation resolves under ``03_features/``.  Pass ``must_exist=True`` when
-    the caller is about to read the file, so a missing input fails here with the
-    path named rather than deeper in a builder.
+    ``stage`` defaults per generation (see :data:`DEFAULT_STAGE`) and only needs
+    naming for ``final``, which exists both before and after the concurrent
+    build.  Pass ``must_exist=True`` when the caller is about to read the file,
+    so a missing input fails here with the path named rather than deeper in a
+    builder.
     """
     version_root = rebuild_version_root(root)
     generation = _normalize(generation, REBUILD_GENERATIONS, "generation")
-    subdir = SPLIT_SUBDIR if generation == "base" else FEATURES_SUBDIR
-    path = version_root / subdir / rebuild_basename(split, generation)
+    stage = _normalize(
+        DEFAULT_STAGE[generation] if stage is None else stage,
+        REBUILD_STAGES,
+        "stage",
+    )
+    path = (
+        version_root / STAGE_SUBDIRS[stage] / rebuild_basename(split, generation)
+    )
     _assert_within(path, version_root)
     if must_exist and not path.exists():
         raise FileNotFoundError(
@@ -141,11 +177,14 @@ def rebuild_generation_paths(
     root: str | Path,
     generation: str,
     *,
+    stage: str | None = None,
     must_exist: bool = False,
 ) -> dict[str, Path]:
     """Return ``{split: path}`` for one generation across all three splits."""
     return {
-        split: rebuild_split_path(root, split, generation, must_exist=must_exist)
+        split: rebuild_split_path(
+            root, split, generation, stage=stage, must_exist=must_exist
+        )
         for split in REBUILD_SPLITS
     }
 

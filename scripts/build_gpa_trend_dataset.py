@@ -5,6 +5,14 @@ it into copies of the locked split generations, and delegates course-difficulty
 enrichment to the versioned B2 builder. The existing train-fitted diploma bucket
 values and fitted state are preserved unchanged. Existing model-data files are
 never overwritten.
+
+Path modes match the B2 builder: ``--template-dir`` plus generation names by
+default, full explicit paths per split, or ``--rebuild-root`` to fill those in
+from :mod:`src.rebuild_paths`. As in B2 the ``final`` templates are optional and
+all-or-nothing; Phase 1 of the rebuild produced ``base`` only, so under
+``--rebuild-root`` the trend columns are streamed into ``base`` alone and reach
+the ``difficulty`` generation through B2, which copies every non-difficulty
+column forward.
 """
 
 from __future__ import annotations
@@ -16,7 +24,7 @@ from pathlib import Path
 import shutil
 import sys
 from tempfile import TemporaryDirectory
-from types import SimpleNamespace
+from typing import Any
 
 import pandas as pd
 import pyarrow as pa
@@ -34,8 +42,10 @@ from scripts.audit_gpa_trend import (  # noqa: E402
     map_trend_to_course_keys,
 )
 from scripts.build_b2_temporal_course_stats import (  # noqa: E402
+    B2_ALLOWED_CONTRACTS,
     REFERENCE_RUN,
     build as build_b2,
+    default_namespace as b2_namespace,
 )
 from src.paths import (  # noqa: E402
     DIPLOMA_TYPE_BUCKET_MAP_PATH,
@@ -45,10 +55,51 @@ from src.paths import (  # noqa: E402
     assert_data_root,
     model_split_path,
 )
+from src.rebuild_paths import (  # noqa: E402
+    rebuild_diploma_bucket_map_path,
+    rebuild_split_path,
+)
 
 
 SPLITS = ("train", "valid", "test")
 TREND_COLUMNS = ["gpa_trend_delta", "gpa_trend_missing"]
+
+
+def _resolve_templates(args: argparse.Namespace) -> dict[str, dict[str, Path]]:
+    """Resolve the base (and optional final) templates: explicit, rebuild, legacy."""
+    rebuild_root = getattr(args, "rebuild_root", None)
+    template_dir = Path(args.template_dir)
+
+    def explicit(generation: str, split: str) -> Path | None:
+        value = getattr(args, f"{split}_{generation}", None)
+        return Path(value) if value else None
+
+    templates: dict[str, dict[str, Path]] = {"base": {}}
+    for split in SPLITS:
+        base = explicit("base", split)
+        if base is None:
+            base = (
+                rebuild_split_path(rebuild_root, split, "base", must_exist=True)
+                if rebuild_root
+                else model_split_path(split, "base", template_dir)
+            )
+        templates["base"][split] = Path(base)
+
+    explicit_final = {split: explicit("final", split) for split in SPLITS}
+    if any(explicit_final.values()) and not all(explicit_final.values()):
+        missing = sorted(split for split, path in explicit_final.items() if not path)
+        raise ValueError(
+            f"final templates are all-or-nothing across splits; missing: {missing}"
+        )
+    if all(explicit_final.values()):
+        templates["final"] = {
+            split: Path(path) for split, path in explicit_final.items()
+        }
+    elif not rebuild_root:
+        templates["final"] = {
+            split: model_split_path(split, "final", template_dir) for split in SPLITS
+        }
+    return templates
 
 
 def _stream_add_features(
@@ -96,17 +147,23 @@ def build(args: argparse.Namespace) -> Path:
     input_path = Path(args.input)
     versions_root = Path(args.output_root)
     template_dir = Path(args.template_dir)
+    rebuild_root = getattr(args, "rebuild_root", None)
+    templates = _resolve_templates(args)
+    has_final = "final" in templates
     required_templates = [
-        model_split_path(split, generation, template_dir)
-        for split in SPLITS
-        for generation in ("base", "final")
+        path for generation in templates for path in templates[generation].values()
     ]
     assert_data_root(input_path, *required_templates)
     versions_root.mkdir(parents=True, exist_ok=True)
     build_id = args.build_id or datetime.now().astimezone().strftime(
         "%Y-%m-%d_%H%M%S__gpa_trend_feature"
     )
-    output_dir = versions_root / build_id
+    if getattr(args, "output_dir", None):
+        output_dir = Path(args.output_dir)
+    elif rebuild_root:
+        output_dir = rebuild_split_path(rebuild_root, "train", "difficulty").parent
+    else:
+        output_dir = versions_root / build_id
     if output_dir.exists():
         raise FileExistsError(f"Refusing to overwrite versioned dataset: {output_dir}")
 
@@ -117,11 +174,15 @@ def build(args: argparse.Namespace) -> Path:
 
     # The B2 builder reads base and final templates, replaces only difficulty
     # columns, verifies lineage, and atomically publishes the new version folder.
+    # Trend-carrying copies keep their source basenames, so the temporary layout
+    # is the legacy one whenever the templates are the legacy files.
     with TemporaryDirectory(prefix="gpa_trend_build_", dir=versions_root) as temp_dir_name:
         temp_dir = Path(temp_dir_name)
+        staged_templates: dict[str, dict[str, Path]] = {
+            generation: {} for generation in templates
+        }
         for name in SPLITS:
-            base_source = model_split_path(name, "base", template_dir)
-            final_source = model_split_path(name, "final", template_dir)
+            base_source = templates["base"][name]
             keys = pd.read_parquet(
                 base_source,
                 columns=SEMESTER_KEY + ["last_valid_gpa_before_current_semester"],
@@ -140,32 +201,61 @@ def build(args: argparse.Namespace) -> Path:
                 )
             trend = mapped[TREND_COLUMNS]
             split_rows[name] = int(len(trend))
-            _stream_add_features(
-                base_source,
-                model_split_path(name, "base", temp_dir),
-                trend,
-            )
-            _stream_add_features(
-                final_source,
-                model_split_path(name, "final", temp_dir),
-                trend,
-            )
+            for generation in templates:
+                source = templates[generation][name]
+                staged = temp_dir / source.name
+                _stream_add_features(source, staged, trend)
+                staged_templates[generation][name] = staged
 
-        b2_args = SimpleNamespace(
-            input_dir=str(temp_dir),
-            output_root=str(versions_root),
-            build_id=build_id,
-            min_support=args.min_support,
-            shrinkage_k=args.shrinkage_k,
-            reference_run=args.reference_run,
+        b2_overrides: dict[str, Any] = {
+            "input_dir": str(temp_dir),
+            "output_root": str(versions_root),
+            "build_id": build_id,
+            "min_support": args.min_support,
+            "shrinkage_k": args.shrinkage_k,
+            "reference_run": args.reference_run,
+            "feature_contract": args.feature_contract,
+            "output_dir": output_dir,
+        }
+        if rebuild_root:
+            b2_overrides["rebuild_root"] = rebuild_root
+        for generation in staged_templates:
+            for name in SPLITS:
+                b2_overrides[f"{name}_{generation}"] = staged_templates[generation][name]
+        published = build_b2(b2_namespace(**b2_overrides))
+
+    # Under --rebuild-root the version-local map is the only correct one:
+    # Decisions_Log.md 2026-08-03 Amendment 3 refits it on the new TRAIN and
+    # leaves the live map at data/artifacts/ untouched.
+    if getattr(args, "diploma_map_path", None):
+        diploma_state_source = Path(args.diploma_map_path)
+    elif rebuild_root:
+        diploma_state_source = rebuild_diploma_bucket_map_path(
+            rebuild_root, must_exist=True
         )
-        published = build_b2(b2_args)
-
-    diploma_state_source = DIPLOMA_TYPE_BUCKET_MAP_PATH
+    else:
+        diploma_state_source = DIPLOMA_TYPE_BUCKET_MAP_PATH
+    if not diploma_state_source.exists():
+        raise FileNotFoundError(
+            f"Diploma bucket map not found: {diploma_state_source}"
+        )
     shutil.copy2(
         diploma_state_source,
-        published / DIPLOMA_TYPE_BUCKET_MAP_PATH.name,
+        published / diploma_state_source.name,
     )
+    # The audit's coverage tables only need the semester keys, which every
+    # generation carries; point them at whichever generation was published.
+    # B2 records the paths it actually wrote, so they are read back rather than
+    # recomputed from its naming rules here.
+    b2_report = json.loads(
+        (published / "b2_data_report.json").read_text(encoding="utf-8")
+    )
+    published_generation = "final" if has_final else "difficulty"
+    published_outputs = {
+        name: Path(path)
+        for name, path in b2_report["io_plan"]["outputs"][published_generation].items()
+    }
+    audit_split_paths = {name: published_outputs[name] for name in SPLITS}
     audit_dir = published / "gpa_trend_audit"
     audit_report = create_semester_audit_report(
         full_semester,
@@ -173,7 +263,7 @@ def build(args: argparse.Namespace) -> Path:
         audit_dir,
         source_path=input_path,
         source_course_rows=source_rows,
-        split_dir=published,
+        split_paths=audit_split_paths,
     )
     excluded_course_rows = int(
         full_semester.loc[
@@ -182,9 +272,7 @@ def build(args: argparse.Namespace) -> Path:
     )
     primary_course_rows = source_rows - excluded_course_rows
     unassigned_rows = primary_course_rows - sum(split_rows.values())
-    train_schema = pq.ParquetFile(
-        model_split_path("train", "final", published)
-    ).schema_arrow
+    train_schema = pq.ParquetFile(published_outputs["train"]).schema_arrow
     persisted_dtypes = {
         column: str(train_schema.field(column).type) for column in TREND_COLUMNS
     }
@@ -195,6 +283,12 @@ def build(args: argparse.Namespace) -> Path:
         "output": str(published),
         "reference_run": args.reference_run,
         "template_dir": str(template_dir),
+        "feature_contract": args.feature_contract,
+        "templates": {
+            generation: {split: str(path) for split, path in paths.items()}
+            for generation, paths in templates.items()
+        },
+        "final_generation_built": has_final,
         "row_counts": split_rows,
         "unassigned_rows": unassigned_rows,
         "new_features": TREND_COLUMNS,
@@ -234,6 +328,50 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--min-support", type=int, default=20)
     parser.add_argument("--shrinkage-k", type=float, default=20.0)
     parser.add_argument("--reference-run", default=REFERENCE_RUN)
+    parser.add_argument(
+        "--feature-contract",
+        required=True,
+        choices=list(B2_ALLOWED_CONTRACTS),
+        help="Forwarded to the B2 builder's named-contract gate.",
+    )
+    parser.add_argument(
+        "--rebuild-root",
+        type=Path,
+        help=(
+            "Version root of 2026-08_temporal_rebuild_v1. Fills in the base "
+            "templates, the B2 output directory, and the version-local diploma "
+            "bucket map. Final templates are never auto-resolved in this mode."
+        ),
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        help="Full path of the build directory. Overrides --output-root/--build-id.",
+    )
+    parser.add_argument(
+        "--diploma-map-path",
+        type=Path,
+        help=(
+            "Full path of the diploma bucket map copied into the build. "
+            "Defaults to the live map, or to the version-local map under "
+            "--rebuild-root."
+        ),
+    )
+    for split in SPLITS:
+        parser.add_argument(
+            f"--{split}-base",
+            type=Path,
+            help=f"Full path of the {split} base template.",
+        )
+    for split in SPLITS:
+        parser.add_argument(
+            f"--{split}-final",
+            type=Path,
+            help=(
+                f"Full path of the {split} final template. All three or none; "
+                "omit them to carry the trend columns through base alone."
+            ),
+        )
     return parser.parse_args(argv)
 
 

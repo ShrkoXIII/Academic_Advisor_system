@@ -17,9 +17,11 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.paths import MODEL_DATA_GENERATIONS, MODEL_SPLITS  # noqa: E402
 from src.rebuild_paths import (  # noqa: E402
+    CONCURRENT_SUBDIR,
     FEATURES_SUBDIR,
     REBUILD_GENERATIONS,
     REBUILD_SPLITS,
+    REBUILD_STAGES,
     SPLIT_SUBDIR,
     rebuild_basename,
     rebuild_diploma_bucket_map_path,
@@ -57,10 +59,10 @@ class ExplicitResolutionTests(_TempRoot):
                 self.root / SPLIT_SUBDIR / basename,
             )
 
-    def test_later_generations_live_under_03_features(self) -> None:
+    def test_feature_generations_live_under_03_features(self) -> None:
         expected = {
             ("train", "difficulty"): "train_difficulty_candidate.parquet",
-            ("valid", "concurrent"): "valid_concurrent_candidate.parquet",
+            ("valid", "difficulty"): "valid_difficulty_candidate.parquet",
             ("test", "final"): "test_provisional_final_candidate.parquet",
         }
         for (split, generation), basename in expected.items():
@@ -68,6 +70,23 @@ class ExplicitResolutionTests(_TempRoot):
                 rebuild_split_path(self.root, split, generation),
                 self.root / FEATURES_SUBDIR / basename,
             )
+
+    def test_concurrent_stage_is_a_separate_directory(self) -> None:
+        self.assertEqual(
+            rebuild_split_path(self.root, "valid", "concurrent"),
+            self.root / CONCURRENT_SUBDIR / "valid_concurrent_candidate.parquet",
+        )
+        # final exists in both stages; a builder must never read and write one path.
+        pre = rebuild_split_path(self.root, "train", "final")
+        post = rebuild_split_path(self.root, "train", "final", stage="concurrent")
+        self.assertEqual(pre.name, post.name)
+        self.assertNotEqual(pre, post)
+        self.assertEqual(pre.parent, self.root / FEATURES_SUBDIR)
+        self.assertEqual(post.parent, self.root / CONCURRENT_SUBDIR)
+
+    def test_unknown_stage_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            rebuild_split_path(self.root, "train", "final", stage="05_later")
 
     def test_generation_helper_covers_all_three_splits(self) -> None:
         paths = rebuild_generation_paths(self.root, "base")
@@ -137,9 +156,10 @@ class ContainmentAndCollisionTests(_TempRoot):
     def test_no_resolved_path_escapes_the_version_root(self) -> None:
         resolved_root = self.root.resolve()
         candidates = [
-            rebuild_split_path(self.root, split, generation)
+            rebuild_split_path(self.root, split, generation, stage=stage)
             for split in REBUILD_SPLITS
             for generation in REBUILD_GENERATIONS
+            for stage in REBUILD_STAGES
         ]
         candidates.append(rebuild_diploma_bucket_map_path(self.root))
         for path in candidates:
