@@ -110,6 +110,56 @@ def _json_value(value: Any) -> Any:
     raise TypeError(f"Cannot serialize {type(value).__name__}")
 
 
+def stores_pandas_index(parquet_file: pq.ParquetFile) -> bool:
+    """Whether the parquet file materializes a pandas index column.
+
+    The live splits were written with ``preserve_index=True`` and carry
+    ``__index_level_0__``; the rebuild's Phase 1 splits were not and carry no
+    index at all. That difference decides how a streamed batch can be checked
+    against a whole-file feature frame, because a file without a stored index
+    hands every batch a fresh ``RangeIndex`` starting at zero.
+    """
+    return any(
+        field.startswith("__index_level_") for field in parquet_file.schema_arrow.names
+    )
+
+
+def assert_batch_alignment(
+    batch_frame: pd.DataFrame,
+    feature_batch: pd.DataFrame,
+    *,
+    source_path: Path,
+    offset: int,
+    end: int,
+    source_has_index: bool,
+) -> None:
+    """Refuse to write unless the batch and the feature slice are the same rows.
+
+    With a stored index the two indexes must match outright, which is the
+    strongest available check and the one the live splits have always used.
+    Without one, the file offers no index to compare, so the check is that
+    pandas handed back the untouched positional index for this batch - i.e.
+    nothing was reordered - and alignment is by position, which is exact
+    because both sides read the same file in file order.
+    """
+    if len(batch_frame) != len(feature_batch):
+        raise AssertionError(
+            f"Row-count mismatch while streaming {source_path.name}: "
+            f"rows {offset}:{end}"
+        )
+    if source_has_index:
+        if not batch_frame.index.equals(feature_batch.index):
+            raise AssertionError(
+                f"Index/order mismatch while streaming {source_path.name}: rows {offset}:{end}"
+            )
+        return
+    if not batch_frame.index.equals(pd.RangeIndex(len(batch_frame))):
+        raise AssertionError(
+            f"Unindexed source {source_path.name} returned a non-positional batch "
+            f"index at rows {offset}:{end}; refusing to align by position"
+        )
+
+
 def _stream_write_enriched(
     source_path: Path,
     output_path: Path,
@@ -122,6 +172,9 @@ def _stream_write_enriched(
     if output_path.exists():
         raise FileExistsError(f"Refusing to overwrite output parquet: {output_path}")
     parquet_file = pq.ParquetFile(source_path)
+    # Mirror the source: fabricating an index for a file that has none would
+    # write a counter that restarts on every batch.
+    source_has_index = stores_pandas_index(parquet_file)
     writer: pq.ParquetWriter | None = None
     offset = 0
     output_columns: list[str] | None = None
@@ -131,14 +184,20 @@ def _stream_write_enriched(
             batch_frame = table.to_pandas()
             end = offset + len(batch_frame)
             feature_batch = difficulty_features.iloc[offset:end]
-            if not batch_frame.index.equals(feature_batch.index):
-                raise AssertionError(
-                    f"Index/order mismatch while streaming {source_path.name}: rows {offset}:{end}"
-                )
+            assert_batch_alignment(
+                batch_frame,
+                feature_batch,
+                source_path=source_path,
+                offset=offset,
+                end=end,
+                source_has_index=source_has_index,
+            )
             for column in DIFFICULTY_OUTPUT_COLUMNS:
                 batch_frame[column] = feature_batch[column].to_numpy()
 
-            output_table = pa.Table.from_pandas(batch_frame, preserve_index=True)
+            output_table = pa.Table.from_pandas(
+                batch_frame, preserve_index=source_has_index
+            )
             if writer is None:
                 writer = pq.ParquetWriter(output_path, output_table.schema, compression="snappy")
                 output_columns = list(batch_frame.columns)

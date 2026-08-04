@@ -44,8 +44,10 @@ from scripts.audit_gpa_trend import (  # noqa: E402
 from scripts.build_b2_temporal_course_stats import (  # noqa: E402
     B2_ALLOWED_CONTRACTS,
     REFERENCE_RUN,
+    assert_batch_alignment,
     build as build_b2,
     default_namespace as b2_namespace,
+    stores_pandas_index,
 )
 from src.paths import (  # noqa: E402
     DIPLOMA_TYPE_BUCKET_MAP_PATH,
@@ -113,6 +115,7 @@ def _stream_add_features(
     if output_path.exists():
         raise FileExistsError(f"Refusing to overwrite temporary output: {output_path}")
     parquet_file = pq.ParquetFile(source_path)
+    source_has_index = stores_pandas_index(parquet_file)
     writer: pq.ParquetWriter | None = None
     offset = 0
     try:
@@ -121,15 +124,21 @@ def _stream_add_features(
             batch_frame = table.to_pandas()
             end = offset + len(batch_frame)
             feature_batch = features.iloc[offset:end]
-            if not batch_frame.index.equals(feature_batch.index):
-                raise AssertionError(
-                    f"Index/order mismatch while streaming {source_path.name}: {offset}:{end}"
-                )
+            assert_batch_alignment(
+                batch_frame,
+                feature_batch,
+                source_path=source_path,
+                offset=offset,
+                end=end,
+                source_has_index=source_has_index,
+            )
             for column in TREND_COLUMNS:
                 if column in batch_frame.columns:
                     raise AssertionError(f"Source already contains {column}: {source_path}")
                 batch_frame[column] = feature_batch[column].to_numpy()
-            output_table = pa.Table.from_pandas(batch_frame, preserve_index=True)
+            output_table = pa.Table.from_pandas(
+                batch_frame, preserve_index=source_has_index
+            )
             if writer is None:
                 writer = pq.ParquetWriter(output_path, output_table.schema, compression="snappy")
             writer.write_table(output_table)

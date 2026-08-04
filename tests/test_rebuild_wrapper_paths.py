@@ -14,6 +14,10 @@ import sys
 import tempfile
 import unittest
 
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -157,6 +161,106 @@ class B2PathPlanTests(_RebuildRoot):
     def test_unknown_argument_is_refused(self) -> None:
         with self.assertRaises(TypeError):
             B2.default_namespace(feature_contract="baseline_41", typo_root=".")
+
+
+class StreamedBatchAlignmentTests(unittest.TestCase):
+    """Streaming must not assume the source parquet stores a pandas index.
+
+    The live splits were written with ``preserve_index=True``; the rebuild's
+    Phase 1 splits were not. Without a stored index every batch comes back with
+    a fresh ``RangeIndex`` starting at zero, so the old index-equality guard
+    raised on the second batch of every unindexed file, and writing with
+    ``preserve_index=True`` would have stamped a counter that restarts per batch.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory(prefix="stream_align_test_")
+        self.addCleanup(self._tmp.cleanup)
+        self.dir = Path(self._tmp.name)
+        self.frame = pd.DataFrame(
+            {"a": range(60), "b": [f"r{i}" for i in range(60)]}
+        )
+
+    def _write(self, name: str, *, with_index: bool) -> Path:
+        path = self.dir / name
+        table = pa.Table.from_pandas(self.frame, preserve_index=with_index)
+        pq.write_table(table, path)
+        return path
+
+    def test_detects_whether_a_source_stores_an_index(self) -> None:
+        indexed = self._write("indexed.parquet", with_index=True)
+        plain = self._write("plain.parquet", with_index=False)
+        self.assertTrue(B2.stores_pandas_index(pq.ParquetFile(indexed)))
+        self.assertFalse(B2.stores_pandas_index(pq.ParquetFile(plain)))
+
+    def test_unindexed_batches_align_positionally(self) -> None:
+        features = pd.DataFrame({"x": range(60)})
+        # Batch two of an unindexed file: index 0..24, feature slice 25..49.
+        batch = pd.DataFrame({"a": range(25, 50)}).reset_index(drop=True)
+        B2.assert_batch_alignment(
+            batch,
+            features.iloc[25:50],
+            source_path=Path("plain.parquet"),
+            offset=25,
+            end=50,
+            source_has_index=False,
+        )
+
+    def test_indexed_batches_still_require_matching_indexes(self) -> None:
+        features = pd.DataFrame({"x": range(60)})
+        misaligned = pd.DataFrame({"a": range(25)}, index=range(25))
+        with self.assertRaises(AssertionError):
+            B2.assert_batch_alignment(
+                misaligned,
+                features.iloc[25:50],
+                source_path=Path("indexed.parquet"),
+                offset=25,
+                end=50,
+                source_has_index=True,
+            )
+
+    def test_reordered_unindexed_batch_is_refused(self) -> None:
+        features = pd.DataFrame({"x": range(60)})
+        reordered = pd.DataFrame({"a": range(25)}, index=list(reversed(range(25))))
+        with self.assertRaises(AssertionError):
+            B2.assert_batch_alignment(
+                reordered,
+                features.iloc[0:25],
+                source_path=Path("plain.parquet"),
+                offset=0,
+                end=25,
+                source_has_index=False,
+            )
+
+    def test_row_count_mismatch_is_refused_in_both_modes(self) -> None:
+        features = pd.DataFrame({"x": range(60)})
+        short = pd.DataFrame({"a": range(10)})
+        for has_index in (True, False):
+            with self.assertRaises(AssertionError):
+                B2.assert_batch_alignment(
+                    short,
+                    features.iloc[0:25],
+                    source_path=Path("s.parquet"),
+                    offset=0,
+                    end=25,
+                    source_has_index=has_index,
+                )
+
+    def test_stream_mirrors_the_source_index_convention(self) -> None:
+        features = pd.DataFrame(
+            {column: range(60) for column in B2.DIFFICULTY_OUTPUT_COLUMNS}
+        )
+        for name, with_index in (("indexed.parquet", True), ("plain.parquet", False)):
+            source = self._write(name, with_index=with_index)
+            output = self.dir / f"out_{name}"
+            B2._stream_write_enriched(source, output, features, batch_size=25)
+            written = pq.ParquetFile(output).schema_arrow.names
+            has_index_col = any(n.startswith("__index_level_") for n in written)
+            self.assertEqual(has_index_col, with_index, name)
+            self.assertEqual(pq.ParquetFile(output).metadata.num_rows, 60)
+            # Values survive the round trip regardless of index convention.
+            back = pq.read_table(output, columns=["a"]).column(0).to_pylist()
+            self.assertEqual(back, list(range(60)))
 
 
 class B2ContractGateTests(unittest.TestCase):

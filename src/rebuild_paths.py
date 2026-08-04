@@ -43,6 +43,10 @@ same pattern instead of inventing a second one::
                     ...
                     test_provisional_final_candidate.parquet
 
+    05_dataset/     train_dataset_candidate.parquet
+                    valid_dataset_candidate.parquet
+                    test_provisional_dataset_candidate.parquet
+
 The ``test_provisional`` prefix is not decoration: TEST is built from ``20251``
 only and carries ``test_provisional_20251_only = true`` (Decisions_Log.md,
 2026-08-03 Amendment 2, Correction 2).  The ``_candidate`` suffix records that
@@ -68,6 +72,7 @@ REBUILD_VERSION = "2026-08_temporal_rebuild_v1"
 SPLIT_SUBDIR = "01_split"
 FEATURES_SUBDIR = "03_features"
 CONCURRENT_SUBDIR = "04_concurrent"
+DATASET_SUBDIR = "05_dataset"
 
 STAGE_SUBDIRS: dict[str, str] = {
     "split": SPLIT_SUBDIR,
@@ -187,6 +192,31 @@ def rebuild_generation_paths(
         )
         for split in REBUILD_SPLITS
     }
+
+
+def rebuild_dataset_path(
+    root: str | Path,
+    split: str,
+    *,
+    must_exist: bool = False,
+) -> Path:
+    """Return the assembled model-facing dataset path for one split.
+
+    This is the end of the chain: one file per split carrying the union of the
+    named contracts. It is a distinct stage because it is not a feature
+    generation - nothing downstream enriches it further.
+    """
+    version_root = rebuild_version_root(root)
+    split = _normalize(split, REBUILD_SPLITS, "split")
+    path = (
+        version_root
+        / DATASET_SUBDIR
+        / f"{SPLIT_FILE_PREFIX[split]}_dataset{FILE_SUFFIX}"
+    )
+    _assert_within(path, version_root)
+    if must_exist and not path.exists():
+        raise FileNotFoundError(f"Required rebuild artifact is missing: {path}")
+    return path
 
 
 def rebuild_diploma_bucket_map_path(

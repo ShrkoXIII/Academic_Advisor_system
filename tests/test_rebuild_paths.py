@@ -24,11 +24,13 @@ from src.rebuild_paths import (  # noqa: E402
     REBUILD_STAGES,
     SPLIT_SUBDIR,
     rebuild_basename,
+    rebuild_dataset_path,
     rebuild_diploma_bucket_map_path,
     rebuild_generation_paths,
     rebuild_split_path,
     rebuild_version_root,
 )
+from src.rebuild_paths import DATASET_SUBDIR  # noqa: E402
 
 LIVE_BASENAMES = frozenset(
     f"df_{split}_{generation}.parquet"
@@ -95,6 +97,20 @@ class ExplicitResolutionTests(_TempRoot):
             paths["test"],
             self.root / SPLIT_SUBDIR / PHASE1_BASE_NAMES["test"],
         )
+
+    def test_dataset_stage_resolves_under_05_dataset(self) -> None:
+        self.assertEqual(
+            rebuild_dataset_path(self.root, "train"),
+            self.root / DATASET_SUBDIR / "train_dataset_candidate.parquet",
+        )
+        self.assertEqual(
+            rebuild_dataset_path(self.root, "test"),
+            self.root / DATASET_SUBDIR / "test_provisional_dataset_candidate.parquet",
+        )
+        with self.assertRaises(FileNotFoundError):
+            rebuild_dataset_path(self.root, "train", must_exist=True)
+        with self.assertRaises(ValueError):
+            rebuild_dataset_path(self.root, "holdout")
 
     def test_diploma_map_resolves_version_locally(self) -> None:
         self.assertEqual(
