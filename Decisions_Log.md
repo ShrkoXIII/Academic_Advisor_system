@@ -1584,3 +1584,36 @@ modified. The fitting rule itself — top-five by TRAIN frequency, with
 **Nothing else is decided.** No dataset promoted, no model trained, no contract
 changed, no wiring touched.
 
+###
+
+## 2026-08-03 — Correction to Amendment 3: diploma bucket map path
+
+Amendment 3 (`bff75c3`) states the diploma bucket map lives at
+`data/model_data/diploma_type_bucket_map.json`. That path does not exist and is
+corrected here.
+
+The live map is:
+
+```text
+data/artifacts/diploma_type_bucket_map.json
+```
+
+resolved via `DIPLOMA_TYPE_BUCKET_MAP_PATH = ARTIFACTS_DIR / "diploma_type_bucket_map.json"`
+(`src/paths.py:38`).
+
+A second copy exists at
+`data/model_data/versions/2026-07-21_gpa_trend_feature/diploma_type_bucket_map.json`,
+written into the version directory by `build_gpa_trend_dataset.py:167`. It is a
+copy, not the source, and is the likely origin of the error.
+
+Everything else in Amendment 3 is unaffected. The `fit_source` claim is correct
+and was verified: the map records `fit_source.path = data\model_data\df_train_difficulty.parquet`,
+from the superseded split. Its fitting rule was also verified —
+`top_codes = [15, 16, 13, 19, 26]`, `rare_bucket_label = 6`,
+`unseen_bucket_label = -1`.
+
+The refit decision stands: refit on the new TRAIN (606,562 rows, through
+`20233`), persist under
+`data/model_data/versions/2026-08_temporal_rebuild_v1/`, leave the live map at
+`data/artifacts/` untouched, and change no part of the fitting rule.
+
