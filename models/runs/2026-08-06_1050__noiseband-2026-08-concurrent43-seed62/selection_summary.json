@@ -1,0 +1,20 @@
+{
+  "selection_split": "valid",
+  "feature_contract": "concurrent_43",
+  "feature_count": 43,
+  "reporting_threshold": 0.8,
+  "test_policy": "closed_not_read",
+  "directions": {
+    "fail_avg_precision": "higher_is_better",
+    "auc": "higher_is_better",
+    "brier": "lower_is_better",
+    "train_valid_auc_gap": "lower_is_better"
+  },
+  "valid": {
+    "fail_avg_precision": 0.2530540074815186,
+    "auc": 0.8064996387942337,
+    "brier": 0.06503570313964847,
+    "train_valid_auc_gap": 0.071019166300619
+  },
+  "test_descriptive": "closed_not_read"
+}
