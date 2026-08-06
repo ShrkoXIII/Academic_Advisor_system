@@ -1617,3 +1617,142 @@ The refit decision stands: refit on the new TRAIN (606,562 rows, through
 `data/model_data/versions/2026-08_temporal_rebuild_v1/`, leave the live map at
 `data/artifacts/` untouched, and change no part of the fitting rule.
 
+---
+## 2026-08-03 — Phase 3 feature reconstruction on `2026-08_temporal_rebuild_v1`
+
+**Provenance.** Drafted by an AI assistant in an interactive planning
+conversation at the owner's request, then reviewed, decided, and committed by
+the owner. The implementation agent had no part in it.
+
+Implementation commit: `31d9a51`. Nothing pushed. Preceded by the isolated
+enabling commits `1641607` (version-scoped path resolver), `4daef1c` (wrapper
+adaptation), `e1e5ad4` (diploma bucket module and refit).
+
+### Result
+
+| split | rows | part_id | columns |
+|---|---:|---|---:|
+| TRAIN | 606,562 | 20051–20233 | 85 |
+| VALID | 75,380 | 20241–20243 | 85 |
+| TEST | 34,628 | 20251 | 86 |
+
+Row counts identical at every stage (base → difficulty → final → concurrent →
+dataset). No row dropped, therefore no exclusion reasons required. Splits
+disjoint on `student_course_id`. `degree_id`, `course_id`, `student_id`,
+`student_course_id`, `part_id` byte-identical to the Phase 1 split.
+
+TEST carries `test_provisional_20251_only = true` and remains provisional per
+Declaration 1.
+
+### Contracts
+
+The union of the two active contracts is `concurrent_43`; `baseline_41` was
+verified — not assumed — to be a strict subset. 43 features: 42 persisted plus
+`requirement_size_bucket_ord`, derived at training time.
+
+`concurrent_peer_difficulty_missing` was built upstream and dropped at assembly.
+Verified absent from all three datasets as a drop, not a never-built.
+
+Difficulty output is exactly `STAT_OUTPUT_COLUMNS + AUDIT_OUTPUT_COLUMNS`
+imported from `src/course_difficulty.py:29-44`. Nine columns added, none extra.
+
+`feature_manifest.csv` records all 87 columns with contract membership, builder
+module, role, and split presence.
+
+### Identity
+
+```text
+lineage_applied = false
+lineage_reason  = NOT_AUTHORISED_BY_OWNER_DESPITE_PROCEED
+```
+
+Original `degree_id` and `course_id` throughout. No canonical identifier exists.
+
+### Temporal behaviour, with evidence
+
+**Student-own history advances inside VALID.** `audit_gpa_trend.py:180-188`
+groups by `university_id+student_id+degree_id` over the whole pre-split frame and
+applies `ffill().shift(1)` with no split filter. Measured: 8,691 of 8,691
+adjacent within-VALID semester pairs carry the earlier VALID semester's GPA as
+t−1.
+
+**Course-level state is frozen.** `build_b2_temporal_course_stats.py:384-390`
+applies the persisted state to VALID/TEST via `apply_difficulty_state`, which
+never updates from its input. Verified by replay: reloading the persisted state
+and re-applying it reproduces all nine difficulty columns exactly. TRAIN is
+incremental (`course_difficulty.py:663-672`) — all 566,960 Level-1 rows carry
+exactly the count of that key's strictly-earlier rows, and no key's debut
+semester resolves at Level 1.
+
+### Registration rosters
+
+Source `data/raw/v_crg_student_course_raw.parquet`. Match rate 99.220% TRAIN
+(129,750/130,770), 100% VALID, 100% TEST. Rosters carry zero outcome columns and
+exceed the completed-target population (TRAIN +37,810, VALID +5,042, TEST +2,632
+registration rows with no completed outcome) — registration-time membership, not
+post-withdrawal survivors.
+
+### The measured outcome of the boundary change
+
+Level-1 difficulty coverage, against the decay recorded in `CLAUDE.md §9` for
+the superseded boundaries:
+
+```text
+old boundaries:  93.6% TRAIN → 76.2% VALID → 44.7% TEST
+new boundaries:  93.5% TRAIN → 95.5% VALID → 83.1% TEST
+```
+
+This is the effect the rebuild was undertaken to obtain.
+
+### Verification
+
+75 structural and 12 temporal checks pass. 227 unit tests pass. Full chain
+re-run into a scratch root: all 41 data artifacts byte-identical, including
+every parquet, the difficulty state tables, and the manifest CSV. Two JSON files
+differ in timestamp and provenance path only; fitted content identical. All 18
+input and live files byte-unchanged.
+
+### Blocking defect fixed to allow the run
+
+The streaming helpers in the difficulty and trend wrappers assumed the source
+parquet stores a pandas index. Live splits do; Phase 1 candidates do not, so
+every batch after the first returned a `RangeIndex` restarting at zero and the
+guard raised. `preserve_index=True` would have written an index counter
+restarting every 25,000 rows.
+
+Fixed to keep the exact index-equality check when an index is stored, and
+otherwise assert the batch is positionally untouched before aligning by
+position. Legacy re-verified after the fix: still byte-identical to
+`2026-07-21_gpa_trend_feature`.
+
+### Two chain steps written because they did not exist
+
+The `final` generation (difficulty + `diploma_type_bucket`) had no script — only
+a notebook that writes to live paths. The concurrent builder requires it, so the
+chain could not run. The assembly step also did not exist. Both are new files,
+scoped to the version root.
+
+This confirms the earlier architecture audit's finding of no single current
+final-assembly orchestrator.
+
+### Two observations, not blockers
+
+1. `difficulty_state/manifest.json` records `fit_source` as a deleted
+   `TemporaryDirectory` path. Pre-existing; the legacy build does the same.
+   Provenance rests on `fit_rows` (606,562) and `part_id_min`/`max`
+   (20051..20233), both correct.
+2. TEST shows 5,115 unseen-bucket rows (14.8%) against only 8 null
+   `diploma_type_id` — approximately 5,107 rows carry diploma codes never
+   observed in TRAIN. TEST is provisional and was not opened, but this is a
+   genuine distribution shift and must be weighed before TEST is ever read.
+
+### What this entry does not do
+
+No model trained, tuned, evaluated, or promoted. No contract default changed. No
+live artifact written. `CURRENT_VERSION.txt` untouched. TEST outcomes not read.
+
+`models/runs/NOISE_BAND.md` remains invalid as a yardstick for this split, per
+Declaration 4. A new band must be measured before any delta on this split is
+interpreted.
+
+---
