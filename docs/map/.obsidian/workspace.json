@@ -20,8 +20,19 @@
               "icon": "lucide-file",
               "title": "02-merge-and-features"
             }
+          },
+          {
+            "id": "a9a8ffbb896d04b9",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -185,13 +196,14 @@
       "bases:Create new base": false
     }
   },
-  "active": "4c883285a43c4abc",
+  "active": "a9a8ffbb896d04b9",
   "lastOpenFiles": [
     "01-extract-and-clean.md",
+    "new.md",
+    "02-merge-and-features.md",
     "README.md",
     "05-off-route.md",
     "04-training-and-runs.md",
-    "03-rebuild-2026-08.md",
-    "02-merge-and-features.md"
+    "03-rebuild-2026-08.md"
   ]
 }

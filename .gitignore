@@ -30,6 +30,7 @@ __pycache__/
 # Data folders - DO NOT UPLOAD
 # =========================
 data/
+data_old/
 reports/
 ## srcss/ - If you have a src/ folder, you might want to ignore it if it contains sensitive information or if it's not meant to be shared. However, if src/ contains your main codebase, you should consider keeping it in version control. Adjust this based on your project's structure and needs.
 # src/
