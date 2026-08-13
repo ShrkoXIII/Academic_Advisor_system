@@ -38,7 +38,11 @@ import pandas as pd
 
 from src.cleaning_utils import normalize_id_series
 from src.feature_engineering import SEMESTER_KEY
+<<<<<<< HEAD
 from src.validation import require_columns
+=======
+from src.validation import find_missing_columns
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
 
 
 VALID_ACTIVE_STATUS = "A"
@@ -212,6 +216,17 @@ def _normalize_column_names(frame: pd.DataFrame, source_name: str) -> pd.DataFra
     return result
 
 
+<<<<<<< HEAD
+=======
+def _require_columns(
+    frame: pd.DataFrame, columns: list[str] | tuple[str, ...], source_name: str
+) -> None:
+    missing = find_missing_columns(frame, columns)
+    if missing:
+        raise KeyError(f"{source_name} is missing required columns: {missing}")
+
+
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
 def _normalize_code_series(series: pd.Series) -> pd.Series:
     normalized = series.astype("string").str.strip().str.upper()
     null_like = normalized.fillna("").str.lower().isin(

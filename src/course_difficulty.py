@@ -25,7 +25,11 @@ from typing import Dict, Iterable
 import numpy as np
 import pandas as pd
 
+<<<<<<< HEAD
 from src.validation import assert_shape_preserved, require_columns
+=======
+from src.validation import find_missing_columns, shape_changed
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
 
 
 STAT_OUTPUT_COLUMNS = [
@@ -137,8 +141,15 @@ def _composite_key(df: pd.DataFrame, columns: Iterable[str]) -> pd.Series:
         result.iloc[:] = ""
         return result
 
+<<<<<<< HEAD
     # The legacy df[columns] access raised KeyError even for an empty frame.
     require_columns(df, columns, label="composite key", error=KeyError)
+=======
+    missing_columns = find_missing_columns(df, columns)
+    if missing_columns:
+        # The legacy df[columns] access raised KeyError even for an empty frame.
+        raise KeyError(f"Composite-key columns not found: {missing_columns}")
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
 
     for start in range(0, len(df), _COMPOSITE_KEY_CHUNK_ROWS):
         stop = min(start + _COMPOSITE_KEY_CHUNK_ROWS, len(df))
@@ -173,7 +184,15 @@ def build_level_keys(df: pd.DataFrame) -> pd.DataFrame:
         "requirement_type_id",
         "course_credits",
     }
+<<<<<<< HEAD
     require_columns(df, required, label="difficulty keys", error=ValueError)
+=======
+    # sorted(required) so the message keeps the alphabetical order the previous
+    # `sorted(required - set(df.columns))` produced.
+    missing = find_missing_columns(df, sorted(required))
+    if missing:
+        raise ValueError(f"Missing columns required for difficulty keys: {missing}")
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
 
     keys = pd.DataFrame(index=df.index)
     keys["degree_course_key"] = df["degree_course_key"].astype("string")
@@ -210,7 +229,14 @@ def _validate_training_frame(df: pd.DataFrame) -> None:
         "requirement_type_id",
         "course_credits",
     }
+<<<<<<< HEAD
     require_columns(df, required, label="course difficulty", error=ValueError)
+=======
+    # sorted(required): preserves the previous alphabetical message order.
+    missing = find_missing_columns(df, sorted(required))
+    if missing:
+        raise ValueError(f"Missing columns required for course difficulty: {missing}")
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
 
     part_numeric = pd.to_numeric(df["part_id"], errors="coerce")
     if part_numeric.isna().any():
@@ -228,7 +254,16 @@ def _validate_query_frame(df: pd.DataFrame) -> None:
         "requirement_type_id",
         "course_credits",
     }
+<<<<<<< HEAD
     require_columns(df, required, label="course-difficulty queries", error=ValueError)
+=======
+    # sorted(required): preserves the previous alphabetical message order.
+    missing = find_missing_columns(df, sorted(required))
+    if missing:
+        raise ValueError(
+            f"Missing columns required for course-difficulty queries: {missing}"
+        )
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
 
     part_numeric = pd.to_numeric(df["part_id"], errors="coerce")
     if part_numeric.isna().any():
@@ -625,10 +660,15 @@ def apply_difficulty_state(
         else features
     )
 
+<<<<<<< HEAD
     assert_shape_preserved(
         df, out, label="difficulty enrichment", check_index=True,
         error=AssertionError,
     )
+=======
+    if shape_changed(df, out, check_index=True):
+        raise AssertionError("Difficulty enrichment changed row count, order, or index")
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
     return out
 
 
@@ -672,10 +712,15 @@ def build_temporal_train(
         else features
     )
 
+<<<<<<< HEAD
     assert_shape_preserved(
         df_train, out, label="temporal train enrichment", check_index=True,
         error=AssertionError,
     )
+=======
+    if shape_changed(df_train, out, check_index=True):
+        raise AssertionError("Temporal train enrichment changed row count, order, or index")
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
     return out
 
 
@@ -762,10 +807,17 @@ def build_temporal_query_difficulty(
         else features
     )
 
+<<<<<<< HEAD
     assert_shape_preserved(
         df_query, out, label="temporal query enrichment", check_index=True,
         error=AssertionError,
     )
+=======
+    if shape_changed(df_query, out, check_index=True):
+        raise AssertionError(
+            "Temporal query enrichment changed row count, order, or index"
+        )
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
     return out
 
 

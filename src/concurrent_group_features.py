@@ -75,7 +75,11 @@ import pandas as pd
 
 from src.cleaning_utils import normalize_id_series
 from src.feature_engineering import SEMESTER_KEY
+<<<<<<< HEAD
 from src.validation import assert_shape_preserved, require_columns
+=======
+from src.validation import find_missing_columns, shape_changed
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
 
 # The three columns that enter MODEL_FEATURES.
 MODEL_CONCURRENT_FEATURES = [
@@ -136,12 +140,21 @@ def _collapse_to_peer_membership(
     ``PEER_COLLAPSE_CONSISTENCY_COLUMNS``: collapsing those would be an
     arbitrary pick, not a deduplication.
     """
+<<<<<<< HEAD
     require_columns(
         df,
         REQUIRED_INPUT_COLUMNS,
         label=f"concurrent group features ({source})",
         error=KeyError,
     )
+=======
+    missing_cols = find_missing_columns(df, REQUIRED_INPUT_COLUMNS)
+    if missing_cols:
+        raise KeyError(
+            f"compute_concurrent_group_features {label} missing required "
+            f"columns: {missing_cols}"
+        )
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
 
     n = len(df)
     if n == 0:
@@ -198,12 +211,20 @@ def _compute_roster_features(df: pd.DataFrame) -> pd.DataFrame:
     :func:`_collapse_to_peer_membership`). See the module docstring for the
     exact NaN-robust leave-one-out contract.
     """
+<<<<<<< HEAD
     require_columns(
         df,
         REQUIRED_INPUT_COLUMNS,
         label="concurrent group features (roster aggregation)",
         error=KeyError,
     )
+=======
+    missing_cols = find_missing_columns(df, REQUIRED_INPUT_COLUMNS)
+    if missing_cols:
+        raise KeyError(
+            f"compute_concurrent_group_features missing required columns: {missing_cols}"
+        )
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
 
     n = len(df)
 
@@ -300,6 +321,7 @@ def _validate_two_input_contract(
     roster_df: pd.DataFrame,
 ) -> np.ndarray:
     """Return each target's unique positional occurrence in ``roster_df``."""
+<<<<<<< HEAD
     require_columns(
         target_df,
         TWO_INPUT_TARGET_REQUIRED_COLUMNS,
@@ -312,6 +334,24 @@ def _validate_two_input_contract(
         label="concurrent group features (roster)",
         error=KeyError,
     )
+=======
+    target_missing = find_missing_columns(
+        target_df, TWO_INPUT_TARGET_REQUIRED_COLUMNS
+    )
+    if target_missing:
+        raise KeyError(
+            "compute_concurrent_group_features target rows missing required "
+            f"columns: {target_missing}"
+        )
+    roster_missing = find_missing_columns(
+        roster_df, TWO_INPUT_ROSTER_REQUIRED_COLUMNS
+    )
+    if roster_missing:
+        raise KeyError(
+            "compute_concurrent_group_features roster missing required "
+            f"columns: {roster_missing}"
+        )
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
 
     target_ids = target_df[STABLE_OCCURRENCE_KEY]
     roster_ids = roster_df[STABLE_OCCURRENCE_KEY]
@@ -392,10 +432,17 @@ def _select_for_targets(
     """Project peer-level features back onto target rows, order preserved."""
     out = features.iloc[peer_positions].copy()
     out.index = target_df.index
+<<<<<<< HEAD
     assert_shape_preserved(
         target_df, out, label="concurrent feature selection", check_index=True,
         error=AssertionError,
     )
+=======
+    if shape_changed(target_df, out, check_index=True):
+        raise AssertionError(
+            "Concurrent feature selection changed target row count, order, or index"
+        )
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
     return out
 
 
@@ -440,8 +487,13 @@ def add_concurrent_group_features(
 
     features = compute_concurrent_group_features(target_df, roster_df)
     out = pd.concat([target_df, features], axis=1)
+<<<<<<< HEAD
     assert_shape_preserved(
         target_df, out, label="concurrent enrichment", check_index=True,
         error=AssertionError,
     )
+=======
+    if shape_changed(target_df, out, check_index=True):
+        raise AssertionError("Concurrent enrichment changed row count, order, or index")
+>>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
     return out
