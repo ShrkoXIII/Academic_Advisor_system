@@ -38,6 +38,7 @@ import pandas as pd
 
 from src.cleaning_utils import normalize_id_series
 from src.feature_engineering import SEMESTER_KEY
+from src.validation import require_columns
 
 
 VALID_ACTIVE_STATUS = "A"
@@ -211,14 +212,6 @@ def _normalize_column_names(frame: pd.DataFrame, source_name: str) -> pd.DataFra
     return result
 
 
-def _require_columns(
-    frame: pd.DataFrame, columns: list[str] | tuple[str, ...], source_name: str
-) -> None:
-    missing = [column for column in columns if column not in frame.columns]
-    if missing:
-        raise KeyError(f"{source_name} is missing required columns: {missing}")
-
-
 def _normalize_code_series(series: pd.Series) -> pd.Series:
     normalized = series.astype("string").str.strip().str.upper()
     null_like = normalized.fillna("").str.lower().isin(
@@ -337,10 +330,11 @@ def _value_counts_dict(series: pd.Series) -> dict[str, int]:
 
 def _prepare_target(target_frame: pd.DataFrame) -> pd.DataFrame:
     target = _normalize_source_frame(target_frame, "target_frame")
-    _require_columns(
+    require_columns(
         target,
         [*SEMESTER_KEY, "student_course_id", "course_id"],
-        "target_frame",
+        label="target_frame",
+        error=KeyError,
     )
 
     null_identity = target[OCCURRENCE_MATCH_KEY].isna().any(axis=1)
@@ -389,10 +383,11 @@ def _prepare_target(target_frame: pd.DataFrame) -> pd.DataFrame:
 
 def _prepare_acd(clean_acd: pd.DataFrame) -> pd.DataFrame:
     acd = _normalize_source_frame(clean_acd, "clean_acd")
-    _require_columns(
+    require_columns(
         acd,
         ["degree_id", "course_id", "requirement_type_id"],
-        "clean_acd",
+        label="clean_acd",
+        error=KeyError,
     )
 
     null_keys = acd[["degree_id", "course_id"]].isna().any(axis=1)
@@ -938,7 +933,7 @@ def build_registration_roster(
 
     target = _prepare_target(target_frame)
     raw = _normalize_source_frame(raw_crg, "raw_crg")
-    _require_columns(
+    require_columns(
         raw,
         [
             "student_course_id",
@@ -951,7 +946,8 @@ def build_registration_roster(
             "active",
             "register_status",
         ],
-        "raw_crg",
+        label="raw_crg",
+        error=KeyError,
     )
     raw["active"] = _normalize_code_series(raw["active"])
     raw["register_status"] = _normalize_code_series(raw["register_status"])

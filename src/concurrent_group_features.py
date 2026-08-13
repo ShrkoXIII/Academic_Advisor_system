@@ -75,6 +75,7 @@ import pandas as pd
 
 from src.cleaning_utils import normalize_id_series
 from src.feature_engineering import SEMESTER_KEY
+from src.validation import assert_shape_preserved, require_columns
 
 # The three columns that enter MODEL_FEATURES.
 MODEL_CONCURRENT_FEATURES = [
@@ -123,7 +124,7 @@ PEER_COLLAPSE_CONSISTENCY_COLUMNS = CONCURRENT_INPUT_COLUMNS + [
 
 
 def _collapse_to_peer_membership(
-    df: pd.DataFrame, label: str
+    df: pd.DataFrame, source: str
 ) -> tuple[pd.DataFrame, np.ndarray]:
     """Collapse occurrences to one peer per ``SEMESTER_KEY + course_id``.
 
@@ -135,12 +136,12 @@ def _collapse_to_peer_membership(
     ``PEER_COLLAPSE_CONSISTENCY_COLUMNS``: collapsing those would be an
     arbitrary pick, not a deduplication.
     """
-    missing_cols = [c for c in REQUIRED_INPUT_COLUMNS if c not in df.columns]
-    if missing_cols:
-        raise KeyError(
-            f"compute_concurrent_group_features {label} missing required "
-            f"columns: {missing_cols}"
-        )
+    require_columns(
+        df,
+        REQUIRED_INPUT_COLUMNS,
+        label=f"concurrent group features ({source})",
+        error=KeyError,
+    )
 
     n = len(df)
     if n == 0:
@@ -171,7 +172,7 @@ def _collapse_to_peer_membership(
                     .to_dict(orient="records")
                 )
                 raise ValueError(
-                    f"{label}: duplicate occurrences of one course disagree on "
+                    f"{source}: duplicate occurrences of one course disagree on "
                     f"{column!r}; peer membership is unique on "
                     f"{PEER_MEMBERSHIP_KEY} and cannot collapse them. "
                     f"Conflicting groups: {int(len(bad_groups))}. "
@@ -197,11 +198,12 @@ def _compute_roster_features(df: pd.DataFrame) -> pd.DataFrame:
     :func:`_collapse_to_peer_membership`). See the module docstring for the
     exact NaN-robust leave-one-out contract.
     """
-    missing_cols = [c for c in REQUIRED_INPUT_COLUMNS if c not in df.columns]
-    if missing_cols:
-        raise KeyError(
-            f"compute_concurrent_group_features missing required columns: {missing_cols}"
-        )
+    require_columns(
+        df,
+        REQUIRED_INPUT_COLUMNS,
+        label="concurrent group features (roster aggregation)",
+        error=KeyError,
+    )
 
     n = len(df)
 
@@ -298,22 +300,18 @@ def _validate_two_input_contract(
     roster_df: pd.DataFrame,
 ) -> np.ndarray:
     """Return each target's unique positional occurrence in ``roster_df``."""
-    target_missing = [
-        c for c in TWO_INPUT_TARGET_REQUIRED_COLUMNS if c not in target_df.columns
-    ]
-    if target_missing:
-        raise KeyError(
-            "compute_concurrent_group_features target rows missing required "
-            f"columns: {target_missing}"
-        )
-    roster_missing = [
-        c for c in TWO_INPUT_ROSTER_REQUIRED_COLUMNS if c not in roster_df.columns
-    ]
-    if roster_missing:
-        raise KeyError(
-            "compute_concurrent_group_features roster missing required "
-            f"columns: {roster_missing}"
-        )
+    require_columns(
+        target_df,
+        TWO_INPUT_TARGET_REQUIRED_COLUMNS,
+        label="concurrent group features (target rows)",
+        error=KeyError,
+    )
+    require_columns(
+        roster_df,
+        TWO_INPUT_ROSTER_REQUIRED_COLUMNS,
+        label="concurrent group features (roster)",
+        error=KeyError,
+    )
 
     target_ids = target_df[STABLE_OCCURRENCE_KEY]
     roster_ids = roster_df[STABLE_OCCURRENCE_KEY]
@@ -394,10 +392,10 @@ def _select_for_targets(
     """Project peer-level features back onto target rows, order preserved."""
     out = features.iloc[peer_positions].copy()
     out.index = target_df.index
-    if len(out) != len(target_df) or not out.index.equals(target_df.index):
-        raise AssertionError(
-            "Concurrent feature selection changed target row count, order, or index"
-        )
+    assert_shape_preserved(
+        target_df, out, label="concurrent feature selection", check_index=True,
+        error=AssertionError,
+    )
     return out
 
 
@@ -442,6 +440,8 @@ def add_concurrent_group_features(
 
     features = compute_concurrent_group_features(target_df, roster_df)
     out = pd.concat([target_df, features], axis=1)
-    if len(out) != len(target_df) or not out.index.equals(target_df.index):
-        raise AssertionError("Concurrent enrichment changed row count, order, or index")
+    assert_shape_preserved(
+        target_df, out, label="concurrent enrichment", check_index=True,
+        error=AssertionError,
+    )
     return out

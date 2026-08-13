@@ -1,26 +1,20 @@
-"""Failure-path regression tests for the guards entering the validation batch.
+"""Tests for src.validation and for the guards routed through it.
 
-These pin the EXACT exception class and EXACT message string of the 14 call
-sites that are about to be refactored onto shared detection helpers
-(``find_missing_columns`` / ``shape_changed`` in ``src.validation``).
+Part A covers the two helpers directly: exception class, exact message text,
+and the signature contract that ``label``, ``error`` and ``check_index`` are
+all keyword-only with no defaults.
 
-They are written and committed BEFORE the extraction, deliberately. Written
-afterwards they would only lock in whatever the rewrite happened to produce;
-written first, any drift in a message or an exception class turns them red.
-
-Measured coverage before this file existed: of these 14 guards, exactly one
-had any failure-path test at all
-(``test_course_difficulty.TemporalCourseDifficultyTests
-.test_composite_key_handles_empty_and_single_column_inputs``), and it asserted
-the exception class only. No test anywhere asserted any of the message
-strings. The parity checks cannot cover these guards: they only fire on bad
-data, and the parity fixtures are good data.
+Part B covers the 16 call sites, asserting the exact message each one now
+produces. Unlike the previous detection-only design, the message text is owned
+by ``src.validation``, so these tests are the definition of what a guard says
+rather than a record of what it used to say.
 
 NOTE on ``KeyError``: ``str(KeyError("abc"))`` is ``"'abc'"``, not ``"abc"`` --
 ``KeyError.__str__`` reprs its argument. Every KeyError assertion below
-therefore compares ``exception.args[0]``, never ``str(exception)``.
+compares ``exception.args[0]``, never ``str(exception)``.
 """
 
+import inspect
 import unittest
 from unittest.mock import patch
 
@@ -44,7 +38,12 @@ from src.course_difficulty import (
     build_temporal_train,
     empty_difficulty_state,
 )
-from src.registration_roster import _require_columns
+from src.registration_roster import (
+    _prepare_acd,
+    _prepare_target,
+    build_registration_roster,
+)
+from src.validation import assert_shape_preserved, require_columns
 
 
 # --------------------------------------------------------------------------
@@ -91,6 +90,22 @@ def _concurrent_df(drop=()):
     return frame.drop(columns=list(drop))
 
 
+def _valid_target_frame():
+    """A target frame that clears every check inside _prepare_target."""
+    return pd.DataFrame(
+        [
+            {
+                "university_id": "111",
+                "student_id": "s1",
+                "degree_id": "d1",
+                "part_id": "20241",
+                "student_course_id": "o1",
+                "course_id": "c1",
+            }
+        ]
+    )
+
+
 class _TruncateOuterCall:
     """``_drop_stale_columns`` stand-in that truncates only the OUTER call.
 
@@ -118,128 +133,282 @@ class _TruncateOuterCall:
 
 
 # ==========================================================================
-# require_columns sites -- KeyError (6) and ValueError (3)
+# Part A -- the helpers themselves
 # ==========================================================================
 
-class RequireColumnsSiteMessages(unittest.TestCase):
-    """Sites 6-14: the missing-required-columns family."""
+class RequireColumnsHelper(unittest.TestCase):
+    def test_a1_silent_when_every_column_is_present(self):
+        frame = pd.DataFrame(columns=["a", "b", "c"])
+        self.assertIsNone(
+            require_columns(frame, ["a", "c"], label="x", error=KeyError)
+        )
 
-    # --- site 6: course_difficulty._composite_key -----------------------
-    def test_b01_site06_composite_key_raises_keyerror_with_exact_message(self):
+    def test_a2_raises_the_given_class_keyerror_with_exact_message(self):
+        frame = pd.DataFrame(columns=["a"])
+        with self.assertRaises(KeyError) as cm:
+            require_columns(frame, ["a", "b"], label="roster", error=KeyError)
+        self.assertEqual(
+            cm.exception.args[0], "roster: missing required columns: ['b']"
+        )
+
+    def test_a3_raises_the_given_class_valueerror_with_exact_message(self):
+        frame = pd.DataFrame(columns=["a"])
+        with self.assertRaises(ValueError) as cm:
+            require_columns(frame, ["a", "b"], label="roster", error=ValueError)
+        self.assertEqual(
+            str(cm.exception), "roster: missing required columns: ['b']"
+        )
+
+    def test_a4_missing_list_is_sorted_not_argument_order(self):
+        frame = pd.DataFrame(columns=["a"])
+        with self.assertRaises(ValueError) as cm:
+            require_columns(frame, ["z", "b", "a", "y"], label="f", error=ValueError)
+        self.assertEqual(
+            str(cm.exception), "f: missing required columns: ['b', 'y', 'z']"
+        )
+
+    def test_a5_a_set_argument_produces_a_deterministic_message(self):
+        # Python randomises string hashing per process, so an unsorted set
+        # would give a different message on every run.
+        frame = pd.DataFrame(columns=["degree_id"])
+        required = {"part_id", "final_mark", "degree_id", "attempt_number"}
+        with self.assertRaises(ValueError) as cm:
+            require_columns(frame, required, label="course difficulty", error=ValueError)
+        self.assertEqual(
+            str(cm.exception),
+            "course difficulty: missing required columns: "
+            "['attempt_number', 'final_mark', 'part_id']",
+        )
+
+    def test_a6_duplicate_frame_column_names_still_count_as_present(self):
+        frame = pd.DataFrame([[1, 2, 3]], columns=["a", "a", "b"])
+        with self.assertRaises(KeyError) as cm:
+            require_columns(frame, ["a", "b", "c"], label="f", error=KeyError)
+        self.assertEqual(cm.exception.args[0], "f: missing required columns: ['c']")
+
+
+class AssertShapePreservedHelper(unittest.TestCase):
+    def test_a7_silent_for_an_identical_frame(self):
+        frame = pd.DataFrame({"x": [1, 2, 3]})
+        self.assertIsNone(
+            assert_shape_preserved(
+                frame, frame, label="x", check_index=True, error=AssertionError
+            )
+        )
+
+    def test_a8_row_count_change_message_names_both_counts(self):
+        before = pd.DataFrame({"x": [1, 2, 3]})
+        after = before.iloc[:-1]
+        with self.assertRaises(AssertionError) as cm:
+            assert_shape_preserved(
+                before, after, label="enrichment", check_index=True,
+                error=AssertionError,
+            )
+        self.assertEqual(
+            str(cm.exception), "enrichment: row count changed: 3 -> 2"
+        )
+
+    def test_a9_index_change_message_is_distinct_from_row_count(self):
+        before = pd.DataFrame({"x": [1, 2, 3]}, index=[0, 1, 2])
+        after = pd.DataFrame({"x": [3, 2, 1]}, index=[2, 1, 0])
+        with self.assertRaises(ValueError) as cm:
+            assert_shape_preserved(
+                before, after, label="enrichment", check_index=True,
+                error=ValueError,
+            )
+        self.assertEqual(
+            str(cm.exception),
+            "enrichment: row order or index changed (row count 3 unchanged)",
+        )
+
+    def test_a10_check_index_false_ignores_a_reordered_index(self):
+        before = pd.DataFrame({"x": [1, 2, 3]}, index=[0, 1, 2])
+        after = pd.DataFrame({"x": [3, 2, 1]}, index=[2, 1, 0])
+        self.assertIsNone(
+            assert_shape_preserved(
+                before, after, label="x", check_index=False, error=AssertionError
+            )
+        )
+
+    def test_a11_row_count_change_is_caught_even_with_check_index_false(self):
+        before = pd.DataFrame({"x": [1, 2, 3]})
+        with self.assertRaises(AssertionError) as cm:
+            assert_shape_preserved(
+                before, before.iloc[:-1], label="e", check_index=False,
+                error=AssertionError,
+            )
+        self.assertEqual(str(cm.exception), "e: row count changed: 3 -> 2")
+
+
+class HelperSignatureContract(unittest.TestCase):
+    """No keyword may acquire a default; every one is keyword-only."""
+
+    def _assert_required_keyword_only(self, func, names):
+        parameters = inspect.signature(func).parameters
+        for name in names:
+            with self.subTest(function=func.__name__, parameter=name):
+                self.assertIs(parameters[name].kind, inspect.Parameter.KEYWORD_ONLY)
+                self.assertIs(parameters[name].default, inspect.Parameter.empty)
+
+    def test_a12_all_keywords_are_keyword_only_and_have_no_defaults(self):
+        self._assert_required_keyword_only(require_columns, ["label", "error"])
+        self._assert_required_keyword_only(
+            assert_shape_preserved, ["label", "check_index", "error"]
+        )
+        # Omitting them is a TypeError, not a silent default.
+        with self.assertRaises(TypeError):
+            require_columns(pd.DataFrame(), [])
+        with self.assertRaises(TypeError):
+            assert_shape_preserved(pd.DataFrame(), pd.DataFrame())
+
+
+# ==========================================================================
+# Part B -- the 16 call sites
+# ==========================================================================
+
+class CourseDifficultySites(unittest.TestCase):
+    def test_b01_site06_composite_key(self):
         with self.assertRaises(KeyError) as cm:
             _composite_key(pd.DataFrame(), ["missing"])
         self.assertEqual(
             cm.exception.args[0],
-            "Composite-key columns not found: ['missing']",
+            "composite key: missing required columns: ['missing']",
         )
 
-    # --- site 7: course_difficulty.build_level_keys ---------------------
-    def test_b02_site07_build_level_keys_raises_valueerror_with_exact_message(self):
+    def test_b02_site07_build_level_keys(self):
         frame = pd.DataFrame(columns=["degree_id", "course_credits", "unrelated_col"])
         with self.assertRaises(ValueError) as cm:
             build_level_keys(frame)
         self.assertEqual(
             str(cm.exception),
-            "Missing columns required for difficulty keys: "
+            "difficulty keys: missing required columns: "
             "['degree_course_key', 'faculty_id', 'requirement_type_id']",
         )
 
-    # --- site 8: course_difficulty._validate_training_frame -------------
-    def test_b03_site08_validate_training_frame_raises_valueerror_with_exact_message(self):
+    def test_b03_site08_validate_training_frame(self):
         frame = pd.DataFrame(columns=["degree_id", "course_credits", "unrelated_col"])
         with self.assertRaises(ValueError) as cm:
             _validate_training_frame(frame)
         self.assertEqual(
             str(cm.exception),
-            "Missing columns required for course difficulty: "
+            "course difficulty: missing required columns: "
             "['attempt_number', 'degree_course_key', 'faculty_id', "
             "'final_mark', 'part_id', 'requirement_type_id']",
         )
 
-    # --- site 9: course_difficulty._validate_query_frame ----------------
-    def test_b04_site09_validate_query_frame_raises_valueerror_with_exact_message(self):
+    def test_b04_site09_validate_query_frame(self):
         frame = pd.DataFrame(columns=["degree_id", "course_credits", "unrelated_col"])
         with self.assertRaises(ValueError) as cm:
             _validate_query_frame(frame)
         self.assertEqual(
             str(cm.exception),
-            "Missing columns required for course-difficulty queries: "
+            "course-difficulty queries: missing required columns: "
             "['degree_course_key', 'faculty_id', 'part_id', 'requirement_type_id']",
         )
 
-    # --- site 10: _collapse_to_peer_membership, both label values -------
-    # The message interpolates ``label``, so both callers are pinned.
-    def test_b05_site10_collapse_roster_label_raises_keyerror_with_exact_message(self):
+
+class ConcurrentGroupFeatureSites(unittest.TestCase):
+    def test_b05_site10_collapse_with_roster_source(self):
         frame = _concurrent_df(drop=("course_id", "requirement_type_id"))
         with self.assertRaises(KeyError) as cm:
             _collapse_to_peer_membership(frame, "roster")
         self.assertEqual(
             cm.exception.args[0],
-            "compute_concurrent_group_features roster missing required "
-            "columns: ['course_id', 'requirement_type_id']",
+            "concurrent group features (roster): missing required columns: "
+            "['course_id', 'requirement_type_id']",
         )
 
-    def test_b06_site10_collapse_target_label_raises_keyerror_with_exact_message(self):
+    def test_b06_site10_collapse_with_target_rows_source(self):
         frame = _concurrent_df(drop=("course_id", "requirement_type_id"))
         with self.assertRaises(KeyError) as cm:
             _collapse_to_peer_membership(frame, "target rows")
         self.assertEqual(
             cm.exception.args[0],
-            "compute_concurrent_group_features target rows missing required "
-            "columns: ['course_id', 'requirement_type_id']",
+            "concurrent group features (target rows): missing required columns: "
+            "['course_id', 'requirement_type_id']",
         )
 
-    # --- site 11: _compute_roster_features ------------------------------
-    def test_b07_site11_compute_roster_features_raises_keyerror_with_exact_message(self):
+    def test_b07_site11_compute_roster_features(self):
         frame = _concurrent_df(drop=("course_id", "requirement_type_id"))
         with self.assertRaises(KeyError) as cm:
             _compute_roster_features(frame)
         self.assertEqual(
             cm.exception.args[0],
-            "compute_concurrent_group_features missing required columns: "
-            "['course_id', 'requirement_type_id']",
+            "concurrent group features (roster aggregation): missing required "
+            "columns: ['course_id', 'requirement_type_id']",
         )
 
-    # --- site 12: _validate_two_input_contract, target side -------------
-    def test_b08_site12_two_input_target_raises_keyerror_with_exact_message(self):
+    def test_b08_site12_two_input_target_side(self):
         target = _concurrent_df(drop=("student_course_id", "course_id"))
         roster = _concurrent_df()
         with self.assertRaises(KeyError) as cm:
             _validate_two_input_contract(target, roster)
         self.assertEqual(
             cm.exception.args[0],
-            "compute_concurrent_group_features target rows missing required "
-            "columns: ['student_course_id', 'course_id']",
+            "concurrent group features (target rows): missing required columns: "
+            "['course_id', 'student_course_id']",
         )
 
-    # --- site 13: _validate_two_input_contract, roster side -------------
-    def test_b09_site13_two_input_roster_raises_keyerror_with_exact_message(self):
+    def test_b09_site13_two_input_roster_side(self):
         target = _concurrent_df()
         roster = _concurrent_df(drop=("course_pass_rate_historical",))
         with self.assertRaises(KeyError) as cm:
             _validate_two_input_contract(target, roster)
         self.assertEqual(
             cm.exception.args[0],
-            "compute_concurrent_group_features roster missing required "
-            "columns: ['course_pass_rate_historical']",
+            "concurrent group features (roster): missing required columns: "
+            "['course_pass_rate_historical']",
         )
 
-    # --- site 14: registration_roster._require_columns ------------------
-    def test_b10_site14_require_columns_raises_keyerror_with_exact_message(self):
-        frame = pd.DataFrame(columns=["present"])
+
+class RegistrationRosterSites(unittest.TestCase):
+    """The three former _require_columns callers, now calling require_columns."""
+
+    def test_b10_caller_prepare_target(self):
+        # _normalize_source_frame always derives university_id, so it is never
+        # reported missing.
+        frame = pd.DataFrame([{"student_id": "s1"}])
         with self.assertRaises(KeyError) as cm:
-            _require_columns(frame, ["a", "b"], "clean_acd")
+            _prepare_target(frame)
         self.assertEqual(
             cm.exception.args[0],
-            "clean_acd is missing required columns: ['a', 'b']",
+            "target_frame: missing required columns: "
+            "['course_id', 'degree_id', 'part_id', 'student_course_id']",
+        )
+
+    def test_b11_caller_prepare_acd(self):
+        frame = pd.DataFrame([{"degree_id": "d1"}])
+        with self.assertRaises(KeyError) as cm:
+            _prepare_acd(frame)
+        self.assertEqual(
+            cm.exception.args[0],
+            "clean_acd: missing required columns: "
+            "['course_id', 'requirement_type_id']",
+        )
+
+    def test_b12_caller_build_registration_roster_raw_crg(self):
+        raw = pd.DataFrame(
+            [
+                {
+                    "student_course_id": "o1",
+                    "student_id": "s1",
+                    "course_id": "c1",
+                    "part_id": "20241",
+                    "degree_id": "d1",
+                    "faculty_id": "f1",
+                    "course_credits": 3.0,
+                }
+            ]
+        )
+        with self.assertRaises(KeyError) as cm:
+            build_registration_roster(raw, _valid_target_frame(), pd.DataFrame())
+        self.assertEqual(
+            cm.exception.args[0],
+            "raw_crg: missing required columns: ['active', 'register_status']",
         )
 
 
-# ==========================================================================
-# shape_changed sites -- AssertionError (4 reachable) + 1 unreachable
-# ==========================================================================
-
-# B11-B14 use mock.patch rather than crafted input, and that is deliberate.
+# B13-B16 use mock.patch rather than crafted input, and that is deliberate.
 #
 # On pandas 3.0.2 (the version pinned in .venv) no legitimate input can make
 # these four conditions true. Measured: pd.concat([a, b], axis=1) where both
@@ -254,24 +423,20 @@ class RequireColumnsSiteMessages(unittest.TestCase):
 # with real duplicate-index inputs.
 #
 # SHADOWING -- why the patch is identity-scoped to the outer call.
-# build_temporal_train (course_difficulty.py:651) and
-# build_temporal_query_difficulty (course_difficulty.py:714) each call
+# build_temporal_train and build_temporal_query_difficulty each call
 # _drop_stale_columns on their own input AND then call apply_difficulty_state,
-# which calls it again at course_difficulty.py:569. A patch that truncates
-# every call therefore shortens the nested frame too, and site 1's guard fires
-# first with "Difficulty enrichment changed row count, order, or index" --
-# control never reaches sites 2 and 3. Measured: that is exactly what happened
-# on the first run of this file, before the identity scoping was added.
+# which calls it again. A patch that truncates every call therefore shortens
+# the nested frame too, and the apply_difficulty_state guard fires first --
+# control never reaches the temporal guards. Measured: that is exactly what
+# happened before the identity scoping was added.
 #
-# So: under a row-dropping fault in _drop_stale_columns, site 1 shadows sites 2
-# and 3. Those two guards are NOT independently reachable through that fault.
-# _TruncateOuterCall exists to reach them anyway, by leaving nested calls alone.
+# So: under a row-dropping fault in _drop_stale_columns, the
+# apply_difficulty_state guard shadows the two temporal guards. Those are NOT
+# independently reachable through that fault. _TruncateOuterCall exists to
+# reach them anyway, by leaving nested calls alone.
 
-class ShapePreservedSiteMessages(unittest.TestCase):
-    """Sites 1-5: the row-count/index-preservation family."""
-
-    # --- site 1: apply_difficulty_state ---------------------------------
-    def test_b11_site01_apply_difficulty_state_raises_assertion_with_exact_message(self):
+class ShapePreservedSites(unittest.TestCase):
+    def test_b13_site01_apply_difficulty_state(self):
         frame = _two_difficulty_rows()
         truncate = _TruncateOuterCall(frame)
         with patch(
@@ -284,11 +449,10 @@ class ShapePreservedSiteMessages(unittest.TestCase):
         )
         self.assertEqual(
             str(cm.exception),
-            "Difficulty enrichment changed row count, order, or index",
+            "difficulty enrichment: row count changed: 2 -> 1",
         )
 
-    # --- site 2: build_temporal_train -----------------------------------
-    def test_b12_site02_build_temporal_train_raises_assertion_with_exact_message(self):
+    def test_b14_site02_build_temporal_train(self):
         frame = _two_difficulty_rows()
         truncate = _TruncateOuterCall(frame)
         with patch(
@@ -301,11 +465,10 @@ class ShapePreservedSiteMessages(unittest.TestCase):
         )
         self.assertEqual(
             str(cm.exception),
-            "Temporal train enrichment changed row count, order, or index",
+            "temporal train enrichment: row count changed: 2 -> 1",
         )
 
-    # --- site 3: build_temporal_query_difficulty ------------------------
-    def test_b13_site03_build_temporal_query_raises_assertion_with_exact_message(self):
+    def test_b15_site03_build_temporal_query(self):
         history = _two_difficulty_rows()
         query = _two_difficulty_rows()
         truncate = _TruncateOuterCall(query)
@@ -319,11 +482,10 @@ class ShapePreservedSiteMessages(unittest.TestCase):
         )
         self.assertEqual(
             str(cm.exception),
-            "Temporal query enrichment changed row count, order, or index",
+            "temporal query enrichment: row count changed: 2 -> 1",
         )
 
-    # --- site 5: add_concurrent_group_features --------------------------
-    def test_b14_site05_add_concurrent_features_raises_assertion_with_exact_message(self):
+    def test_b16_site05_add_concurrent_group_features(self):
         target = _concurrent_df()
         disjoint = pd.DataFrame(
             {"concurrent_peer_difficulty_mean": [0.1, 0.2]},
@@ -337,12 +499,14 @@ class ShapePreservedSiteMessages(unittest.TestCase):
                 add_concurrent_group_features(target)
         self.assertEqual(
             str(cm.exception),
-            "Concurrent enrichment changed row count, order, or index",
+            "concurrent enrichment: row count changed: 2 -> 4",
         )
 
     # --- site 4: _select_for_targets -- DOCUMENTS UNREACHABILITY --------
+    # Kept verbatim from the previous design: it pins pandas' own error, not
+    # one of ours, so the message reversal does not affect it.
     def test_b15_site04_select_for_targets_guard_is_unreachable(self):
-        """The AssertionError at _select_for_targets cannot fire.
+        """The guard at _select_for_targets cannot fire.
 
         ``out.index = target_df.index`` executes on the line immediately
         before the guard. If the lengths differ, that assignment raises

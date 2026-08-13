@@ -25,6 +25,8 @@ from typing import Dict, Iterable
 import numpy as np
 import pandas as pd
 
+from src.validation import assert_shape_preserved, require_columns
+
 
 STAT_OUTPUT_COLUMNS = [
     "course_pass_rate_historical",
@@ -135,10 +137,8 @@ def _composite_key(df: pd.DataFrame, columns: Iterable[str]) -> pd.Series:
         result.iloc[:] = ""
         return result
 
-    missing_columns = [column for column in columns if column not in df.columns]
-    if missing_columns:
-        # The legacy df[columns] access raised KeyError even for an empty frame.
-        raise KeyError(f"Composite-key columns not found: {missing_columns}")
+    # The legacy df[columns] access raised KeyError even for an empty frame.
+    require_columns(df, columns, label="composite key", error=KeyError)
 
     for start in range(0, len(df), _COMPOSITE_KEY_CHUNK_ROWS):
         stop = min(start + _COMPOSITE_KEY_CHUNK_ROWS, len(df))
@@ -173,9 +173,7 @@ def build_level_keys(df: pd.DataFrame) -> pd.DataFrame:
         "requirement_type_id",
         "course_credits",
     }
-    missing = sorted(required - set(df.columns))
-    if missing:
-        raise ValueError(f"Missing columns required for difficulty keys: {missing}")
+    require_columns(df, required, label="difficulty keys", error=ValueError)
 
     keys = pd.DataFrame(index=df.index)
     keys["degree_course_key"] = df["degree_course_key"].astype("string")
@@ -212,9 +210,7 @@ def _validate_training_frame(df: pd.DataFrame) -> None:
         "requirement_type_id",
         "course_credits",
     }
-    missing = sorted(required - set(df.columns))
-    if missing:
-        raise ValueError(f"Missing columns required for course difficulty: {missing}")
+    require_columns(df, required, label="course difficulty", error=ValueError)
 
     part_numeric = pd.to_numeric(df["part_id"], errors="coerce")
     if part_numeric.isna().any():
@@ -232,11 +228,7 @@ def _validate_query_frame(df: pd.DataFrame) -> None:
         "requirement_type_id",
         "course_credits",
     }
-    missing = sorted(required - set(df.columns))
-    if missing:
-        raise ValueError(
-            f"Missing columns required for course-difficulty queries: {missing}"
-        )
+    require_columns(df, required, label="course-difficulty queries", error=ValueError)
 
     part_numeric = pd.to_numeric(df["part_id"], errors="coerce")
     if part_numeric.isna().any():
@@ -633,8 +625,10 @@ def apply_difficulty_state(
         else features
     )
 
-    if len(out) != len(df) or not out.index.equals(df.index):
-        raise AssertionError("Difficulty enrichment changed row count, order, or index")
+    assert_shape_preserved(
+        df, out, label="difficulty enrichment", check_index=True,
+        error=AssertionError,
+    )
     return out
 
 
@@ -678,8 +672,10 @@ def build_temporal_train(
         else features
     )
 
-    if len(out) != len(df_train) or not out.index.equals(df_train.index):
-        raise AssertionError("Temporal train enrichment changed row count, order, or index")
+    assert_shape_preserved(
+        df_train, out, label="temporal train enrichment", check_index=True,
+        error=AssertionError,
+    )
     return out
 
 
@@ -766,10 +762,10 @@ def build_temporal_query_difficulty(
         else features
     )
 
-    if len(out) != len(df_query) or not out.index.equals(df_query.index):
-        raise AssertionError(
-            "Temporal query enrichment changed row count, order, or index"
-        )
+    assert_shape_preserved(
+        df_query, out, label="temporal query enrichment", check_index=True,
+        error=AssertionError,
+    )
     return out
 
 

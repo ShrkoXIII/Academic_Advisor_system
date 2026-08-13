@@ -1756,3 +1756,11 @@ Declaration 4. A new band must be measured before any delta on this split is
 interpreted.
 
 ---
+
+---
+concurrent_44 archived and forbidden. DEFAULT_FEATURE_CONTRACT must not
+default to it. test_model_training.py:30 (EXPECTED_FEATURE_COUNT == 44)
+pins the deprecated alias and must be corrected or removed.
+Any call to resolve_feature_contract(None) must fail loudly, not
+silently resolve to concurrent_44.
+---
