@@ -38,6 +38,7 @@ import pandas as pd
 
 from src.cleaning_utils import normalize_id_series
 from src.feature_engineering import SEMESTER_KEY
+from src.validation import find_missing_columns
 
 
 VALID_ACTIVE_STATUS = "A"
@@ -214,7 +215,7 @@ def _normalize_column_names(frame: pd.DataFrame, source_name: str) -> pd.DataFra
 def _require_columns(
     frame: pd.DataFrame, columns: list[str] | tuple[str, ...], source_name: str
 ) -> None:
-    missing = [column for column in columns if column not in frame.columns]
+    missing = find_missing_columns(frame, columns)
     if missing:
         raise KeyError(f"{source_name} is missing required columns: {missing}")
 

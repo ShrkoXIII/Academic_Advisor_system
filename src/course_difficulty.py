@@ -25,6 +25,8 @@ from typing import Dict, Iterable
 import numpy as np
 import pandas as pd
 
+from src.validation import find_missing_columns, shape_changed
+
 
 STAT_OUTPUT_COLUMNS = [
     "course_pass_rate_historical",
@@ -135,7 +137,7 @@ def _composite_key(df: pd.DataFrame, columns: Iterable[str]) -> pd.Series:
         result.iloc[:] = ""
         return result
 
-    missing_columns = [column for column in columns if column not in df.columns]
+    missing_columns = find_missing_columns(df, columns)
     if missing_columns:
         # The legacy df[columns] access raised KeyError even for an empty frame.
         raise KeyError(f"Composite-key columns not found: {missing_columns}")
@@ -173,7 +175,9 @@ def build_level_keys(df: pd.DataFrame) -> pd.DataFrame:
         "requirement_type_id",
         "course_credits",
     }
-    missing = sorted(required - set(df.columns))
+    # sorted(required) so the message keeps the alphabetical order the previous
+    # `sorted(required - set(df.columns))` produced.
+    missing = find_missing_columns(df, sorted(required))
     if missing:
         raise ValueError(f"Missing columns required for difficulty keys: {missing}")
 
@@ -212,7 +216,8 @@ def _validate_training_frame(df: pd.DataFrame) -> None:
         "requirement_type_id",
         "course_credits",
     }
-    missing = sorted(required - set(df.columns))
+    # sorted(required): preserves the previous alphabetical message order.
+    missing = find_missing_columns(df, sorted(required))
     if missing:
         raise ValueError(f"Missing columns required for course difficulty: {missing}")
 
@@ -232,7 +237,8 @@ def _validate_query_frame(df: pd.DataFrame) -> None:
         "requirement_type_id",
         "course_credits",
     }
-    missing = sorted(required - set(df.columns))
+    # sorted(required): preserves the previous alphabetical message order.
+    missing = find_missing_columns(df, sorted(required))
     if missing:
         raise ValueError(
             f"Missing columns required for course-difficulty queries: {missing}"
@@ -633,7 +639,7 @@ def apply_difficulty_state(
         else features
     )
 
-    if len(out) != len(df) or not out.index.equals(df.index):
+    if shape_changed(df, out, check_index=True):
         raise AssertionError("Difficulty enrichment changed row count, order, or index")
     return out
 
@@ -678,7 +684,7 @@ def build_temporal_train(
         else features
     )
 
-    if len(out) != len(df_train) or not out.index.equals(df_train.index):
+    if shape_changed(df_train, out, check_index=True):
         raise AssertionError("Temporal train enrichment changed row count, order, or index")
     return out
 
@@ -766,7 +772,7 @@ def build_temporal_query_difficulty(
         else features
     )
 
-    if len(out) != len(df_query) or not out.index.equals(df_query.index):
+    if shape_changed(df_query, out, check_index=True):
         raise AssertionError(
             "Temporal query enrichment changed row count, order, or index"
         )
