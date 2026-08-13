@@ -38,17 +38,12 @@ from src.course_difficulty import (
     build_temporal_train,
     empty_difficulty_state,
 )
-<<<<<<< HEAD
 from src.registration_roster import (
     _prepare_acd,
     _prepare_target,
     build_registration_roster,
 )
 from src.validation import assert_shape_preserved, require_columns
-=======
-from src.registration_roster import _require_columns
-from src.validation import find_missing_columns, shape_changed
->>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
 
 
 # --------------------------------------------------------------------------
@@ -138,75 +133,7 @@ class _TruncateOuterCall:
 
 
 # ==========================================================================
-<<<<<<< HEAD
 # Part A -- the helpers themselves
-=======
-# Part A -- the detection helpers themselves
-# ==========================================================================
-
-class FindMissingColumns(unittest.TestCase):
-    def test_a1_returns_empty_when_every_column_is_present(self):
-        frame = pd.DataFrame(columns=["a", "b", "c"])
-        self.assertEqual(find_missing_columns(frame, ["a", "c"]), [])
-
-    def test_a2_preserves_argument_order_not_frame_order(self):
-        frame = pd.DataFrame(columns=["a"])
-        # Argument order is z, b, y -- deliberately neither sorted nor the
-        # frame's order, because three call sites depend on argument order
-        # being what lands in the message.
-        self.assertEqual(
-            find_missing_columns(frame, ["z", "b", "a", "y"]), ["z", "b", "y"]
-        )
-
-    def test_a3_sorted_input_reproduces_the_sorted_set_difference(self):
-        # The invariant sites 7, 8 and 9 rely on: passing sorted(required)
-        # yields exactly what `sorted(required - set(df.columns))` produced.
-        required = {"part_id", "final_mark", "degree_id", "attempt_number"}
-        frame = pd.DataFrame(columns=["degree_id", "unrelated"])
-        self.assertEqual(
-            find_missing_columns(frame, sorted(required)),
-            sorted(required - set(frame.columns)),
-        )
-
-    def test_a4_duplicate_frame_column_names_still_count_as_present(self):
-        frame = pd.DataFrame([[1, 2, 3]], columns=["a", "a", "b"])
-        self.assertEqual(find_missing_columns(frame, ["a", "b", "c"]), ["c"])
-
-
-class ShapeChanged(unittest.TestCase):
-    def test_a5_false_for_an_identical_frame(self):
-        frame = pd.DataFrame({"x": [1, 2, 3]})
-        self.assertIs(shape_changed(frame, frame, check_index=True), False)
-
-    def test_a6_true_when_the_row_count_changes(self):
-        before = pd.DataFrame({"x": [1, 2, 3]})
-        after = before.iloc[:-1]
-        self.assertIs(shape_changed(before, after, check_index=True), True)
-        # A length change is caught even when the index is not compared.
-        self.assertIs(shape_changed(before, after, check_index=False), True)
-
-    def test_a7_true_on_a_reordered_index_when_check_index_is_true(self):
-        before = pd.DataFrame({"x": [1, 2, 3]}, index=[0, 1, 2])
-        after = pd.DataFrame({"x": [3, 2, 1]}, index=[2, 1, 0])
-        self.assertIs(shape_changed(before, after, check_index=True), True)
-
-    def test_a8_false_on_a_reordered_index_when_check_index_is_false(self):
-        before = pd.DataFrame({"x": [1, 2, 3]}, index=[0, 1, 2])
-        after = pd.DataFrame({"x": [3, 2, 1]}, index=[2, 1, 0])
-        self.assertIs(shape_changed(before, after, check_index=False), False)
-
-    def test_a9_check_index_is_keyword_only_and_has_no_default(self):
-        """A default would let a call site silently change what it compares."""
-        parameter = inspect.signature(shape_changed).parameters["check_index"]
-        self.assertIs(parameter.kind, inspect.Parameter.KEYWORD_ONLY)
-        self.assertIs(parameter.default, inspect.Parameter.empty)
-        with self.assertRaises(TypeError):
-            shape_changed(pd.DataFrame(), pd.DataFrame())
-
-
-# ==========================================================================
-# Part B -- require_columns sites: KeyError (6) and ValueError (3)
->>>>>>> 770c7a147a9b3b0664121b3c8c165bf6cbfc57a9
 # ==========================================================================
 
 class RequireColumnsHelper(unittest.TestCase):
