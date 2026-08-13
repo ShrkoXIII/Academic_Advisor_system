@@ -406,7 +406,10 @@ Every entry is `PS-XX`: a problem, the solution built for it, the file it lives 
 - **Solution:** Resolve the degree→faculty ambiguity by modal frequency within the Level-3 parent.
 - **Implemented in:** commit `8fda96b` ("Fix: resolve degree->faculty ambiguity by modal frequency in the Level-3 parent")
 - **How we know it worked:** The Phase 3 feature reconstruction ran to completion afterward with 75 structural + 12 temporal checks passing and a full byte-identical scratch-root re-run (`Decisions_Log.md:1707-1713`).
-- **Status:** LIVE
+- **Status:** LIVE for the one-shot fit; see the residual below for the streaming path.
+- **Residual — OPEN, blocks the new-data rebuild:** the modal resolution is **frame-dependent** — it elects the most frequent faculty within whatever frame it is handed (`src/course_difficulty.py:299-321`). The one-shot `fit_difficulty_state` path passes the whole TRAIN frame and is fixed. The streaming path does not: `_DifficultyAccumulator.update` (`src/course_difficulty.py:516-534`) recomputes `_degree_faculty_map` **per semester batch**, and `:530-533` still raises `degree_id ... changed faculty_id from ... to ...` when two batches elect different winners for the same degree. None of the five tests added with the fix cover it — `tests/test_course_difficulty.py:453-494` all call `fit_difficulty_state` or `_degree_faculty_map` directly, never the accumulator.
+  - **Why it is not visible from the experiment side:** an ablation over an already-built dataset never triggers it, because training reads a built parquet by column subset and refits no difficulty state (`src/model_training.py:1183`, `:1300-1301`). A **new-data rebuild does** refit, through the streaming path, on a pull that may carry reassignments the modal resolution has never seen.
+  - **Found:** 2026-08-11, during the staged-experiment feasibility investigation (`reports/staged_experiment_feasibility.md`, Q6). Recorded here rather than left in that report so the preprocessing/rebuild workstream sees it.
 
 ### PS-28 — Streaming batch helpers assumed a stored pandas index that Phase-1 split candidates don't have
 
