@@ -20,7 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.paths import FINAL_DIR, MODEL_DATA_VERSIONS_DIR, RAW_DIR  # noqa: E402
 
-REBUILD_VERSION = "2026-08_temporal_rebuild_v1"
+REBUILD_VERSION = "2026-08_temporal_rebuild_v2"
 FROZEN_VERSION = "2026-07-26_batched_fixes__registration_roster_concurrent"
 
 VERSION_ROOT = MODEL_DATA_VERSIONS_DIR / REBUILD_VERSION

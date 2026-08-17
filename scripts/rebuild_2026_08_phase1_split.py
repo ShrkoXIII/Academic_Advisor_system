@@ -38,7 +38,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.paths import FINAL_DIR, MODEL_DATA_VERSIONS_DIR, RAW_DIR  # noqa: E402
 
-REBUILD_VERSION = "2026-08_temporal_rebuild_v1"
+REBUILD_VERSION = "2026-08_temporal_rebuild_v2"
 FROZEN_VERSION = "2026-07-26_batched_fixes__registration_roster_concurrent"
 
 VERSION_ROOT = MODEL_DATA_VERSIONS_DIR / REBUILD_VERSION
@@ -46,7 +46,7 @@ SPLIT_DIR = VERSION_ROOT / "01_split"
 PREFLIGHT_DIR = VERSION_ROOT / "00_preflight"
 BASELINE_MANIFEST = PREFLIGHT_DIR / "current_artifacts_baseline_manifest.csv"
 
-SOURCE_PATH = FINAL_DIR / "without_outliers.parquet"
+SOURCE_PATH = FINAL_DIR / "model_population_v2.parquet"
 RAW_CRG_PATH = RAW_DIR / "v_crg_student_course_raw.parquet"
 FROZEN_DIR = MODEL_DATA_VERSIONS_DIR / FROZEN_VERSION
 

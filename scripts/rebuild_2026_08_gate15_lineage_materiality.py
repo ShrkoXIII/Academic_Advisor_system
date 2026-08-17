@@ -46,7 +46,7 @@ from src.course_difficulty import (  # noqa: E402
 )
 from src.paths import FINAL_DIR, MODEL_DATA_VERSIONS_DIR  # noqa: E402
 
-REBUILD_VERSION = "2026-08_temporal_rebuild_v1"
+REBUILD_VERSION = "2026-08_temporal_rebuild_v2"
 VERSION_ROOT = MODEL_DATA_VERSIONS_DIR / REBUILD_VERSION
 SPLIT_DIR = VERSION_ROOT / "01_split"
 GATE_DIR = VERSION_ROOT / "01_5_lineage_gate"

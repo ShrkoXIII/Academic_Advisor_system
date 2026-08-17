@@ -65,7 +65,7 @@ from __future__ import annotations
 from pathlib import Path
 
 
-REBUILD_VERSION = "2026-08_temporal_rebuild_v1"
+REBUILD_VERSION = "2026-08_temporal_rebuild_v2"
 
 # Subdirectories inside the version root. Phase 1 owns 01_split; the feature
 # generations that Phase 3 will write live under 03_features and 04_concurrent.

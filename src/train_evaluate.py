@@ -55,7 +55,7 @@ from src.paths import MODELS_DIR, model_split_path
 # ---------------------------------------------------------------------------
 
 _SHARED_PARAMS = {
-    "learning_rate": 0.05, ## default 1 
+    "learning_rate": 0.05, ## LightGBM default is 0.1
     "num_leaves": 127, #depth 
     "min_child_samples": 50, ## 
     "feature_fraction": 0.8,
@@ -123,7 +123,7 @@ def _assert_booster_matches_params(
 
 
 NUM_BOOST_ROUND = 2000
-EARLY_STOPPING_ROUNDS = 50
+EARLY_STOPPING_ROUNDS = 120
 EFFECTIVE_SEED_PARAM_NAMES = (
     "seed",
     "data_random_seed",

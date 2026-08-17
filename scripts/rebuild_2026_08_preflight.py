@@ -33,7 +33,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src import paths as P  # noqa: E402
 
-REBUILD_VERSION = "2026-08_temporal_rebuild_v1"
+REBUILD_VERSION = "2026-08_temporal_rebuild_v2"
 FROZEN_VERSION = "2026-07-26_batched_fixes__registration_roster_concurrent"
 
 VERSION_ROOT = P.MODEL_DATA_VERSIONS_DIR / REBUILD_VERSION
@@ -255,7 +255,7 @@ def main() -> int:
 
     total_bytes = sum(int(r["file_size_bytes"] or 0) for r in rows if r["exists"])
     lines = [
-        "# Phase 1 preflight — `2026-08_temporal_rebuild_v1`",
+        "# Phase 1 preflight — `2026-08_temporal_rebuild_v2`",
         "",
         "Read-only baseline capture. No candidate dataset existed when this ran.",
         "",
