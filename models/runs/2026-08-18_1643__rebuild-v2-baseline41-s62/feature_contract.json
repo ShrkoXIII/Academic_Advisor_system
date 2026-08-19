@@ -1,0 +1,213 @@
+{
+  "contract_name": "baseline_41",
+  "contract_version": "v1",
+  "contract_description": "Established feature list including GPA trend, excluding the three concurrent peer-difficulty features. Controlled-experiment baseline.",
+  "feature_count": 41,
+  "ordered_features": [
+    "prev_gpa_points_clean",
+    "start_agpa_points",
+    "last_valid_gpa_before_current_semester",
+    "gpa_trend_delta",
+    "gpa_trend_missing",
+    "start_total_in_credits",
+    "start_total_in_courses",
+    "total_fail_credits_capped",
+    "fail_credit_ratio_capped",
+    "is_extreme_fail_history",
+    "reg_total_semesters",
+    "start_level_ord",
+    "start_semester",
+    "prior_interruption_count",
+    "consecutive_interruption_count",
+    "prev_semester_was_interruption",
+    "no_previous_progress",
+    "is_first_active_semester",
+    "is_first_row_in_timeline",
+    "prev_gpa_points_missing",
+    "prev_gpa_points_zero",
+    "prev_gpa_invalid_zero_case",
+    "semester_reg_credits",
+    "semester_reg_courses",
+    "part_semester",
+    "course_credits",
+    "attempt_number",
+    "is_high_credit_course",
+    "course_pass_rate_historical",
+    "course_avg_mark_historical",
+    "course_retake_rate_historical",
+    "course_history_count",
+    "course_difficulty_missing",
+    "requirement_type_id",
+    "requirement_type_missing",
+    "degree_requirement_credits_count",
+    "degree_requirement_credits_count_missing",
+    "course_share_of_requirement",
+    "requirement_size_bucket_ord",
+    "diploma_gpa",
+    "diploma_type_bucket"
+  ],
+  "categorical_features": [
+    "requirement_type_id",
+    "diploma_type_bucket"
+  ],
+  "categorical_levels_learned_from": "train_only",
+  "categorical_levels": {
+    "requirement_type_id": [
+      -1,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "diploma_type_bucket": [
+      -1,
+      6,
+      13,
+      15,
+      16,
+      19,
+      26
+    ]
+  },
+  "unknown_category_code": -1,
+  "dtypes_after_model_preparation": {
+    "prev_gpa_points_clean": "float64",
+    "start_agpa_points": "float64",
+    "last_valid_gpa_before_current_semester": "float64",
+    "gpa_trend_delta": "float64",
+    "gpa_trend_missing": "float64",
+    "start_total_in_credits": "float64",
+    "start_total_in_courses": "float64",
+    "total_fail_credits_capped": "float64",
+    "fail_credit_ratio_capped": "float64",
+    "is_extreme_fail_history": "float64",
+    "reg_total_semesters": "float64",
+    "start_level_ord": "float64",
+    "start_semester": "float64",
+    "prior_interruption_count": "float64",
+    "consecutive_interruption_count": "float64",
+    "prev_semester_was_interruption": "float64",
+    "no_previous_progress": "float64",
+    "is_first_active_semester": "float64",
+    "is_first_row_in_timeline": "float64",
+    "prev_gpa_points_missing": "float64",
+    "prev_gpa_points_zero": "float64",
+    "prev_gpa_invalid_zero_case": "float64",
+    "semester_reg_credits": "float64",
+    "semester_reg_courses": "float64",
+    "part_semester": "float64",
+    "course_credits": "float64",
+    "attempt_number": "float64",
+    "is_high_credit_course": "float64",
+    "course_pass_rate_historical": "float64",
+    "course_avg_mark_historical": "float64",
+    "course_retake_rate_historical": "float64",
+    "course_history_count": "float64",
+    "course_difficulty_missing": "float64",
+    "requirement_type_id": "category",
+    "requirement_type_missing": "float64",
+    "degree_requirement_credits_count": "float64",
+    "degree_requirement_credits_count_missing": "float64",
+    "course_share_of_requirement": "float64",
+    "requirement_size_bucket_ord": "float64",
+    "diploma_gpa": "float64",
+    "diploma_type_bucket": "category"
+  },
+  "derived_feature_sources": {
+    "requirement_size_bucket_ord": "requirement_size_bucket"
+  },
+  "dropped_feature_guard": [
+    "is_interruption_semester",
+    "model_prev_gpa",
+    "prev_gpa_actual_zero_performance",
+    "start_level_missing",
+    "difficulty_fallback_level",
+    "part_year",
+    "start_year",
+    "difficulty_group_support_count"
+  ],
+  "target_m1_classifier": "(final_mark >= 50).astype(int)",
+  "target_m2_regressor": "final_mark",
+  "reporting_threshold": 0.8,
+  "reporting_threshold_policy": "locked constant; never optimized per run; applies to precision, recall, F1 and the confusion matrix only \u2014 not to training or early stopping",
+  "random_seed": 62,
+  "effective_seed_settings": {
+    "seed": 62,
+    "data_random_seed": 241,
+    "feature_fraction_seed": 19802,
+    "bagging_seed": 18760,
+    "drop_seed": 14704
+  },
+  "lightgbm_params": {
+    "learning_rate": 0.05,
+    "num_leaves": 127,
+    "min_child_samples": 50,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 5,
+    "reg_alpha": 0.1,
+    "reg_lambda": 1.0,
+    "histogram_pool_size": 256,
+    "force_col_wise": true,
+    "num_threads": 4,
+    "verbose": -1,
+    "seed": 62
+  },
+  "training_control": {
+    "num_boost_round": 2000,
+    "early_stopping_rounds": 120,
+    "early_stopping_selection_split": "valid_only"
+  },
+  "diploma_gpa_handling": {
+    "method": "train_median_fill",
+    "learned_from": "train_only",
+    "fill_value": 85.48,
+    "null_counts": {
+      "train": {
+        "missing_before": 0,
+        "missing_after": 0
+      },
+      "valid": {
+        "missing_before": 0,
+        "missing_after": 0
+      }
+    }
+  },
+  "data_rows": {
+    "train": 603068,
+    "valid": 75155
+  },
+  "requires_concurrent_plan_context": false,
+  "serving_limitation": "score() pre-plan candidate ranking must use baseline_41; concurrent_44 is semantically valid only after a complete plan is formed and score_plan recomputes the same-semester concurrent context.",
+  "test_policy": "closed_not_read",
+  "train_path": "data/model_data/versions/2026-08_temporal_rebuild_v2/05_dataset/train_dataset_candidate.parquet",
+  "valid_path": "data/model_data/versions/2026-08_temporal_rebuild_v2/05_dataset/valid_dataset_candidate.parquet",
+  "dataset_version": "2026-08_temporal_rebuild_v2",
+  "dataset_inputs": {
+    "train": {
+      "path": "data\\model_data\\versions\\2026-08_temporal_rebuild_v2\\05_dataset\\train_dataset_candidate.parquet",
+      "exists": true,
+      "bytes": 34171260,
+      "sha256": "6268404aece0d974614d14c6a2514e7cff0bea494a6784ba4deaa33cfeeb85fa"
+    },
+    "valid": {
+      "path": "data\\model_data\\versions\\2026-08_temporal_rebuild_v2\\05_dataset\\valid_dataset_candidate.parquet",
+      "exists": true,
+      "bytes": 4454581,
+      "sha256": "c73c059bc4fb4e18184f3d4465aa08bb56d20828b023cc8d759b2cecb5510979"
+    }
+  },
+  "created_at": "2026-08-18T16:43:14+03:00",
+  "git": {
+    "commit": "12f9baba40a4e7c3b2a067956ede54c2abe29b68",
+    "branch": "main",
+    "working_tree_clean": false,
+    "dirty_paths": [
+      "models/runs/2026-08-18_1638__rebuild-v2-baseline41-s42/",
+      "models/runs/2026-08-18_1640__rebuild-v2-baseline41-s52/",
+      "models/runs/2026-08-18_1643__rebuild-v2-baseline41-s62/"
+    ]
+  }
+}
