@@ -2,7 +2,39 @@ import unittest
 
 import pandas as pd
 
+from src.grade_scale import GradeScale
 from src.recommendation import Recommender
+
+
+def _grade_scale() -> GradeScale:
+    rows = [
+        ("985.111", 0, 49, 0.00, "F", "F"),
+        ("984.111", 50, 54, 1.50, "P", "D"),
+        ("983.111", 55, 59, 1.75, "P", "D+"),
+        ("982.111", 60, 64, 2.00, "P", "C-"),
+        ("981.111", 65, 69, 2.25, "P", "C"),
+        ("980.111", 70, 74, 2.50, "P", "C+"),
+        ("979.111", 75, 79, 2.75, "P", "B-"),
+        ("978.111", 80, 84, 3.00, "P", "B"),
+        ("977.111", 85, 89, 3.25, "P", "B+"),
+        ("976.111", 90, 94, 3.50, "P", "A-"),
+        ("975.111", 95, 97, 3.75, "P", "A"),
+        ("974.111", 98, 100, 4.00, "P", "A+"),
+    ]
+    return GradeScale(
+        "3.111",
+        pd.DataFrame(
+            rows,
+            columns=[
+                "grade_id",
+                "from_percent",
+                "to_percent",
+                "points",
+                "finish_status",
+                "grade_show",
+            ],
+        ),
+    )
 
 
 class _FakeScorer:
@@ -106,6 +138,13 @@ class _FakeKNNV2Level:
 
 
 class RecommendationKNNV2IntegrationTest(unittest.TestCase):
+    def test_recommender_rejects_a_non_3_111_grade_scale(self):
+        scale = _grade_scale()
+        scale.grade_version_id = "4.111"
+
+        with self.assertRaisesRegex(ValueError, "3.111"):
+            Recommender(_FakeScorer(), _FakeKNNV2Level(), scale)
+
     def test_recommend_queries_level_knn_with_latest_official_state(self):
         history = pd.DataFrame(
             [
@@ -124,7 +163,7 @@ class RecommendationKNNV2IntegrationTest(unittest.TestCase):
             ]
         )
         knn = _FakeKNNV2Level()
-        recommender = Recommender(_FakeScorer(), knn)
+        recommender = Recommender(_FakeScorer(), knn, _grade_scale())
 
         plans = recommender.recommend(
             df_history=history,
@@ -144,13 +183,14 @@ class RecommendationKNNV2IntegrationTest(unittest.TestCase):
         self.assertEqual(plans[0]["knn_support"], 1)
         self.assertEqual(plans[0]["knn_avg_pass_rate"], 1.0)
         self.assertEqual(plans[0]["knn_similar_plan_avg_mark"], 76.0)
+        self.assertEqual(plans[0]["expected_agpa"], 2.75)
 
     def test_explicit_cold_start_uses_diploma_gpa(self):
         history = pd.DataFrame(
             [{"student_id": "new-student", "part_id": "20241", "diploma_gpa": 84.0}]
         )
         knn = _FakeKNNV2Level()
-        recommender = Recommender(_FakeScorer(), knn)
+        recommender = Recommender(_FakeScorer(), knn, _grade_scale())
 
         recommender.recommend(
             df_history=history,
@@ -179,7 +219,7 @@ class RecommendationKNNV2IntegrationTest(unittest.TestCase):
             ]
         )
         recommender = Recommender(
-            _FakeScorer(), _FakeKNNV2Level(return_empty=True)
+            _FakeScorer(), _FakeKNNV2Level(return_empty=True), _grade_scale()
         )
 
         plans = recommender.recommend(

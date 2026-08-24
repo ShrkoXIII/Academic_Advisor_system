@@ -7,7 +7,7 @@ and KNN evidence to produce ranked course-plan recommendations.
   Steps 1-3: provided externally (student snapshot, rules engine, candidate courses)
   Step 4-5: ML scoring via src.inference
   Step 6:   Plan candidate generation (this module)
-  Step 7:   KNN soft evidence (this module, via src.knn_advisor)
+  Step 7:   KNN soft evidence (this module, via src.knn_advisor_v2)
   Step 8:   Plan scoring on 4 axes (this module)
   Step 9:   Final ranked recommendations (this module)
 
@@ -20,6 +20,9 @@ rec = Recommender.load(
     grade_model_path=str(MODELS_DIR / 'grade_model.lgbm'),
     pass_model_path=str(MODELS_DIR / 'pass_model.lgbm'),
     difficulty_lookup_path=str(ARTIFACTS_DIR / 'course_difficulty_lookup.parquet'),
+    grade_scale_path=str(
+        ARTIFACTS_DIR / 'grade_scales/acs_grade_3.111.json'
+    ),
     knn_index_path=str(
         ARTIFACTS_DIR / 'knn/2026-08-23_history_v2_level/'
         'knn_v2_gpa_level_nearest.pkl'
@@ -50,29 +53,17 @@ from src.feature_engineering import (
     MAX_ALLOWED_SEMESTER_CREDITS,
     MAX_ALLOWED_SEMESTER_COURSES,
 )
+from src.grade_scale import (
+    DEFAULT_GRADE_SCALE_PATH,
+    OFFICIAL_GRADE_VERSION_ID,
+    GradeScale,
+)
 from src.inference import StudentScorer
 from src.knn_advisor_v2 import KNNAdvisorV2Level
 from src.knn_history_helpers import SEMESTER_KEY as KNN_SEMESTER_KEY
 
 # Minimum pass probability — courses below this are excluded from candidate plans
 MIN_PASS_PROB_FOR_PLAN = 0.30
-
-
-def _mark_to_gpa_points(mark: float) -> float:
-    """Approximate conversion from final_mark (0–100) to GPA points (0–4)."""
-    # Plan scoring optimizes GPA-like utility, so model marks are converted into
-    # the same coarse scale used by academic planning discussions.
-    if mark >= 90:
-        return 4.0
-    if mark >= 80:
-        return 3.5
-    if mark >= 70:
-        return 3.0
-    if mark >= 60:
-        return 2.5
-    if mark >= 50:
-        return 2.0
-    return 0.0
 
 
 def _generate_candidate_plans(
@@ -152,6 +143,7 @@ def _score_plan(
     scored_courses: pd.DataFrame,
     knn_evidence: dict,
     remaining_degree_credits: Optional[float],
+    grade_scale: GradeScale,
 ) -> dict:
     """Compute the 4-axis plan score plus a composite blend.
 
@@ -177,8 +169,8 @@ def _score_plan(
     credits = rows["course_credits"].fillna(3.0)
     total_credits = float(credits.sum())
 
-    # Convert course-level predicted marks into a credit-weighted expected AGPA.
-    pred_gpa = rows["pred_mark"].apply(_mark_to_gpa_points)
+    # Convert predicted marks through the persisted ACS_GRADE 3.111 authority.
+    pred_gpa = grade_scale.points_for_marks(rows["pred_mark"])
     expected_agpa = float(
         (pred_gpa * credits).sum() / total_credits if total_credits > 0 else 0.0
     )
@@ -396,11 +388,18 @@ class Recommender:
         self,
         scorer: StudentScorer,
         knn_advisor: KNNAdvisorV2Level,
+        grade_scale: GradeScale,
     ) -> None:
-        # Compose the two independent evidence providers so recommendation code
-        # can rank plans without knowing artifact-loading details.
+        # Compose model, KNN, and official grade-scale providers so plan ranking
+        # does not depend on artifact-loading details or hand-written cutoffs.
+        if grade_scale.grade_version_id != OFFICIAL_GRADE_VERSION_ID:
+            raise ValueError(
+                "Recommender requires ACS_GRADE grade_version_id "
+                f"{OFFICIAL_GRADE_VERSION_ID}, got {grade_scale.grade_version_id!r}"
+            )
         self.scorer = scorer
         self.knn = knn_advisor
+        self.grade_scale = grade_scale
 
     @classmethod
     def load(
@@ -409,12 +408,17 @@ class Recommender:
         pass_model_path: str,
         difficulty_lookup_path: str,
         knn_index_path: str,
+        grade_scale_path: str | None = None,
     ) -> "Recommender":
         # Keep the public loader as the single entry point for trained model,
         # difficulty, and KNN artifacts.
         scorer = StudentScorer.load(grade_model_path, pass_model_path, difficulty_lookup_path)
         knn = KNNAdvisorV2Level.load(knn_index_path)
-        return cls(scorer, knn)
+        scale_path = (
+            DEFAULT_GRADE_SCALE_PATH if grade_scale_path is None else grade_scale_path
+        )
+        grade_scale = GradeScale.load(scale_path)
+        return cls(scorer, knn, grade_scale)
 
     def recommend(
         self,
@@ -513,6 +517,7 @@ class Recommender:
                 scored_courses=plan_scored,
                 knn_evidence=knn_evidence,
                 remaining_degree_credits=remaining_degree_credits,
+                grade_scale=self.grade_scale,
             )
             if plan_dict:
                 scored_plans.append(plan_dict)
