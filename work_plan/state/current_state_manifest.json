@@ -1,0 +1,202 @@
+{
+  "freeze_id": "development-v0-2026-08-22",
+  "created_at": "2026-08-22T13:38:00+03:00",
+  "purpose": "Development safety reference for the product-pipeline build. This is not a model or dataset promotion decision.",
+  "dataset_version": "2026-08_temporal_rebuild_v2",
+  "reference_run": "models/runs/2026-08-18_1647__rebuild-v2-baseline41-s82",
+  "reference_contract": "baseline_41",
+  "reference_contract_feature_count": 41,
+  "reference_models": {
+    "m1": "m1_pass_model.lgbm",
+    "m2": "m2_grade_model.lgbm"
+  },
+  "test_policy": {
+    "train_rows": 603068,
+    "valid_rows": 75155,
+    "test_read_by_this_freeze": false,
+    "note": "Golden predictions use VALID only. The provisional TEST parquet is intentionally absent from the freeze verifier inputs."
+  },
+  "environment": {
+    "python": "3.11.5",
+    "pandas": "3.0.2",
+    "numpy": "2.4.4",
+    "pyarrow": "24.0.0",
+    "lightgbm": "4.6.0",
+    "scikit_learn": "1.9.0"
+  },
+  "baseline_tests": {
+    "command": ".venv/Scripts/python.exe -m unittest discover -s tests -q",
+    "process_environment_note": "GIT_CONFIG_COUNT/GIT_CONFIG_KEY_0/GIT_CONFIG_VALUE_0 supplied safe.directory only to the test process because the sandbox user does not own the workspace directory.",
+    "tests_run": 252,
+    "skipped": 3,
+    "failures": 0,
+    "errors": 0,
+    "exit_code": 0
+  },
+  "post_freeze_tests": {
+    "command": ".venv/Scripts/python.exe -m unittest discover -s tests -q",
+    "tests_run": 255,
+    "skipped": 3,
+    "failures": 0,
+    "errors": 0,
+    "exit_code": 0,
+    "duration_seconds": 44.279
+  },
+  "golden_predictions": {
+    "path": "tests/fixtures/golden_predictions_v0.json",
+    "source_split": "valid",
+    "case_count": 12,
+    "absolute_tolerance": 1e-10,
+    "contains_direct_student_identifiers": false
+  },
+  "artifacts": [
+    {
+      "path": "data/model_data/versions/2026-08_temporal_rebuild_v2/05_dataset/train_dataset_candidate.parquet",
+      "role": "immutable_data",
+      "verification": "required",
+      "bytes": 34171260,
+      "sha256": "6268404aece0d974614d14c6a2514e7cff0bea494a6784ba4deaa33cfeeb85fa"
+    },
+    {
+      "path": "data/model_data/versions/2026-08_temporal_rebuild_v2/05_dataset/valid_dataset_candidate.parquet",
+      "role": "immutable_data",
+      "verification": "required",
+      "bytes": 4454581,
+      "sha256": "c73c059bc4fb4e18184f3d4465aa08bb56d20828b023cc8d759b2cecb5510979"
+    },
+    {
+      "path": "data/model_data/versions/2026-08_temporal_rebuild_v2/05_dataset/feature_manifest.csv",
+      "role": "immutable_data_metadata",
+      "verification": "required",
+      "bytes": 8039,
+      "sha256": "9f409eec48070bd1e77849dbc46fb5383679717812565203b8acf3c3fd364dd4"
+    },
+    {
+      "path": "data/model_data/versions/2026-08_temporal_rebuild_v2/05_dataset/phase3_dataset_report.json",
+      "role": "immutable_data_metadata",
+      "verification": "required",
+      "bytes": 7351,
+      "sha256": "5d7baac089b39a43aa49c175375df1cfab0bd9f73eb9c23a247b7c77dd333ab8"
+    },
+    {
+      "path": "data/model_data/versions/2026-08_temporal_rebuild_v2/03_features/difficulty_state/manifest.json",
+      "role": "immutable_serving_artifact",
+      "verification": "required",
+      "bytes": 2645,
+      "sha256": "483f5afc1ee12d0e1dc29eb436a5678032fd62a5e1ec38cdca6ebf9ebfa3c089"
+    },
+    {
+      "path": "data/model_data/versions/2026-08_temporal_rebuild_v2/03_features/difficulty_state/level_1.parquet",
+      "role": "immutable_serving_artifact",
+      "verification": "required",
+      "bytes": 140365,
+      "sha256": "2e12a65240f006eb85f6cb02e0803d708566face321dcdd8e8a3e769c069ea23"
+    },
+    {
+      "path": "data/model_data/versions/2026-08_temporal_rebuild_v2/03_features/difficulty_state/level_2.parquet",
+      "role": "immutable_serving_artifact",
+      "verification": "required",
+      "bytes": 54917,
+      "sha256": "9fdf0b28fe138d032f443c3e09060d2c330f8492d49d757329f0a7e98bb47764"
+    },
+    {
+      "path": "data/model_data/versions/2026-08_temporal_rebuild_v2/03_features/difficulty_state/level_3.parquet",
+      "role": "immutable_serving_artifact",
+      "verification": "required",
+      "bytes": 28086,
+      "sha256": "8ef6702a3bccb0b7c884235bf02092b75deaab28695d5b299feaee97790e45f0"
+    },
+    {
+      "path": "data/model_data/versions/2026-08_temporal_rebuild_v2/03_features/difficulty_state/level_4.parquet",
+      "role": "immutable_serving_artifact",
+      "verification": "required",
+      "bytes": 13196,
+      "sha256": "a14332c425663e1d6dcd1d92c6fa58406f3a0aa192925fa7f4a3c8774dfc56f6"
+    },
+    {
+      "path": "data/model_data/versions/2026-08_temporal_rebuild_v2/03_features/difficulty_state/level_5.parquet",
+      "role": "immutable_serving_artifact",
+      "verification": "required",
+      "bytes": 7744,
+      "sha256": "d03744d59f81bd59f4c297872774f3b71b95bbcf4c47f3e3bce78f1931d62c37"
+    },
+    {
+      "path": "models/runs/2026-08-18_1647__rebuild-v2-baseline41-s82/m1_pass_model.lgbm",
+      "role": "immutable_reference_model",
+      "verification": "required",
+      "bytes": 4456114,
+      "sha256": "226ea954930a6d90bc4b2e39538274dd51f7ea45b4fa4c744a729fb9b9004d6e"
+    },
+    {
+      "path": "models/runs/2026-08-18_1647__rebuild-v2-baseline41-s82/m2_grade_model.lgbm",
+      "role": "immutable_reference_model",
+      "verification": "required",
+      "bytes": 1069801,
+      "sha256": "a4ac6d2a5b0ec5a79490f74edc104d230c4022943ff017e44cbbb235daa6bfd5"
+    },
+    {
+      "path": "models/runs/2026-08-18_1647__rebuild-v2-baseline41-s82/feature_contract.json",
+      "role": "immutable_reference_model_metadata",
+      "verification": "required",
+      "bytes": 7285,
+      "sha256": "8bf37306b8843b499c4d78761eaa71b3fa95aa556424384ca8fb2f8f1aad92b6"
+    },
+    {
+      "path": "models/runs/2026-08-18_1647__rebuild-v2-baseline41-s82/metrics.json",
+      "role": "immutable_reference_model_metadata",
+      "verification": "required",
+      "bytes": 4708,
+      "sha256": "b55d2400d7e060624c30b765976949a999fa8595a71357bfd3bcbba4df36b5e4"
+    },
+    {
+      "path": "models/runs/2026-08-18_1647__rebuild-v2-baseline41-s82/selection_summary.json",
+      "role": "immutable_reference_model_metadata",
+      "verification": "required",
+      "bytes": 570,
+      "sha256": "1037604ce181dfce41350ddcc2cc683b696c32be6e60b84e49d5bcd7ea4516e5"
+    },
+    {
+      "path": "src/data_prep.py",
+      "role": "baseline_code_snapshot",
+      "verification": "record_only",
+      "bytes": 10011,
+      "sha256": "ebcabb2905c6129c45b6827949da6ed4529e88e2eec73290a670f55fdce14cad"
+    },
+    {
+      "path": "src/feature_contracts.py",
+      "role": "baseline_code_snapshot",
+      "verification": "record_only",
+      "bytes": 14208,
+      "sha256": "f0aa0427fcd0679f2811c577de44e1d8230f3e4f598a3dd2c6a1abca73cfed25"
+    },
+    {
+      "path": "src/inference.py",
+      "role": "baseline_code_snapshot",
+      "verification": "record_only",
+      "bytes": 25380,
+      "sha256": "2e372e5d0b4bd2b9c3f00da09228e2906d0dd3fd0b7e6236a22a8ee6fcc6b065"
+    },
+    {
+      "path": "src/recommendation.py",
+      "role": "baseline_code_snapshot",
+      "verification": "record_only",
+      "bytes": 12420,
+      "sha256": "eb4d85133f139a7c59bdd100d04a38c5dc0983e5e3f59cbb71f200d1fd48b92a"
+    },
+    {
+      "path": "src/knn_advisor.py",
+      "role": "baseline_code_snapshot",
+      "verification": "record_only",
+      "bytes": 10705,
+      "sha256": "8784f4dc4b34a92ea559dba47cf27177fae99bf9e99604f6fde2627cbc0b760a"
+    }
+  ],
+  "known_limitations": [
+    "This freeze selects the seed-82 baseline_41 run as a development reference only; it does not promote it as the final production model.",
+    "The v2 dataset metadata names concurrent_43 as the intended M2 contract, but no v2 concurrent_43 model run is present. The runnable v2 reference freezes baseline_41 for both M1 and M2.",
+    "StudentScorer.load() does not accept or recover the stored feature contract and defaults through compatibility behavior; Recommender.load() cannot explicitly pass baseline_41.",
+    "A real score_plan attempt with the frozen baseline_41 models fails with LightGBM categorical-feature mismatch because serving rows are not cast with the stored train-only categorical levels.",
+    "No complete KNN production artifact is present, so a full Recommender golden response cannot be frozen yet.",
+    "The official GPA engine, eligibility engine, official offered-course feed, and set-level backtest are not implemented."
+  ]
+}

@@ -20,7 +20,10 @@ rec = Recommender.load(
     grade_model_path=str(MODELS_DIR / 'grade_model.lgbm'),
     pass_model_path=str(MODELS_DIR / 'pass_model.lgbm'),
     difficulty_lookup_path=str(ARTIFACTS_DIR / 'course_difficulty_lookup.parquet'),
-    knn_index_path=str(ARTIFACTS_DIR / 'knn_index.pkl'),
+    knn_index_path=str(
+        ARTIFACTS_DIR / 'knn/2026-08-23_history_v2_level/'
+        'knn_v2_gpa_level_nearest.pkl'
+    ),
 )
 
 plans = rec.recommend(
@@ -48,7 +51,8 @@ from src.feature_engineering import (
     MAX_ALLOWED_SEMESTER_COURSES,
 )
 from src.inference import StudentScorer
-from src.knn_advisor import KNNAdvisor
+from src.knn_advisor_v2 import KNNAdvisorV2Level
+from src.knn_history_helpers import SEMESTER_KEY as KNN_SEMESTER_KEY
 
 # Minimum pass probability — courses below this are excluded from candidate plans
 MIN_PASS_PROB_FOR_PLAN = 0.30
@@ -224,8 +228,165 @@ def _score_plan(
         "knn_similar_plan_avg_mark": round(
             knn_evidence.get("knn_similar_plan_avg_mark", np.nan), 3
         ),
+        "knn_support": int(knn_evidence.get("knn_support", 0)),
+        "knn_route": knn_evidence.get("knn_route"),
+        "knn_median_gpa_distance": round(
+            knn_evidence.get("knn_median_gpa_distance", np.nan), 4
+        ),
         "composite_score": round(composite, 4),
     }
+
+
+def _latest_history_row(df_history: pd.DataFrame) -> pd.Series:
+    """Return one row from the most recent completed semester."""
+    if df_history.empty:
+        return pd.Series(dtype=object)
+    if "part_id" not in df_history.columns:
+        return df_history.iloc[-1]
+
+    part_order = pd.to_numeric(df_history["part_id"], errors="coerce")
+    if part_order.notna().any():
+        latest_position = int(part_order.fillna(-np.inf).to_numpy().argmax())
+        return df_history.iloc[latest_position]
+    return df_history.iloc[-1]
+
+
+def _first_finite_positive(*values: object) -> float | None:
+    """Return the first finite positive numeric value in priority order."""
+    for value in values:
+        numeric = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+        if pd.notna(numeric) and np.isfinite(float(numeric)) and float(numeric) > 0:
+            return float(numeric)
+    return None
+
+
+def _resolve_knn_query(
+    *,
+    df_history: pd.DataFrame,
+    snapshot: pd.Series,
+    cold_start: bool,
+    knn_gpa: float | None,
+    academic_level: int | None,
+) -> tuple[float, int, str | None]:
+    """Resolve the GPA, exact level, and self-exclusion id for KNN v2."""
+    latest = _latest_history_row(df_history)
+
+    if knn_gpa is None:
+        if cold_start:
+            knn_gpa = _first_finite_positive(
+                snapshot.get("diploma_gpa"),
+                latest.get("diploma_gpa"),
+            )
+        else:
+            # Prefer the official state after the latest completed semester.
+            # Snapshot values describe the start of that semester and are only
+            # fallbacks when the serving history lacks official end-state fields.
+            knn_gpa = _first_finite_positive(
+                latest.get("end_agpa_points"),
+                latest.get("cumulative_gpa_after"),
+                snapshot.get("start_agpa_points"),
+                snapshot.get("last_valid_gpa_before_current_semester"),
+                snapshot.get("model_prev_gpa"),
+            )
+    else:
+        knn_gpa = _first_finite_positive(knn_gpa)
+
+    if knn_gpa is None:
+        source = "diploma_gpa" if cold_start else "current cumulative GPA"
+        raise ValueError(f"Cannot query KNN v2: no valid {source} is available")
+
+    if academic_level is None:
+        academic_level_value = _first_finite_positive(
+            latest.get("end_level_name_short"),
+            latest.get("academic_level_after"),
+            snapshot.get("start_level_ord"),
+        )
+    else:
+        academic_level_value = _first_finite_positive(academic_level)
+
+    if academic_level_value is None or not float(academic_level_value).is_integer():
+        raise ValueError(
+            "Cannot query KNN v2: academic_level must be a positive integer"
+        )
+    resolved_level = int(academic_level_value)
+
+    student_id = snapshot.get("student_id")
+    if pd.isna(student_id) and "student_id" in df_history.columns:
+        non_null_ids = df_history["student_id"].dropna()
+        student_id = non_null_ids.iloc[-1] if len(non_null_ids) else None
+    exclude_student_id = (
+        None if student_id is None or pd.isna(student_id) else str(student_id)
+    )
+    return float(knn_gpa), resolved_level, exclude_student_id
+
+
+def _base_knn_evidence(
+    advisor: KNNAdvisorV2Level,
+    neighbours: pd.DataFrame,
+) -> tuple[dict, pd.DataFrame]:
+    """Translate KNN v2 outcomes into recommendation-compatible evidence."""
+    summary = advisor.summarize(neighbours)
+    neighbour_courses = advisor.courses_for_neighbours(neighbours)
+
+    pass_rate = np.nan
+    if not neighbour_courses.empty and "is_passed" in neighbour_courses.columns:
+        passed = pd.to_numeric(neighbour_courses["is_passed"], errors="coerce")
+        if passed.notna().any():
+            pass_rate = float(passed.mean())
+
+    pct_all_passed = np.nan
+    if not neighbours.empty and "all_courses_passed" in neighbours.columns:
+        values = pd.to_numeric(neighbours["all_courses_passed"], errors="coerce")
+        if values.notna().any():
+            pct_all_passed = float(values.mean())
+
+    def number_or_nan(value: object) -> float:
+        return np.nan if value is None else float(value)
+
+    evidence = {
+        "knn_support": int(summary["support"]),
+        "knn_route": summary["knn_route"],
+        "knn_avg_pass_rate": pass_rate,
+        "knn_avg_gpa": number_or_nan(summary["mean_term_gpa"]),
+        "knn_pct_all_passed": pct_all_passed,
+        "knn_pct_any_failed": number_or_nan(summary["pct_any_course_failed"]),
+        "knn_mean_matched_gpa": number_or_nan(summary["mean_matched_gpa"]),
+        "knn_median_gpa_distance": number_or_nan(summary["median_gpa_distance"]),
+        "knn_mean_term_gpa_delta": number_or_nan(summary["mean_term_gpa_delta"]),
+        "knn_mean_cumulative_gpa_delta": number_or_nan(
+            summary["mean_cumulative_gpa_delta"]
+        ),
+    }
+    return evidence, neighbour_courses
+
+
+def _knn_evidence_for_plan(
+    base_evidence: dict,
+    neighbour_courses: pd.DataFrame,
+    plan_course_ids: List[str],
+) -> dict:
+    """Add course-overlap evidence for one candidate plan."""
+    evidence = dict(base_evidence)
+    evidence["knn_similar_plan_avg_mark"] = np.nan
+    if neighbour_courses.empty or not plan_course_ids:
+        return evidence
+
+    plan_set = {str(course_id) for course_id in plan_course_ids}
+    similar_plan_marks: list[float] = []
+    for _, semester_courses in neighbour_courses.groupby(
+        KNN_SEMESTER_KEY, dropna=False, sort=False
+    ):
+        historical_set = set(semester_courses["course_id"].astype(str))
+        overlap_ratio = len(plan_set & historical_set) / len(plan_set)
+        if overlap_ratio < 0.5:
+            continue
+        marks = pd.to_numeric(semester_courses["final_mark"], errors="coerce").dropna()
+        if len(marks):
+            similar_plan_marks.append(float(marks.mean()))
+
+    if similar_plan_marks:
+        evidence["knn_similar_plan_avg_mark"] = float(np.mean(similar_plan_marks))
+    return evidence
 
 
 class Recommender:
@@ -234,7 +395,7 @@ class Recommender:
     def __init__(
         self,
         scorer: StudentScorer,
-        knn_advisor: KNNAdvisor,
+        knn_advisor: KNNAdvisorV2Level,
     ) -> None:
         # Compose the two independent evidence providers so recommendation code
         # can rank plans without knowing artifact-loading details.
@@ -252,7 +413,7 @@ class Recommender:
         # Keep the public loader as the single entry point for trained model,
         # difficulty, and KNN artifacts.
         scorer = StudentScorer.load(grade_model_path, pass_model_path, difficulty_lookup_path)
-        knn = KNNAdvisor.load(knn_index_path)
+        knn = KNNAdvisorV2Level.load(knn_index_path)
         return cls(scorer, knn)
 
     def recommend(
@@ -264,6 +425,10 @@ class Recommender:
         remaining_degree_credits: Optional[float] = None,
         n_plans: int = 500,
         top_k: int = 5,
+        knn_gpa: Optional[float] = None,
+        academic_level: Optional[int] = None,
+        cold_start: bool = False,
+        knn_k: int = 20,
     ) -> List[dict]:
         """Generate and rank course-plan recommendations.
 
@@ -275,7 +440,13 @@ class Recommender:
             expected_agpa, risk, workload_ratio, graduation_progress,
             avg_pass_prob, min_pass_prob,
             knn_avg_pass_rate, knn_pct_any_failed, knn_similar_plan_avg_mark,
+            knn_support, knn_route, knn_median_gpa_distance,
             composite_score
+
+        KNN query values default to the official state after the latest history
+        semester. Callers may provide ``knn_gpa`` and ``academic_level``
+        explicitly. For a new student set ``cold_start=True``; ``knn_gpa`` then
+        means diploma GPA instead of cumulative university GPA.
         """
         # Extract the student snapshot once because every later stage needs the
         # same current academic state.
@@ -299,9 +470,27 @@ class Recommender:
         if not plans:
             return []
 
-        # Fetch similar historical semesters once and reuse them for all plan
-        # evidence summaries.
-        neighbours = self.knn.find_similar(snapshot, k=20)
+        # KNN v2 matches only inside the student's exact degree and academic
+        # level, using cumulative GPA for returning students or diploma GPA for
+        # cold-start students.
+        resolved_gpa, resolved_level, exclude_student_id = _resolve_knn_query(
+            df_history=df_history,
+            snapshot=snapshot,
+            cold_start=cold_start,
+            knn_gpa=knn_gpa,
+            academic_level=academic_level,
+        )
+        neighbours = self.knn.find_nearest_gpa(
+            degree_id=degree_id,
+            academic_level=resolved_level,
+            gpa=resolved_gpa,
+            cold_start=cold_start,
+            k=knn_k,
+            exclude_student_id=exclude_student_id,
+        )
+        base_knn_evidence, neighbour_courses = _base_knn_evidence(
+            self.knn, neighbours
+        )
 
         # Re-score each plan with its exact workload context before combining
         # model predictions, KNN evidence, risk, and graduation progress.
@@ -314,7 +503,11 @@ class Recommender:
                 degree_id=degree_id,
                 snapshot=snapshot,
             )
-            knn_evidence = self.knn.summarize_evidence(neighbours, plan_course_ids=plan_courses)
+            knn_evidence = _knn_evidence_for_plan(
+                base_knn_evidence,
+                neighbour_courses,
+                plan_course_ids=plan_courses,
+            )
             plan_dict = _score_plan(
                 plan_courses=plan_courses,
                 scored_courses=plan_scored,

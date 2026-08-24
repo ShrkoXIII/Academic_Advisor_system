@@ -1,0 +1,142 @@
+{
+  "freeze_id": "development-v0-2026-08-22",
+  "dataset_path": "data/model_data/versions/2026-08_temporal_rebuild_v2/05_dataset/valid_dataset_candidate.parquet",
+  "run_path": "models/runs/2026-08-18_1647__rebuild-v2-baseline41-s82",
+  "feature_contract": "baseline_41",
+  "absolute_tolerance": 1e-10,
+  "identity_policy": "Cases use zero-based row positions in a hash-frozen parquet and contain no direct student identifiers.",
+  "cases": [
+    {
+      "source_row_index": 22364,
+      "segment": "cold_start_start_part_equals_part",
+      "actual_final_mark": 79,
+      "attempt_number": 1,
+      "difficulty_fallback_level": 1,
+      "course_difficulty_missing": 0,
+      "feature_vector_sha256": "30e9d5d91143405faf5e56784673e0bb3b70efab3cd5cbf14baa5ec68f808452",
+      "m1_pass_probability": 0.9705668116470819,
+      "m2_predicted_mark": 77.6949027243306
+    },
+    {
+      "source_row_index": 28493,
+      "segment": "cold_start_start_part_equals_part",
+      "actual_final_mark": 40,
+      "attempt_number": 2,
+      "difficulty_fallback_level": 1,
+      "course_difficulty_missing": 0,
+      "feature_vector_sha256": "b55724784e434d0d2811d80f2731637da037452437ecc43dba1d8dec485d4b00",
+      "m1_pass_probability": 0.6803985110589528,
+      "m2_predicted_mark": 54.033406313284274
+    },
+    {
+      "source_row_index": 28725,
+      "segment": "cold_start_start_part_equals_part",
+      "actual_final_mark": 37,
+      "attempt_number": 3,
+      "difficulty_fallback_level": 1,
+      "course_difficulty_missing": 0,
+      "feature_vector_sha256": "00c34b315f44b762837f6c5ef62c18951e655a7acac6d4329480e8a799edea11",
+      "m1_pass_probability": 0.6019356605130319,
+      "m2_predicted_mark": 55.358451227979316
+    },
+    {
+      "source_row_index": 0,
+      "segment": "returning",
+      "actual_final_mark": 95,
+      "attempt_number": 1,
+      "difficulty_fallback_level": 1,
+      "course_difficulty_missing": 0,
+      "feature_vector_sha256": "4f72f85fc3929a05aaaf5dfff77a3dea1f1ae8c9432f661c60bb217c69ed95c5",
+      "m1_pass_probability": 0.9995401105087143,
+      "m2_predicted_mark": 94.47971235351417
+    },
+    {
+      "source_row_index": 1,
+      "segment": "returning",
+      "actual_final_mark": 90,
+      "attempt_number": 1,
+      "difficulty_fallback_level": 1,
+      "course_difficulty_missing": 0,
+      "feature_vector_sha256": "af5934e292f3fabdfc18d3ee8e13774f7321323feb7f3312bed45b906510e8b6",
+      "m1_pass_probability": 0.9994953510967192,
+      "m2_predicted_mark": 94.019792946684
+    },
+    {
+      "source_row_index": 2,
+      "segment": "returning",
+      "actual_final_mark": 100,
+      "attempt_number": 1,
+      "difficulty_fallback_level": 1,
+      "course_difficulty_missing": 0,
+      "feature_vector_sha256": "061b693c4b134d3186463341173ff1f0bd1fd04ace77be65feacd3965f1b3d5f",
+      "m1_pass_probability": 0.9989735918272131,
+      "m2_predicted_mark": 92.75883795965676
+    },
+    {
+      "source_row_index": 498,
+      "segment": "difficulty_fallback",
+      "actual_final_mark": 94,
+      "attempt_number": 1,
+      "difficulty_fallback_level": 3,
+      "course_difficulty_missing": 1,
+      "feature_vector_sha256": "662296e006135cd40212f6ab86599d5fc9ccd69acb4fc1f9556832f5ee5082c9",
+      "m1_pass_probability": 0.9988543695849182,
+      "m2_predicted_mark": 92.34534278536069
+    },
+    {
+      "source_row_index": 515,
+      "segment": "difficulty_fallback",
+      "actual_final_mark": 86,
+      "attempt_number": 1,
+      "difficulty_fallback_level": 3,
+      "course_difficulty_missing": 1,
+      "feature_vector_sha256": "1dc6aef31acdbdf09bed4a6b5541fca2b0088e8842a33c07ccf9fe0131567b0c",
+      "m1_pass_probability": 0.9966472930426324,
+      "m2_predicted_mark": 81.82438210650335
+    },
+    {
+      "source_row_index": 733,
+      "segment": "difficulty_fallback",
+      "actual_final_mark": 69,
+      "attempt_number": 1,
+      "difficulty_fallback_level": 3,
+      "course_difficulty_missing": 1,
+      "feature_vector_sha256": "8ad08badc8d0ba1ddd847aee2757bd48a59b29847f7df1be7a5c83f415212f91",
+      "m1_pass_probability": 0.9933557284065064,
+      "m2_predicted_mark": 78.23447316362645
+    },
+    {
+      "source_row_index": 27,
+      "segment": "retake",
+      "actual_final_mark": 77,
+      "attempt_number": 2,
+      "difficulty_fallback_level": 1,
+      "course_difficulty_missing": 0,
+      "feature_vector_sha256": "d51ee9de3bf6e0c541b01d109c4c0e1ace7dced9e1a0e3c0e49d0d5341d05fde",
+      "m1_pass_probability": 0.8936901921868402,
+      "m2_predicted_mark": 65.73910656061733
+    },
+    {
+      "source_row_index": 28,
+      "segment": "retake",
+      "actual_final_mark": 78,
+      "attempt_number": 2,
+      "difficulty_fallback_level": 1,
+      "course_difficulty_missing": 0,
+      "feature_vector_sha256": "e23c079ee38dd110e0988ad152f0cd74d303687bdf762ff1ff60200a1832c8f0",
+      "m1_pass_probability": 0.8923721246867061,
+      "m2_predicted_mark": 64.4993565903671
+    },
+    {
+      "source_row_index": 56,
+      "segment": "retake",
+      "actual_final_mark": 68,
+      "attempt_number": 4,
+      "difficulty_fallback_level": 1,
+      "course_difficulty_missing": 0,
+      "feature_vector_sha256": "5ad22c9cf955d5a64f18e19656c95de6c152c3eae12a61703d1c476f032a6498",
+      "m1_pass_probability": 0.7184573312020923,
+      "m2_predicted_mark": 63.81197220387815
+    }
+  ]
+}
