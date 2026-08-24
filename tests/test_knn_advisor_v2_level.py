@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 import pandas as pd
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
 from src.knn_advisor_v2 import KNNAdvisorV2Level
 
@@ -81,6 +82,62 @@ class KNNAdvisorV2LevelTest(unittest.TestCase):
         self.assertNotIn("s3", set(result["student_id"]))
         self.assertEqual(set(result["level_fallback_used"]), {0})
 
+    def test_build_fits_sklearn_models_and_predict_uses_them(self):
+        prediction = self.advisor.predict(
+            degree_id="d1",
+            academic_level=2,
+            gpa=2.42,
+        )
+
+        self.assertEqual(self.advisor.metadata["backend"], "sklearn")
+        self.assertTrue(self.advisor.metadata["fit_called"])
+        fitted_group = next(
+            iter(self.advisor._group_models[self.advisor.RETURNING_ROUTE].values())
+        )
+        self.assertIsInstance(fitted_group.classifier, KNeighborsClassifier)
+        self.assertIsInstance(fitted_group.regressor, KNeighborsRegressor)
+        self.assertTrue(prediction["covered"])
+        self.assertEqual(prediction["predicted_any_course_failed"], 0)
+        self.assertEqual(prediction["failure_probability"], 0.0)
+        self.assertAlmostEqual(prediction["predicted_term_gpa"], 2.5)
+        self.assertAlmostEqual(
+            prediction["predicted_semester_average_mark"], 70.0
+        )
+
+    def test_predict_refuses_k_different_from_fitted_artifact(self):
+        with self.assertRaisesRegex(ValueError, "fitted with n_neighbors=20"):
+            self.advisor.predict(
+                degree_id="d1",
+                academic_level=2,
+                gpa=2.42,
+                k=10,
+            )
+
+    def test_predict_frame_calls_fitted_classifier_and_regressor(self):
+        predictions = self.advisor.predict_frame(
+            pd.DataFrame(
+                [
+                    {
+                        "degree_id": "d1",
+                        "academic_level": 2,
+                        "gpa": 2.42,
+                        "cold_start": False,
+                    },
+                    {
+                        "degree_id": "missing",
+                        "academic_level": 2,
+                        "gpa": 2.42,
+                        "cold_start": False,
+                    },
+                ]
+            )
+        )
+
+        self.assertTrue(bool(predictions.loc[0, "covered"]))
+        self.assertEqual(int(predictions.loc[0, "predicted_any_course_failed"]), 0)
+        self.assertFalse(bool(predictions.loc[1, "covered"]))
+        self.assertTrue(pd.isna(predictions.loc[1, "predicted_term_gpa"]))
+
     def test_cold_start_uses_exact_start_level_and_diploma_gpa(self):
         result = self.advisor.find_nearest_gpa(
             degree_id="d1",
@@ -107,6 +164,7 @@ class KNNAdvisorV2LevelTest(unittest.TestCase):
 
         self.assertEqual(list(result["student_id"]), ["s3"])
         self.assertEqual(loaded.metadata["level_fallback"], "none_exact_level_only")
+        self.assertEqual(loaded.metadata["backend"], "sklearn")
 
 
 if __name__ == "__main__":

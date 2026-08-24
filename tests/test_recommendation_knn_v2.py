@@ -65,6 +65,7 @@ class _FakeScorer:
 class _FakeKNNV2Level:
     def __init__(self, *, return_empty: bool = False) -> None:
         self.query = None
+        self.prediction_query = None
         self.return_empty = return_empty
 
     def find_nearest_gpa(self, **kwargs) -> pd.DataFrame:
@@ -91,6 +92,28 @@ class _FakeKNNV2Level:
                 }
             ]
         )
+
+    def predict(self, **kwargs) -> dict:
+        self.prediction_query = kwargs
+        if self.return_empty:
+            return {
+                "covered": False,
+                "support": 0,
+                "knn_route": None,
+                "predicted_any_course_failed": None,
+                "failure_probability": None,
+                "predicted_term_gpa": None,
+                "predicted_semester_average_mark": None,
+            }
+        return {
+            "covered": True,
+            "support": 1,
+            "knn_route": "returning_degree_level_cumulative_gpa",
+            "predicted_any_course_failed": 0,
+            "failure_probability": 0.0,
+            "predicted_term_gpa": 2.8,
+            "predicted_semester_average_mark": 76.0,
+        }
 
     def summarize(self, neighbours: pd.DataFrame) -> dict:
         if neighbours.empty:
@@ -180,8 +203,12 @@ class RecommendationKNNV2IntegrationTest(unittest.TestCase):
         self.assertFalse(knn.query["cold_start"])
         self.assertEqual(knn.query["k"], 20)
         self.assertEqual(knn.query["exclude_student_id"], "current-student")
+        self.assertEqual(knn.prediction_query["degree_id"], "degree-1")
+        self.assertEqual(knn.prediction_query["academic_level"], 3)
         self.assertEqual(plans[0]["knn_support"], 1)
         self.assertEqual(plans[0]["knn_avg_pass_rate"], 1.0)
+        self.assertEqual(plans[0]["knn_failure_probability"], 0.0)
+        self.assertEqual(plans[0]["knn_predicted_term_gpa"], 2.8)
         self.assertEqual(plans[0]["knn_similar_plan_avg_mark"], 76.0)
         self.assertEqual(plans[0]["expected_agpa"], 2.75)
 

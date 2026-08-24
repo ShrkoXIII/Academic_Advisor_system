@@ -10,6 +10,7 @@ dependencies = [
     "oracledb",
     "pandas",
     "numpy",
+    "scikit-learn",
     "matplotlib",
     "seaborn",
     "pyarrow",

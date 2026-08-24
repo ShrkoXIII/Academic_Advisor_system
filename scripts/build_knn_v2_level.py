@@ -1,4 +1,4 @@
-"""Build the exact degree-and-level GPA KNN artifact from History V2."""
+"""Fit and persist the sklearn degree-and-level GPA KNN models."""
 
 from __future__ import annotations
 
@@ -20,13 +20,25 @@ from src.paths import assert_data_root  # noqa: E402
 DEFAULT_HISTORY_DIR = (
     PROJECT_ROOT / "data" / "artifacts" / "knn" / "2026-08-23_history_v2_level"
 )
-DEFAULT_OUTPUT = DEFAULT_HISTORY_DIR / "knn_v2_gpa_level_nearest.pkl"
+DEFAULT_OUTPUT = (
+    PROJECT_ROOT
+    / "data"
+    / "artifacts"
+    / "knn"
+    / "2026-08-24_sklearn_v3"
+    / "knn_v2_level_sklearn_k20.pkl"
+)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--history-dir", type=Path, default=DEFAULT_HISTORY_DIR)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--n-neighbors", type=int, default=20)
+    parser.add_argument(
+        "--weights", choices=["uniform", "distance"], default="uniform"
+    )
+    parser.add_argument("--metric", default="euclidean")
     return parser.parse_args()
 
 
@@ -38,7 +50,13 @@ def main() -> None:
 
     outcomes = pd.read_parquet(outcomes_path)
     courses = pd.read_parquet(courses_path)
-    advisor = KNNAdvisorV2Level.build(outcomes, courses)
+    advisor = KNNAdvisorV2Level.build(
+        outcomes,
+        courses,
+        n_neighbors=args.n_neighbors,
+        weights=args.weights,
+        metric=args.metric,
+    )
     advisor.save(args.output)
 
     print(f"KNN v2 level artifact: {args.output}")

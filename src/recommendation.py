@@ -24,8 +24,8 @@ rec = Recommender.load(
         ARTIFACTS_DIR / 'grade_scales/acs_grade_3.111.json'
     ),
     knn_index_path=str(
-        ARTIFACTS_DIR / 'knn/2026-08-23_history_v2_level/'
-        'knn_v2_gpa_level_nearest.pkl'
+        ARTIFACTS_DIR / 'knn/2026-08-24_sklearn_v3/'
+        'knn_v2_level_sklearn_k20.pkl'
     ),
 )
 
@@ -189,11 +189,16 @@ def _score_plan(
     else:
         grad_progress = 0.0
 
-    # KNN evidence nudges the ML score using outcomes from similar historical
-    # students without overpowering the main model predictions.
+    # KNN evidence nudges the ML score using the fitted sklearn classifier's
+    # failure probability. Fall back to descriptive neighbour pass rate only
+    # when the degree-level model has no coverage.
     knn_bonus = 0.0
-    if "knn_avg_pass_rate" in knn_evidence and not np.isnan(knn_evidence["knn_avg_pass_rate"]):
-        # Bonus if similar students tended to pass; penalty if they tended to fail
+    failure_probability = knn_evidence.get("knn_failure_probability", np.nan)
+    if not pd.isna(failure_probability):
+        knn_bonus = ((1.0 - float(failure_probability)) - 0.8) * 0.5
+    elif "knn_avg_pass_rate" in knn_evidence and not pd.isna(
+        knn_evidence["knn_avg_pass_rate"]
+    ):
         knn_bonus = (knn_evidence["knn_avg_pass_rate"] - 0.8) * 0.5
 
     # Composite score turns the separate planning axes into one sortable value.
@@ -217,6 +222,18 @@ def _score_plan(
         "min_pass_prob": round(min_pass_prob, 3),
         "knn_avg_pass_rate": round(knn_evidence.get("knn_avg_pass_rate", np.nan), 3),
         "knn_pct_any_failed": round(knn_evidence.get("knn_pct_any_failed", np.nan), 3),
+        "knn_predicted_any_course_failed": knn_evidence.get(
+            "knn_predicted_any_course_failed"
+        ),
+        "knn_failure_probability": round(
+            knn_evidence.get("knn_failure_probability", np.nan), 3
+        ),
+        "knn_predicted_term_gpa": round(
+            knn_evidence.get("knn_predicted_term_gpa", np.nan), 3
+        ),
+        "knn_predicted_semester_average_mark": round(
+            knn_evidence.get("knn_predicted_semester_average_mark", np.nan), 3
+        ),
         "knn_similar_plan_avg_mark": round(
             knn_evidence.get("knn_similar_plan_avg_mark", np.nan), 3
         ),
@@ -315,8 +332,9 @@ def _resolve_knn_query(
 def _base_knn_evidence(
     advisor: KNNAdvisorV2Level,
     neighbours: pd.DataFrame,
+    prediction: dict,
 ) -> tuple[dict, pd.DataFrame]:
-    """Translate KNN v2 outcomes into recommendation-compatible evidence."""
+    """Combine native sklearn predictions with explainable neighbour evidence."""
     summary = advisor.summarize(neighbours)
     neighbour_courses = advisor.courses_for_neighbours(neighbours)
 
@@ -335,13 +353,42 @@ def _base_knn_evidence(
     def number_or_nan(value: object) -> float:
         return np.nan if value is None else float(value)
 
+    model_covered = bool(prediction.get("covered", False))
+    predicted_failure_probability = (
+        number_or_nan(prediction.get("failure_probability"))
+        if model_covered
+        else np.nan
+    )
+    predicted_term_gpa = (
+        number_or_nan(prediction.get("predicted_term_gpa"))
+        if model_covered
+        else np.nan
+    )
+    predicted_average_mark = (
+        number_or_nan(prediction.get("predicted_semester_average_mark"))
+        if model_covered
+        else np.nan
+    )
+
     evidence = {
         "knn_support": int(summary["support"]),
         "knn_route": summary["knn_route"],
         "knn_avg_pass_rate": pass_rate,
-        "knn_avg_gpa": number_or_nan(summary["mean_term_gpa"]),
+        "knn_avg_gpa": predicted_term_gpa
+        if model_covered
+        else number_or_nan(summary["mean_term_gpa"]),
         "knn_pct_all_passed": pct_all_passed,
-        "knn_pct_any_failed": number_or_nan(summary["pct_any_course_failed"]),
+        "knn_pct_any_failed": predicted_failure_probability
+        if model_covered
+        else number_or_nan(summary["pct_any_course_failed"]),
+        "knn_predicted_any_course_failed": prediction.get(
+            "predicted_any_course_failed"
+        )
+        if model_covered
+        else None,
+        "knn_failure_probability": predicted_failure_probability,
+        "knn_predicted_term_gpa": predicted_term_gpa,
+        "knn_predicted_semester_average_mark": predicted_average_mark,
         "knn_mean_matched_gpa": number_or_nan(summary["mean_matched_gpa"]),
         "knn_median_gpa_distance": number_or_nan(summary["median_gpa_distance"]),
         "knn_mean_term_gpa_delta": number_or_nan(summary["mean_term_gpa_delta"]),
@@ -492,8 +539,15 @@ class Recommender:
             k=knn_k,
             exclude_student_id=exclude_student_id,
         )
+        knn_prediction = self.knn.predict(
+            degree_id=degree_id,
+            academic_level=resolved_level,
+            gpa=resolved_gpa,
+            cold_start=cold_start,
+            k=knn_k,
+        )
         base_knn_evidence, neighbour_courses = _base_knn_evidence(
-            self.knn, neighbours
+            self.knn, neighbours, knn_prediction
         )
 
         # Re-score each plan with its exact workload context before combining

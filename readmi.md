@@ -1,3 +1,8 @@
+# Academic Advisor Pipeline
+
+توثيق KNN المفصل، بما فيه بناء البيانات و`fit/predict` والتقييم والربط مع
+التوصيات، موجود في [docs/knn_readme/README.md](docs/knn_readme/README.md).
+
 Clean Tables
 ↓
 Student Snapshot تمثيل حالة الطالب قبل بداية الفصل.  (student_id + semester_id) 
