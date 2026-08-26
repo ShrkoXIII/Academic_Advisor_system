@@ -119,6 +119,58 @@ def _attempt_number(df_history: pd.DataFrame, course_id: str) -> int:
     return int(prior) + 1
 
 
+def _estimate_semester_context(
+    df_history: pd.DataFrame,
+    expected_semester_credits: float | None,
+    expected_semester_courses: int | None,
+) -> tuple[float, int]:
+    """Return the target semester workload supplied or estimated from history."""
+    if expected_semester_credits is None:
+        if "semester_reg_credits" in df_history.columns:
+            expected_semester_credits = float(
+                df_history["semester_reg_credits"].tail(3).mean()
+            )
+        else:
+            expected_semester_credits = 15.0
+
+    if expected_semester_courses is None:
+        if "semester_reg_courses" in df_history.columns:
+            expected_semester_courses = int(
+                round(df_history["semester_reg_courses"].tail(3).mean())
+            )
+        else:
+            expected_semester_courses = 5
+
+    return expected_semester_credits, expected_semester_courses
+
+
+def _index_candidate_metadata(
+    candidate_metadata: pd.DataFrame | None,
+) -> pd.DataFrame | None:
+    """Return candidate metadata indexed by string course ID, when supplied."""
+    if candidate_metadata is None:
+        return None
+
+    metadata_by_course = candidate_metadata.copy()
+    if "course_id" in metadata_by_course.columns:
+        metadata_by_course = metadata_by_course.set_index("course_id")
+    metadata_by_course.index = metadata_by_course.index.astype(str)
+    return metadata_by_course
+
+
+def _candidate_metadata_row(
+    metadata_by_course: pd.DataFrame | None, course_id: str
+) -> pd.Series:
+    """Return the first metadata row for a course, or an empty row."""
+    if metadata_by_course is None or str(course_id) not in metadata_by_course.index:
+        return pd.Series(dtype=object)
+
+    candidate_info = metadata_by_course.loc[str(course_id)]
+    if isinstance(candidate_info, pd.DataFrame):
+        return candidate_info.iloc[0]
+    return candidate_info
+
+
 # ---------------------------------------------------------------------------
 # Main scorer class
 # ---------------------------------------------------------------------------
@@ -286,27 +338,12 @@ class StudentScorer:
         if snapshot is None:
             snapshot = _extract_student_snapshot(df_history)
 
-        # Estimate semester context because single-course scoring still needs
-        # workload features for the target term.
         target_year, target_sem = _part_id_to_year_sem(target_part_id)
-
-        if expected_semester_credits is None:
-            # Use the recent workload mean as a practical default when callers
-            # have not selected a concrete plan yet.
-            if "semester_reg_credits" in df_history.columns:
-                expected_semester_credits = float(
-                    df_history["semester_reg_credits"].tail(3).mean()
-                )
-            else:
-                expected_semester_credits = 15.0
-
-        if expected_semester_courses is None:
-            if "semester_reg_courses" in df_history.columns:
-                expected_semester_courses = int(
-                    round(df_history["semester_reg_courses"].tail(3).mean())
-                )
-            else:
-                expected_semester_courses = 5
+        expected_semester_credits, expected_semester_courses = _estimate_semester_context(
+            df_history,
+            expected_semester_credits,
+            expected_semester_courses,
+        )
 
         # Single-course scoring has no plan context, so the concurrent peer
         # features stay on their singleton placeholder inside the frame builder.
@@ -343,18 +380,9 @@ class StudentScorer:
         plan context is known so train and serve compute them identically.
         """
         rows = []
-        metadata_by_course = None
-        if candidate_metadata is not None:
-            metadata_by_course = candidate_metadata.copy()
-            if "course_id" in metadata_by_course.columns:
-                metadata_by_course = metadata_by_course.set_index("course_id")
-            metadata_by_course.index = metadata_by_course.index.astype(str)
+        metadata_by_course = _index_candidate_metadata(candidate_metadata)
         for course_id in candidate_course_ids:
-            candidate_info = pd.Series(dtype=object)
-            if metadata_by_course is not None and str(course_id) in metadata_by_course.index:
-                candidate_info = metadata_by_course.loc[str(course_id)]
-                if isinstance(candidate_info, pd.DataFrame):
-                    candidate_info = candidate_info.iloc[0]
+            candidate_info = _candidate_metadata_row(metadata_by_course, course_id)
             diff_row = self._get_difficulty_row(
                 degree_id,
                 course_id,
@@ -469,6 +497,20 @@ class StudentScorer:
 
         return result.sort_values("pass_prob", ascending=False)
 
+    def _plan_total_credits(self, degree_id: str, plan_course_ids: List[str]) -> float:
+        """Return a plan's credits from the same lookup used for scoring."""
+        fallback_course_credits = 3.0
+        total_credits = 0.0
+        for course_id in plan_course_ids:
+            course_credits = self._get_difficulty_row(degree_id, course_id).get(
+                "course_credits"
+            )
+            if pd.notna(course_credits):
+                total_credits += float(course_credits)
+            else:
+                total_credits += fallback_course_credits
+        return total_credits
+
     def score_plan(
         self,
         df_history: pd.DataFrame,
@@ -490,21 +532,7 @@ class StudentScorer:
         if snapshot is None:
             snapshot = _extract_student_snapshot(df_history)
 
-        # Look up credits for plan courses so workload features reflect the
-        # concrete plan rather than a historical average. Route through the
-        # shared difficulty lookup so this works under both the B2
-        # DifficultyState (self._diff is None) and the legacy lookup table, and
-        # stays consistent with the per-course credits score() itself uses. The
-        # B2 state carries no course_credits per course, so an unresolved course
-        # falls back to 3.0 credits — the same default recommendation.py uses
-        # (fillna(3.0) at recommendation.py:100,111,173) — rather than 0, which
-        # would be an out-of-distribution semester_reg_credits value never seen
-        # in training.
-        _FALLBACK_COURSE_CREDITS = 3.0
-        total_credits = 0.0
-        for cid in plan_course_ids:
-            cr = self._get_difficulty_row(degree_id, cid).get("course_credits")
-            total_credits += float(cr) if pd.notna(cr) else _FALLBACK_COURSE_CREDITS
+        total_credits = self._plan_total_credits(degree_id, plan_course_ids)
 
         target_year, target_sem = _part_id_to_year_sem(target_part_id)
         df_cand = self._build_candidate_frame(

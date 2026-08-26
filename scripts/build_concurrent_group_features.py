@@ -1515,6 +1515,202 @@ def _resolve_outputs(
     return outputs
 
 
+def _build_split(
+    split: str,
+    *,
+    template_paths: dict[str, Path],
+    output_paths: dict[str, Path],
+    raw_crg_path: Path,
+    clean_acd: pd.DataFrame,
+    state: Any,
+    prior_paths: dict[str, Path],
+    staging: Path,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Path]]:
+    """Build, validate, and stage every concurrent artifact for one split."""
+
+    diff_path = template_paths[f"{split}_difficulty"]
+    final_path = template_paths[f"{split}_final"]
+    target = _read_target(diff_path)
+    raw_crg = _read_raw_crg_for_parts(raw_crg_path, target["part_id"])
+    roster_result = build_registration_roster(raw_crg, target, clean_acd)
+    roster = roster_result.roster
+    leaked_outcomes = sorted(KNOWN_OUTCOME_COLUMNS.intersection(roster.columns))
+    if leaked_outcomes:
+        raise AssertionError(
+            f"{split}: outcome columns entered registration roster: "
+            f"{leaked_outcomes}"
+        )
+
+    if split == "train":
+        generated_difficulty = build_temporal_query_difficulty(
+            target,
+            roster,
+            state.config,
+            include_source=False,
+        )
+    else:
+        generated_difficulty = apply_difficulty_state(
+            roster,
+            state,
+            include_source=False,
+        )
+
+    generated_target = _select_generated_target_difficulty(
+        roster,
+        generated_difficulty,
+        target,
+    )
+    pre_reuse_gate = _assert_target_difficulty_matches_template(
+        generated_target,
+        target,
+        split,
+        "regenerated",
+    )
+    roster_difficulty, reuse_diagnostics = _reuse_same_semester_target_difficulty(
+        roster,
+        generated_difficulty,
+        target,
+    )
+    reused_target = _select_generated_target_difficulty(
+        roster,
+        roster_difficulty,
+        target,
+    )
+    post_reuse_gate = _assert_target_difficulty_matches_template(
+        reused_target,
+        target,
+        split,
+        "post-reuse",
+    )
+
+    enriched_roster = pd.concat(
+        [
+            roster.reset_index(drop=True),
+            roster_difficulty.reset_index(drop=True),
+        ],
+        axis=1,
+    )
+    concurrent = compute_concurrent_group_features(target, enriched_roster)
+    if not concurrent.index.equals(target.index) or len(concurrent) != len(target):
+        raise AssertionError(
+            f"{split}: two-input concurrent features changed target order"
+        )
+    if not (
+        concurrent["concurrent_peer_difficulty_missing"]
+        .eq(concurrent["concurrent_peer_set_empty"])
+        .all()
+    ):
+        raise AssertionError(
+            f"{split}: legacy indicator is not the empty peer-set flag"
+        )
+    if concurrent["concurrent_peer_difficulty_missing"].dtype != np.dtype("int64"):
+        raise AssertionError(
+            f"{split}: legacy indicator dtype changed: "
+            f"{concurrent['concurrent_peer_difficulty_missing'].dtype}"
+        )
+
+    if prior_paths:
+        prior = pd.read_parquet(prior_paths[split], columns=PRIOR_COMPARISON_COLUMNS)
+        _assert_positional_alignment(
+            target,
+            prior,
+            ALIGNMENT_COLUMNS,
+            f"{split}: live template/prior comparison build",
+        )
+        impact = _impact_diagnostics(target, concurrent, prior)
+    else:
+        impact = None
+
+    published_roster = model_facing_roster(enriched_roster)
+    assert_unique_peer_membership(published_roster)
+    roster_audit = roster_row_audit(enriched_roster)
+
+    concurrent_out = output_paths[f"{split}_concurrent"]
+    final_out = output_paths[f"{split}_final"]
+    roster_out = staging / f"registration_roster_{split}.parquet"
+    roster_audit_out = staging / f"registration_roster_row_audit_{split}.parquet"
+    count_audit_out = staging / f"registration_roster_count_comparison_{split}.parquet"
+    mismatch_out = staging / f"registration_roster_mismatch_examples_{split}.parquet"
+    excluded_register_out = staging / f"registration_roster_excluded_status_{split}.parquet"
+
+    _stream_append_columns(diff_path, concurrent_out, concurrent)
+    _stream_append_columns(final_path, final_out, concurrent)
+    _write_parquet_refuse(published_roster, roster_out)
+    _write_parquet_refuse(roster_audit, roster_audit_out)
+    _write_parquet_refuse(roster_result.semester_count_comparison, count_audit_out)
+    _write_parquet_refuse(roster_result.mismatch_examples, mismatch_out)
+    _write_parquet_refuse(
+        roster_result.excluded_registration_status_summary,
+        excluded_register_out,
+    )
+
+    readback_checks = {
+        f"{split}_concurrent": _verify_streamed_output(
+            diff_path,
+            concurrent_out,
+            concurrent,
+            split,
+            "concurrent",
+        ),
+        f"{split}_final": _verify_streamed_output(
+            final_path,
+            final_out,
+            concurrent,
+            split,
+            "final",
+        ),
+    }
+    output_schema = pq.ParquetFile(final_out).schema_arrow
+    legacy_arrow_type = str(
+        output_schema.field("concurrent_peer_difficulty_missing").type
+    )
+    if legacy_arrow_type != "int64":
+        raise AssertionError(
+            f"{split}: persisted legacy indicator dtype is "
+            f"{legacy_arrow_type}, expected int64"
+        )
+
+    split_report = {
+        "target_rows": int(len(target)),
+        "roster_rows": int(len(roster)),
+        "model_facing_roster": {
+            "peer_membership_key": list(PEER_MEMBERSHIP_KEY),
+            "rows": int(len(published_roster)),
+            "columns": int(len(published_roster.columns)),
+            "duplicate_membership_rows": int(
+                published_roster.duplicated(PEER_MEMBERSHIP_KEY, keep=False).sum()
+            ),
+            "row_audit_columns_removed": list(ROW_AUDIT_ONLY_COLUMNS),
+            "row_audit_artifact_rows": int(len(roster_audit)),
+            "outcome_or_target_proxy_columns": [],
+            "gates": {
+                "unique_on_peer_membership_key": True,
+                "no_outcome_or_target_proxy_column": True,
+            },
+        },
+        "roster": roster_result.diagnostics,
+        "residual_mismatch_examples": _records(roster_result.mismatch_examples, limit=30),
+        "same_semester_target_reuse": reuse_diagnostics,
+        "target_difficulty_gate": {
+            "before_reuse": pre_reuse_gate,
+            "after_reuse": post_reuse_gate,
+        },
+        "temporal_difficulty": _temporal_coverage(roster, roster_difficulty, split),
+        "impact": impact,
+        "legacy_indicator_persisted_dtype": legacy_arrow_type,
+    }
+    staged_outputs = {
+        concurrent_out.stem: concurrent_out,
+        final_out.stem: final_out,
+        f"registration_roster_{split}": roster_out,
+        f"registration_roster_row_audit_{split}": roster_audit_out,
+        f"registration_count_comparison_{split}": count_audit_out,
+        f"registration_mismatch_examples_{split}": mismatch_out,
+        f"registration_excluded_status_{split}": excluded_register_out,
+    }
+    return split_report, readback_checks, staged_outputs
+
+
 def build(args: argparse.Namespace) -> Path:
     template_dir = Path(args.template_dir)
     output_root = Path(args.output_root)
@@ -1600,249 +1796,20 @@ def build(args: argparse.Namespace) -> Path:
 
     try:
         for split in SPLITS:
-            diff_path = template_paths[f"{split}_difficulty"]
-            final_path = template_paths[f"{split}_final"]
-            target = _read_target(diff_path)
-            raw_crg = _read_raw_crg_for_parts(raw_crg_path, target["part_id"])
-
-            roster_result = build_registration_roster(
-                raw_crg,
-                target,
-                clean_acd,
-            )
-            roster = roster_result.roster
-            leaked_outcomes = sorted(KNOWN_OUTCOME_COLUMNS.intersection(roster.columns))
-            if leaked_outcomes:
-                raise AssertionError(
-                    f"{split}: outcome columns entered registration roster: "
-                    f"{leaked_outcomes}"
-                )
-
-            if split == "train":
-                generated_difficulty = build_temporal_query_difficulty(
-                    target,
-                    roster,
-                    state.config,
-                    include_source=False,
-                )
-            else:
-                generated_difficulty = apply_difficulty_state(
-                    roster,
-                    state,
-                    include_source=False,
-                )
-
-            generated_target = _select_generated_target_difficulty(
-                roster,
-                generated_difficulty,
-                target,
-            )
-            pre_reuse_gate = _assert_target_difficulty_matches_template(
-                generated_target,
-                target,
+            split_report, split_checks, split_outputs = _build_split(
                 split,
-                "regenerated",
+                template_paths=template_paths,
+                output_paths=output_paths,
+                raw_crg_path=raw_crg_path,
+                clean_acd=clean_acd,
+                state=state,
+                prior_paths=prior_paths,
+                staging=staging,
             )
-
-            roster_difficulty, reuse_diagnostics = (
-                _reuse_same_semester_target_difficulty(
-                    roster,
-                    generated_difficulty,
-                    target,
-                )
-            )
-            reused_target = _select_generated_target_difficulty(
-                roster,
-                roster_difficulty,
-                target,
-            )
-            post_reuse_gate = _assert_target_difficulty_matches_template(
-                reused_target,
-                target,
-                split,
-                "post-reuse",
-            )
-
-            enriched_roster = pd.concat(
-                [
-                    roster.reset_index(drop=True),
-                    roster_difficulty.reset_index(drop=True),
-                ],
-                axis=1,
-            )
-            concurrent = compute_concurrent_group_features(
-                target,
-                enriched_roster,
-            )
-            if not concurrent.index.equals(target.index) or len(concurrent) != len(
-                target
-            ):
-                raise AssertionError(
-                    f"{split}: two-input concurrent features changed target order"
-                )
-            if not (
-                concurrent["concurrent_peer_difficulty_missing"]
-                .eq(concurrent["concurrent_peer_set_empty"])
-                .all()
-            ):
-                raise AssertionError(
-                    f"{split}: legacy indicator is not the empty peer-set flag"
-                )
-            if (
-                concurrent["concurrent_peer_difficulty_missing"].dtype
-                != np.dtype("int64")
-            ):
-                raise AssertionError(
-                    f"{split}: legacy indicator dtype changed: "
-                    f"{concurrent['concurrent_peer_difficulty_missing'].dtype}"
-                )
-
-            if prior_paths:
-                prior = pd.read_parquet(
-                    prior_paths[split],
-                    columns=PRIOR_COMPARISON_COLUMNS,
-                )
-                _assert_positional_alignment(
-                    target,
-                    prior,
-                    ALIGNMENT_COLUMNS,
-                    f"{split}: live template/prior comparison build",
-                )
-                impact = _impact_diagnostics(target, concurrent, prior)
-            else:
-                prior = None
-                impact = None
-
-            # The model-facing roster carries no current-semester outcome and
-            # no target proxy; row-level diagnostics move to a separate audit
-            # artifact that no feature or training code reads.
-            published_roster = model_facing_roster(enriched_roster)
-            assert_unique_peer_membership(published_roster)
-            roster_audit = roster_row_audit(enriched_roster)
-
-            concurrent_out = output_paths[f"{split}_concurrent"]
-            final_out = output_paths[f"{split}_final"]
-            roster_out = staging / f"registration_roster_{split}.parquet"
-            roster_audit_out = (
-                staging / f"registration_roster_row_audit_{split}.parquet"
-            )
-            count_audit_out = (
-                staging / f"registration_roster_count_comparison_{split}.parquet"
-            )
-            mismatch_out = (
-                staging / f"registration_roster_mismatch_examples_{split}.parquet"
-            )
-            excluded_register_out = (
-                staging / f"registration_roster_excluded_status_{split}.parquet"
-            )
-
-            _stream_append_columns(diff_path, concurrent_out, concurrent)
-            _stream_append_columns(final_path, final_out, concurrent)
-            _write_parquet_refuse(published_roster, roster_out)
-            _write_parquet_refuse(roster_audit, roster_audit_out)
-            _write_parquet_refuse(
-                roster_result.semester_count_comparison,
-                count_audit_out,
-            )
-            _write_parquet_refuse(roster_result.mismatch_examples, mismatch_out)
-            _write_parquet_refuse(
-                roster_result.excluded_registration_status_summary,
-                excluded_register_out,
-            )
-
-            readback_checks[f"{split}_concurrent"] = _verify_streamed_output(
-                diff_path,
-                concurrent_out,
-                concurrent,
-                split,
-                "concurrent",
-            )
-            readback_checks[f"{split}_final"] = _verify_streamed_output(
-                final_path,
-                final_out,
-                concurrent,
-                split,
-                "final",
-            )
-            output_schema = pq.ParquetFile(final_out).schema_arrow
-            legacy_arrow_type = str(
-                output_schema.field("concurrent_peer_difficulty_missing").type
-            )
-            if legacy_arrow_type != "int64":
-                raise AssertionError(
-                    f"{split}: persisted legacy indicator dtype is "
-                    f"{legacy_arrow_type}, expected int64"
-                )
-
-            # Labelling by stem keeps the legacy keys (df_train_concurrent, ...)
-            # byte-identical while still naming rebuild outputs truthfully.
-            for label, path in (
-                (concurrent_out.stem, concurrent_out),
-                (final_out.stem, final_out),
-                (f"registration_roster_{split}", roster_out),
-                (f"registration_roster_row_audit_{split}", roster_audit_out),
-                (f"registration_count_comparison_{split}", count_audit_out),
-                (f"registration_mismatch_examples_{split}", mismatch_out),
-                (f"registration_excluded_status_{split}", excluded_register_out),
-            ):
-                staged_outputs[label] = path
-
-            split_reports[split] = {
-                "target_rows": int(len(target)),
-                "roster_rows": int(len(roster)),
-                "model_facing_roster": {
-                    "peer_membership_key": list(PEER_MEMBERSHIP_KEY),
-                    "rows": int(len(published_roster)),
-                    "columns": int(len(published_roster.columns)),
-                    "duplicate_membership_rows": int(
-                        published_roster.duplicated(
-                            PEER_MEMBERSHIP_KEY, keep=False
-                        ).sum()
-                    ),
-                    "row_audit_columns_removed": list(ROW_AUDIT_ONLY_COLUMNS),
-                    "row_audit_artifact_rows": int(len(roster_audit)),
-                    "outcome_or_target_proxy_columns": [],
-                    "gates": {
-                        "unique_on_peer_membership_key": True,
-                        "no_outcome_or_target_proxy_column": True,
-                    },
-                },
-                "roster": roster_result.diagnostics,
-                "residual_mismatch_examples": _records(
-                    roster_result.mismatch_examples,
-                    limit=30,
-                ),
-                "same_semester_target_reuse": reuse_diagnostics,
-                "target_difficulty_gate": {
-                    "before_reuse": pre_reuse_gate,
-                    "after_reuse": post_reuse_gate,
-                },
-                "temporal_difficulty": _temporal_coverage(
-                    roster,
-                    roster_difficulty,
-                    split,
-                ),
-                "impact": impact,
-                "legacy_indicator_persisted_dtype": legacy_arrow_type,
-            }
-
-            del (
-                target,
-                raw_crg,
-                roster_result,
-                roster,
-                generated_difficulty,
-                generated_target,
-                roster_difficulty,
-                reused_target,
-                enriched_roster,
-                published_roster,
-                roster_audit,
-                concurrent,
-                prior,
-            )
+            split_reports[split] = split_report
+            readback_checks.update(split_checks)
+            staged_outputs.update(split_outputs)
             gc.collect()
-
         # Both aggregates are differences against the comparison build; without
         # one there is nothing to difference, and neither feeds the features.
         has_comparison = bool(prior_paths)

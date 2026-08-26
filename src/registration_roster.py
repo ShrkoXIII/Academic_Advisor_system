@@ -910,28 +910,9 @@ def _build_count_comparison(
     return comparison
 
 
-def build_registration_roster(
-    raw_crg: pd.DataFrame,
-    target_frame: pd.DataFrame,
-    clean_acd: pd.DataFrame,
-) -> RegistrationRosterResult:
-    """Return the complete active, registered roster for target semesters.
+def _prepare_raw_roster(raw_crg: pd.DataFrame) -> pd.DataFrame:
+    """Normalize and validate the raw CRG registration source."""
 
-    Parameters
-    ----------
-    raw_crg:
-        Raw ``V_CRG_STUDENT_COURSE`` rows.  Column names may use source casing;
-        they are normalized on a copy.
-    target_frame:
-        Completed target occurrences.  Every row must match exactly one
-        eligible raw occurrence on ``OCCURRENCE_MATCH_KEY``.
-    clean_acd:
-        Clean ``V_ACD_DEGREE_COURSE`` metadata used only for roster-only
-        occurrences.  Resolution reproduces the current exact-pair followed by
-        unique-course-degree fallback.
-    """
-
-    target = _prepare_target(target_frame)
     raw = _normalize_source_frame(raw_crg, "raw_crg")
     require_columns(
         raw,
@@ -957,6 +938,14 @@ def build_registration_roster(
         raw["finish_status"] = pd.Series(pd.NA, index=raw.index, dtype="string")
     raw["course_credits"] = _to_nullable_float(raw["course_credits"])
     raw["_raw_row_position"] = np.arange(len(raw), dtype="int64")
+    return raw
+
+
+def _select_eligible_registrations(
+    raw: pd.DataFrame,
+    target: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Keep active R/E registrations in target semesters and validate their IDs."""
 
     target_groups = target[SEMESTER_KEY].drop_duplicates()
     in_scope = raw.merge(
@@ -966,7 +955,6 @@ def build_registration_roster(
         validate="many_to_one",
         sort=False,
     )
-
     active_mask = in_scope["active"].eq(VALID_ACTIVE_STATUS).fillna(False)
     valid_register_mask = (
         in_scope["register_status"].isin(VALID_REGISTER_STATUSES).fillna(False)
@@ -1003,6 +991,21 @@ def build_registration_roster(
             "raw_crg student_course_id is ambiguous within target semesters; "
             f"each ID must identify one occurrence. Examples: {examples}"
         )
+    return (
+        target_groups,
+        in_scope,
+        excluded_inactive,
+        excluded_register,
+        eligible,
+    )
+
+
+def _attach_target_occurrences(
+    eligible: pd.DataFrame,
+    target: pd.DataFrame,
+    raw: pd.DataFrame,
+) -> pd.DataFrame:
+    """Match every completed target occurrence to one eligible registration."""
 
     coverage = target[OCCURRENCE_MATCH_KEY + ["_target_row_position"]].merge(
         eligible[OCCURRENCE_MATCH_KEY],
@@ -1042,7 +1045,6 @@ def build_registration_roster(
         "_raw_row_position",
     ]
     roster = eligible[raw_roster_columns].copy()
-
     target_merge_columns = OCCURRENCE_MATCH_KEY + ["_target_row_position"]
     for column in TARGET_METADATA_OVERRIDE_COLUMNS:
         if column in target.columns and column not in target_merge_columns:
@@ -1067,6 +1069,40 @@ def build_registration_roster(
     roster["target_row_position"] = roster[
         "_target__target_row_position"
     ].astype("Int64")
+    return roster
+
+
+def build_registration_roster(
+    raw_crg: pd.DataFrame,
+    target_frame: pd.DataFrame,
+    clean_acd: pd.DataFrame,
+) -> RegistrationRosterResult:
+    """Return the complete active, registered roster for target semesters.
+
+    Parameters
+    ----------
+    raw_crg:
+        Raw ``V_CRG_STUDENT_COURSE`` rows.  Column names may use source casing;
+        they are normalized on a copy.
+    target_frame:
+        Completed target occurrences.  Every row must match exactly one
+        eligible raw occurrence on ``OCCURRENCE_MATCH_KEY``.
+    clean_acd:
+        Clean ``V_ACD_DEGREE_COURSE`` metadata used only for roster-only
+        occurrences.  Resolution reproduces the current exact-pair followed by
+        unique-course-degree fallback.
+    """
+
+    target = _prepare_target(target_frame)
+    raw = _prepare_raw_roster(raw_crg)
+    (
+        target_groups,
+        in_scope,
+        excluded_inactive,
+        excluded_register,
+        eligible,
+    ) = _select_eligible_registrations(raw, target)
+    roster = _attach_target_occurrences(eligible, target, raw)
 
     # Apply the binding target-over-raw metadata contract.
     roster["faculty_id_source"] = pd.Series(

@@ -1051,6 +1051,53 @@ def _last_valid_gpa_ratio(frame):
     return float(frame["last_valid_gpa_before_current_semester"].notna().mean())
 
 
+def _build_audit_frame(df, diagnostics):
+    """Build course rows with semester history before policy exclusions."""
+
+    df_model_audit = df.copy(deep=True)
+    df_model_audit = ensure_university_id(df_model_audit, diagnostics)
+    df_model_audit = normalize_timeline_keys(df_model_audit)
+    df_model_audit = add_policy_and_fail_flags(df_model_audit, diagnostics)
+    semester_df = build_semester_history(df_model_audit, diagnostics)
+    df_model_audit = merge_semester_history(
+        df_model_audit,
+        semester_df,
+        diagnostics,
+    )
+    return df_model_audit, semester_df
+
+
+def _add_row_features(df_model_audit, diagnostics, structural_zero_as_nan):
+    """Repair prior GPA values and add course-level feature columns."""
+
+    df_model_audit = repair_previous_gpa_chain(
+        df_model_audit,
+        diagnostics,
+        structural_zero_as_nan=structural_zero_as_nan,
+    )
+    df_model_audit = add_remaining_rowwise_features(
+        df_model_audit,
+        diagnostics=diagnostics,
+    )
+    report_suspicious_zero_fallback_rows(df_model_audit, diagnostics)
+    check_semester_stability(df_model_audit, diagnostics)
+    return df_model_audit
+
+
+def _split_policy_rows(df_model_audit):
+    """Return model rows and over-policy rows without changing their order."""
+
+    excluded = _boolean_series(
+        df_model_audit,
+        "exclude_over_policy_semester",
+        default=False,
+    )
+    return (
+        df_model_audit.loc[~excluded].copy(),
+        df_model_audit.loc[excluded].copy(),
+    )
+
+
 def run_feature_engineering_job(df, structural_zero_as_nan=STRUCTURAL_ZERO_AS_NAN):
     """Run mark-prediction feature engineering on an in-memory dataframe."""
     # Fail fast on the public API boundary; every downstream step assumes pandas
@@ -1066,17 +1113,10 @@ def run_feature_engineering_job(df, structural_zero_as_nan=STRUCTURAL_ZERO_AS_NA
 
     print("Original df rows:", original_row_count)
 
-    # Build the full audit frame first; this frame intentionally keeps rows that
-    # may later be excluded from primary training.
-    df_model_audit = df.copy(deep=True)
-    df_model_audit = ensure_university_id(df_model_audit, diagnostics)
-    df_model_audit = normalize_timeline_keys(df_model_audit)
-    df_model_audit = add_policy_and_fail_flags(df_model_audit, diagnostics)
-
-    # Compute timeline features at semester grain before merging them back to
-    # course rows to prevent duplicate course rows from leaking current outcomes.
-    semester_df = build_semester_history(df_model_audit, diagnostics)
-    df_model_audit = merge_semester_history(df_model_audit, semester_df, diagnostics)
+    # The audit frame intentionally keeps rows that may later be excluded from
+    # primary training. Timeline features are built at semester grain before
+    # they are merged back to course rows.
+    df_model_audit, semester_df = _build_audit_frame(df, diagnostics)
 
     # Compare GPA-history availability before and after merge to catch silent
     # key mismatches early.
@@ -1089,25 +1129,15 @@ def run_feature_engineering_job(df, structural_zero_as_nan=STRUCTURAL_ZERO_AS_NA
     print("Last valid GPA non-null ratio in semester frame:", semester_ratio)
     print("Last valid GPA non-null ratio after merge in df_model_audit:", audit_ratio)
 
-    # Repair previous GPA after timeline history exists, then add independent
-    # row-wise academic and requirement features.
-    df_model_audit = repair_previous_gpa_chain(
+    df_model_audit = _add_row_features(
         df_model_audit,
         diagnostics,
-        structural_zero_as_nan=structural_zero_as_nan,
+        structural_zero_as_nan,
     )
-    df_model_audit = add_remaining_rowwise_features(df_model_audit, diagnostics=diagnostics)
-    report_suspicious_zero_fallback_rows(df_model_audit, diagnostics)
-    check_semester_stability(df_model_audit, diagnostics)
 
     # Split the audit frame into the normal training set and the policy-excluded
     # set while keeping both available to callers.
-    df_primary = df_model_audit.loc[
-        ~_boolean_series(df_model_audit, "exclude_over_policy_semester", default=False)
-    ].copy()
-    df_excluded_over_policy = df_model_audit.loc[
-        _boolean_series(df_model_audit, "exclude_over_policy_semester", default=False)
-    ].copy()
+    df_primary, df_excluded_over_policy = _split_policy_rows(df_model_audit)
 
     primary_ratio = _last_valid_gpa_ratio(df_primary)
     diagnostics["last_valid_gpa_non_null_ratios"]["df_primary"] = primary_ratio
